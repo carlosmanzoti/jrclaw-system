@@ -785,6 +785,7 @@ model Project {
   documentos      Document[]
   atividades      Activity[]
   anotacoes       ProjectNote[]
+  despesas        ProjectExpense[]
   negociacoes     Negotiation[]
   calendar_events CalendarEvent[]
   library_entries LibraryEntry[] @relation("LibraryProjects")
@@ -939,6 +940,21 @@ model Holiday {
 
   @@unique([data, nome])
   @@map("holidays")
+}
+
+model ProjectExpense {
+  id              String   @id @default(cuid())
+  project_id      String
+  project         Project  @relation(fields: [project_id], references: [id], onDelete: Cascade)
+  descricao       String
+  valor           Decimal  @db.Decimal(18, 2)
+  data            DateTime
+  categoria       String   // CERTIDAO, REGISTRO, CUSTAS, VIAGEM, PERICIA, OUTRO
+  comprovante_url String?
+  created_by_id   String?
+  created_at      DateTime @default(now())
+
+  @@map("project_expenses")
 }
 
 model ProjectTemplate {

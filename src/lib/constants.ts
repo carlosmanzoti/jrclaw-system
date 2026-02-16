@@ -199,6 +199,107 @@ export const ACTIVITY_TYPE_LABELS: Record<string, string> = {
   OUTRO: "Outro",
 };
 
+export const PRIORITY_LABELS: Record<string, string> = {
+  CRITICA: "Crítica",
+  ALTA: "Alta",
+  MEDIA: "Média",
+  BAIXA: "Baixa",
+};
+
+export const PRIORITY_COLORS: Record<string, string> = {
+  CRITICA: "bg-red-100 text-red-700",
+  ALTA: "bg-orange-100 text-orange-700",
+  MEDIA: "bg-blue-100 text-blue-700",
+  BAIXA: "bg-gray-100 text-gray-600",
+};
+
+export const PROJECT_STATUS_COLORS: Record<string, string> = {
+  PLANEJAMENTO: "bg-slate-100 text-slate-700",
+  EM_ANDAMENTO: "bg-blue-100 text-blue-700",
+  AGUARDANDO_CLIENTE: "bg-amber-100 text-amber-700",
+  AGUARDANDO_TERCEIRO: "bg-yellow-100 text-yellow-700",
+  AGUARDANDO_ORGAO: "bg-orange-100 text-orange-700",
+  PAUSADO: "bg-gray-100 text-gray-600",
+  CONCLUIDO: "bg-emerald-100 text-emerald-700",
+  CANCELADO: "bg-red-100 text-red-700",
+};
+
+export const PROJECT_TASK_TYPE_LABELS: Record<string, string> = {
+  DOCUMENTO: "Documento",
+  REUNIAO: "Reunião",
+  DILIGENCIA: "Diligência",
+  ANALISE: "Análise",
+  COMUNICACAO: "Comunicação",
+  COBRANCA: "Cobrança",
+  ACOMPANHAMENTO: "Acompanhamento",
+  PROTOCOLO: "Protocolo",
+  OBTENCAO_CERTIDAO: "Obtenção de Certidão",
+  OBTENCAO_ALVARA: "Obtenção de Alvará",
+  LIBERACAO_VALORES: "Liberação de Valores",
+  NEGOCIACAO: "Negociação",
+  ASSINATURA: "Assinatura",
+  REGISTRO: "Registro",
+  PAGAMENTO: "Pagamento",
+  OUTRO: "Outro",
+};
+
+export const PROJECT_TASK_STATUS_LABELS: Record<string, string> = {
+  BACKLOG: "Backlog",
+  A_FAZER: "A Fazer",
+  EM_ANDAMENTO: "Em Andamento",
+  EM_REVISAO: "Em Revisão",
+  AGUARDANDO: "Aguardando",
+  CONCLUIDA: "Concluída",
+  CANCELADA: "Cancelada",
+};
+
+export const PROJECT_TASK_STATUS_COLORS: Record<string, string> = {
+  BACKLOG: "bg-slate-100 text-slate-600",
+  A_FAZER: "bg-blue-100 text-blue-700",
+  EM_ANDAMENTO: "bg-indigo-100 text-indigo-700",
+  EM_REVISAO: "bg-purple-100 text-purple-700",
+  AGUARDANDO: "bg-amber-100 text-amber-700",
+  CONCLUIDA: "bg-emerald-100 text-emerald-700",
+  CANCELADA: "bg-red-100 text-red-700",
+};
+
+export const PROJECT_PHASE_STATUS_LABELS: Record<string, string> = {
+  NAO_INICIADA: "Não Iniciada",
+  EM_ANDAMENTO: "Em Andamento",
+  CONCLUIDA: "Concluída",
+  BLOQUEADA: "Bloqueada",
+};
+
+export const MILESTONE_STATUS_LABELS: Record<string, string> = {
+  PENDENTE: "Pendente",
+  ALCANCADO: "Alcançado",
+  ATRASADO: "Atrasado",
+  CANCELADO: "Cancelado",
+};
+
+export const MILESTONE_IMPACT_LABELS: Record<string, string> = {
+  CRITICO: "Crítico",
+  ALTO: "Alto",
+  MEDIO: "Médio",
+  BAIXO: "Baixo",
+};
+
+export const PROJECT_TEAM_ROLE_LABELS: Record<string, string> = {
+  RESPONSAVEL: "Responsável",
+  MEMBRO: "Membro",
+  CONSULTOR: "Consultor",
+  ESTAGIARIO: "Estagiário",
+};
+
+export const EXPENSE_CATEGORY_LABELS: Record<string, string> = {
+  CERTIDAO: "Certidão",
+  REGISTRO: "Registro",
+  CUSTAS: "Custas",
+  VIAGEM: "Viagem",
+  PERICIA: "Perícia",
+  OUTRO: "Outro",
+};
+
 export const ESTADOS_BRASIL = [
   "AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO",
   "MA", "MT", "MS", "MG", "PA", "PB", "PR", "PE", "PI",

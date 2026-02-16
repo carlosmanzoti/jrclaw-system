@@ -822,54 +822,436 @@ async function main() {
   console.log("📄 Created 10 document templates");
 
   // ============================================================
-  // 9. PROJECT TEMPLATES (3)
+  // 9. PROJECT TEMPLATES (7)
   // ============================================================
   await prisma.projectTemplate.createMany({
     data: [
+      // Template 1: Recuperação de Crédito
       {
         titulo: "Recuperação de Crédito",
         categoria: "RECUPERACAO_CREDITO",
-        descricao: "Modelo para projetos de recuperação de crédito extrajudicial/judicial, desde a análise até o recebimento.",
+        descricao: "Modelo completo para projetos de recuperação de crédito, desde a análise documental até o recebimento integral. Abrange notificação extrajudicial, negociação, formalização de acordo e acompanhamento de pagamentos.",
         fases_padrao: [
-          { titulo: "Análise do Crédito", descricao: "Levantamento e análise de documentos comprobatórios do crédito", ordem: 1, tarefas_padrao: [{ titulo: "Analisar documentos do crédito", tipo: "ANALISE" }, { titulo: "Calcular valor atualizado", tipo: "ANALISE" }] },
-          { titulo: "Notificação Extrajudicial", descricao: "Elaboração e envio de notificação ao devedor", ordem: 2, tarefas_padrao: [{ titulo: "Elaborar notificação extrajudicial", tipo: "COMUNICACAO" }, { titulo: "Enviar via cartório/AR", tipo: "COMUNICACAO" }] },
-          { titulo: "Negociação", descricao: "Tentativa de acordo extrajudicial", ordem: 3, tarefas_padrao: [{ titulo: "Reunião de negociação", tipo: "NEGOCIACAO" }, { titulo: "Elaborar proposta de acordo", tipo: "NEGOCIACAO" }] },
-          { titulo: "Acordo ou Execução", descricao: "Formalização do acordo ou ajuizamento de execução", ordem: 4, tarefas_padrao: [{ titulo: "Formalizar acordo", tipo: "DOCUMENTO" }, { titulo: "Ajuizar execução (se necessário)", tipo: "DOCUMENTO" }] },
-          { titulo: "Recebimento", descricao: "Acompanhamento dos pagamentos", ordem: 5, tarefas_padrao: [{ titulo: "Acompanhar pagamentos", tipo: "COBRANCA" }] },
+          {
+            titulo: "Análise do Crédito",
+            descricao: "Levantamento e análise de documentos comprobatórios do crédito, verificação de prescrição e cálculo atualizado",
+            ordem: 1,
+            tarefas_padrao: [
+              { titulo: "Levantar documentos comprobatórios", tipo: "ANALISE" },
+              { titulo: "Verificar prescrição e decadência", tipo: "ANALISE" },
+              { titulo: "Calcular valor atualizado do crédito", tipo: "ANALISE" },
+            ],
+          },
+          {
+            titulo: "Notificação Extrajudicial",
+            descricao: "Elaboração e envio de notificação extrajudicial ao devedor com prazo para resposta",
+            ordem: 2,
+            tarefas_padrao: [
+              { titulo: "Redigir notificação extrajudicial", tipo: "COMUNICACAO" },
+              { titulo: "Enviar via cartório com AR", tipo: "COMUNICACAO" },
+              { titulo: "Aguardar prazo de resposta", tipo: "ACOMPANHAMENTO" },
+            ],
+          },
+          {
+            titulo: "Negociação",
+            descricao: "Contato com devedor, apresentação de proposta e análise de contrapropostas",
+            ordem: 3,
+            tarefas_padrao: [
+              { titulo: "Realizar contato inicial com devedor", tipo: "NEGOCIACAO" },
+              { titulo: "Apresentar proposta de acordo", tipo: "NEGOCIACAO" },
+              { titulo: "Analisar contraproposta", tipo: "NEGOCIACAO" },
+            ],
+          },
+          {
+            titulo: "Formalização",
+            descricao: "Redação do termo de acordo, coleta de assinaturas e registro em cartório",
+            ordem: 4,
+            tarefas_padrao: [
+              { titulo: "Redigir termo de acordo", tipo: "DOCUMENTO" },
+              { titulo: "Colher assinaturas", tipo: "ASSINATURA" },
+              { titulo: "Registrar acordo em cartório", tipo: "REGISTRO" },
+            ],
+          },
+          {
+            titulo: "Recebimento",
+            descricao: "Acompanhamento de pagamentos, emissão de quitações e encerramento do projeto",
+            ordem: 5,
+            tarefas_padrao: [
+              { titulo: "Acompanhar pagamentos", tipo: "COBRANCA" },
+              { titulo: "Emitir recibos/quitações", tipo: "DOCUMENTO" },
+              { titulo: "Encerrar projeto", tipo: "OUTRO" },
+            ],
+          },
         ],
         marcos_padrao: [
-          { titulo: "Notificação enviada", offset_dias: 10 },
-          { titulo: "Resposta recebida", offset_dias: 25 },
+          { titulo: "Notificação enviada", offset_dias: 5 },
+          { titulo: "Resposta recebida", offset_dias: 20 },
           { titulo: "Acordo formalizado", offset_dias: 45 },
-          { titulo: "Crédito quitado", offset_dias: 90 },
+          { titulo: "Primeiro pagamento recebido", offset_dias: 60 },
+          { titulo: "Crédito quitado", offset_dias: 180 },
         ],
       },
+      // Template 2: Obtenção de Alvará Judicial
       {
         titulo: "Obtenção de Alvará Judicial",
         categoria: "ALVARA_LIBERACAO",
-        descricao: "Modelo para projetos de obtenção de alvará judicial e liberação de valores depositados em juízo.",
+        descricao: "Modelo completo para projetos de obtenção de alvará judicial e liberação de valores depositados em juízo. Inclui petição, acompanhamento de deferimento, expedição, envio ao banco e confirmação de crédito.",
         fases_padrao: [
-          { titulo: "Petição", descricao: "Elaboração e protocolo da petição de alvará", ordem: 1, tarefas_padrao: [{ titulo: "Elaborar petição de alvará", tipo: "OBTENCAO_ALVARA" }, { titulo: "Protocolar petição", tipo: "PROTOCOLO" }] },
-          { titulo: "Deferimento", descricao: "Acompanhamento do despacho judicial", ordem: 2, tarefas_padrao: [{ titulo: "Acompanhar despacho", tipo: "ACOMPANHAMENTO" }] },
-          { titulo: "Expedição", descricao: "Aguardar expedição do alvará pela secretaria", ordem: 3, tarefas_padrao: [{ titulo: "Cobrar expedição na secretaria", tipo: "ACOMPANHAMENTO" }] },
-          { titulo: "Envio ao Banco", descricao: "Envio do alvará à instituição financeira", ordem: 4, tarefas_padrao: [{ titulo: "Enviar alvará ao banco", tipo: "LIBERACAO_VALORES" }] },
-          { titulo: "Liberação", descricao: "Confirmação do crédito na conta", ordem: 5, tarefas_padrao: [{ titulo: "Confirmar crédito em conta", tipo: "ACOMPANHAMENTO" }] },
+          {
+            titulo: "Petição",
+            descricao: "Elaboração da petição de alvará, reunião de documentos e protocolo no tribunal",
+            ordem: 1,
+            tarefas_padrao: [
+              { titulo: "Elaborar petição de alvará", tipo: "OBTENCAO_ALVARA" },
+              { titulo: "Reunir documentos necessários", tipo: "DOCUMENTO" },
+              { titulo: "Protocolar petição no tribunal", tipo: "PROTOCOLO" },
+            ],
+          },
+          {
+            titulo: "Deferimento",
+            descricao: "Acompanhamento do despacho judicial e verificação de publicação",
+            ordem: 2,
+            tarefas_padrao: [
+              { titulo: "Acompanhar despacho do juiz", tipo: "ACOMPANHAMENTO" },
+              { titulo: "Verificar publicação no DJE", tipo: "ACOMPANHAMENTO" },
+            ],
+          },
+          {
+            titulo: "Expedição",
+            descricao: "Requerimento e acompanhamento da expedição do alvará pela secretaria",
+            ordem: 3,
+            tarefas_padrao: [
+              { titulo: "Requerer expedição do alvará", tipo: "OBTENCAO_ALVARA" },
+              { titulo: "Acompanhar expedição pela secretaria", tipo: "ACOMPANHAMENTO" },
+            ],
+          },
+          {
+            titulo: "Envio ao Banco",
+            descricao: "Obtenção do alvará físico ou digital e envio à instituição financeira",
+            ordem: 4,
+            tarefas_padrao: [
+              { titulo: "Obter alvará físico ou digital", tipo: "OBTENCAO_ALVARA" },
+              { titulo: "Enviar ao banco com ofício", tipo: "LIBERACAO_VALORES" },
+            ],
+          },
+          {
+            titulo: "Liberação",
+            descricao: "Acompanhamento do processamento bancário e confirmação de crédito",
+            ordem: 5,
+            tarefas_padrao: [
+              { titulo: "Acompanhar processamento bancário", tipo: "ACOMPANHAMENTO" },
+              { titulo: "Confirmar crédito na conta", tipo: "LIBERACAO_VALORES" },
+            ],
+          },
+          {
+            titulo: "Confirmação",
+            descricao: "Comunicação ao cliente, juntada de comprovante e encerramento",
+            ordem: 6,
+            tarefas_padrao: [
+              { titulo: "Comunicar cliente sobre liberação", tipo: "COMUNICACAO" },
+              { titulo: "Anexar comprovante aos autos", tipo: "DOCUMENTO" },
+              { titulo: "Encerrar projeto", tipo: "OUTRO" },
+            ],
+          },
         ],
         marcos_padrao: [
           { titulo: "Petição protocolada", offset_dias: 3 },
           { titulo: "Alvará deferido", offset_dias: 15 },
           { titulo: "Alvará expedido", offset_dias: 25 },
-          { titulo: "Valor creditado na conta", offset_dias: 40 },
+          { titulo: "Valor liberado na conta", offset_dias: 40 },
         ],
       },
+      // Template 3: Planejamento Tributário
+      {
+        titulo: "Planejamento Tributário",
+        categoria: "PLANEJAMENTO_TRIBUTARIO",
+        descricao: "Modelo completo para projetos de planejamento tributário, incluindo diagnóstico fiscal, modelagem de cenários, elaboração de parecer técnico, implementação e acompanhamento de resultados.",
+        fases_padrao: [
+          {
+            titulo: "Diagnóstico Fiscal",
+            descricao: "Levantamento de dados fiscais e contábeis, análise do regime atual e identificação de oportunidades",
+            ordem: 1,
+            tarefas_padrao: [
+              { titulo: "Levantar dados fiscais e contábeis", tipo: "ANALISE" },
+              { titulo: "Analisar regime tributário atual", tipo: "ANALISE" },
+              { titulo: "Identificar oportunidades de economia", tipo: "ANALISE" },
+            ],
+          },
+          {
+            titulo: "Modelagem de Cenários",
+            descricao: "Simulação de cenários tributários, comparação de regimes e cálculo de impacto financeiro",
+            ordem: 2,
+            tarefas_padrao: [
+              { titulo: "Simular cenários tributários", tipo: "ANALISE" },
+              { titulo: "Comparar regimes (Simples/Lucro Presumido/Real)", tipo: "ANALISE" },
+              { titulo: "Calcular impacto financeiro", tipo: "ANALISE" },
+            ],
+          },
+          {
+            titulo: "Parecer Técnico",
+            descricao: "Elaboração e revisão do parecer jurídico-tributário",
+            ordem: 3,
+            tarefas_padrao: [
+              { titulo: "Elaborar parecer jurídico-tributário", tipo: "DOCUMENTO" },
+              { titulo: "Revisar com sócio responsável", tipo: "ANALISE" },
+            ],
+          },
+          {
+            titulo: "Implementação",
+            descricao: "Apresentação ao cliente, formalização da opção e orientação ao departamento contábil",
+            ordem: 4,
+            tarefas_padrao: [
+              { titulo: "Apresentar ao cliente", tipo: "REUNIAO" },
+              { titulo: "Formalizar opção pelo regime", tipo: "DOCUMENTO" },
+              { titulo: "Orientar departamento contábil", tipo: "COMUNICACAO" },
+            ],
+          },
+          {
+            titulo: "Acompanhamento",
+            descricao: "Monitoramento dos resultados e ajustes no planejamento",
+            ordem: 5,
+            tarefas_padrao: [
+              { titulo: "Monitorar resultados do primeiro trimestre", tipo: "ACOMPANHAMENTO" },
+              { titulo: "Ajustar planejamento se necessário", tipo: "ANALISE" },
+            ],
+          },
+        ],
+        marcos_padrao: [
+          { titulo: "Diagnóstico concluído", offset_dias: 15 },
+          { titulo: "Parecer aprovado pelo cliente", offset_dias: 35 },
+          { titulo: "Implementação iniciada", offset_dias: 45 },
+          { titulo: "Primeiro resultado apurado", offset_dias: 120 },
+        ],
+      },
+      // Template 4: Due Diligence
+      {
+        titulo: "Due Diligence",
+        categoria: "DUE_DILIGENCE",
+        descricao: "Modelo completo para projetos de due diligence jurídica, cobrindo definição de escopo, levantamento documental, análise jurídica multidisciplinar, elaboração de relatório e apresentação de findings.",
+        fases_padrao: [
+          {
+            titulo: "Definição de Escopo",
+            descricao: "Reunião de kickoff, definição das áreas de análise e elaboração do checklist documental",
+            ordem: 1,
+            tarefas_padrao: [
+              { titulo: "Reunião de kickoff com cliente", tipo: "REUNIAO" },
+              { titulo: "Definir áreas de análise", tipo: "ANALISE" },
+              { titulo: "Elaborar checklist documental", tipo: "DOCUMENTO" },
+            ],
+          },
+          {
+            titulo: "Levantamento Documental",
+            descricao: "Solicitação de documentos à target, organização do data room e verificação de completude",
+            ordem: 2,
+            tarefas_padrao: [
+              { titulo: "Solicitar documentos à target", tipo: "COMUNICACAO" },
+              { titulo: "Organizar data room", tipo: "DOCUMENTO" },
+              { titulo: "Verificar completude dos documentos", tipo: "ANALISE" },
+            ],
+          },
+          {
+            titulo: "Análise Jurídica",
+            descricao: "Análise multidisciplinar: societária, trabalhista, tributária e contingências judiciais",
+            ordem: 3,
+            tarefas_padrao: [
+              { titulo: "Análise societária e contratos", tipo: "ANALISE" },
+              { titulo: "Análise trabalhista e previdenciária", tipo: "ANALISE" },
+              { titulo: "Análise tributária e fiscal", tipo: "ANALISE" },
+              { titulo: "Análise de contingências judiciais", tipo: "ANALISE" },
+            ],
+          },
+          {
+            titulo: "Relatório",
+            descricao: "Elaboração do relatório de due diligence, revisão com equipe e classificação de riscos",
+            ordem: 4,
+            tarefas_padrao: [
+              { titulo: "Elaborar relatório de due diligence", tipo: "DOCUMENTO" },
+              { titulo: "Revisar com equipe", tipo: "ANALISE" },
+              { titulo: "Classificar riscos encontrados", tipo: "ANALISE" },
+            ],
+          },
+          {
+            titulo: "Apresentação",
+            descricao: "Apresentação dos findings ao cliente, entrega do relatório final e recomendações",
+            ordem: 5,
+            tarefas_padrao: [
+              { titulo: "Apresentar findings ao cliente", tipo: "REUNIAO" },
+              { titulo: "Entregar relatório final", tipo: "DOCUMENTO" },
+              { titulo: "Recomendar próximos passos", tipo: "COMUNICACAO" },
+            ],
+          },
+        ],
+        marcos_padrao: [
+          { titulo: "Kickoff realizado", offset_dias: 3 },
+          { titulo: "Documentos recebidos", offset_dias: 15 },
+          { titulo: "Análise concluída", offset_dias: 40 },
+          { titulo: "Relatório entregue", offset_dias: 50 },
+        ],
+      },
+      // Template 5: Reestruturação Societária
+      {
+        titulo: "Reestruturação Societária",
+        categoria: "REESTRUTURACAO_SOCIETARIA",
+        descricao: "Modelo completo para projetos de reestruturação societária, incluindo diagnóstico da estrutura atual, modelagem da nova estrutura, documentação, deliberação e registro nos órgãos competentes.",
+        fases_padrao: [
+          {
+            titulo: "Diagnóstico",
+            descricao: "Análise da estrutura societária atual, mapeamento de participações e identificação de ineficiências",
+            ordem: 1,
+            tarefas_padrao: [
+              { titulo: "Analisar estrutura societária atual", tipo: "ANALISE" },
+              { titulo: "Mapear participações e holdings", tipo: "ANALISE" },
+              { titulo: "Identificar ineficiências", tipo: "ANALISE" },
+            ],
+          },
+          {
+            titulo: "Modelagem",
+            descricao: "Projeção da nova estrutura, simulação tributária e avaliação de aspectos sucessórios",
+            ordem: 2,
+            tarefas_padrao: [
+              { titulo: "Projetar nova estrutura", tipo: "ANALISE" },
+              { titulo: "Simular impacto tributário", tipo: "ANALISE" },
+              { titulo: "Avaliar aspectos sucessórios", tipo: "ANALISE" },
+            ],
+          },
+          {
+            titulo: "Documentação",
+            descricao: "Elaboração de alterações contratuais, atas de deliberação e contratos intercompany",
+            ordem: 3,
+            tarefas_padrao: [
+              { titulo: "Elaborar alterações contratuais", tipo: "DOCUMENTO" },
+              { titulo: "Preparar atas de deliberação", tipo: "DOCUMENTO" },
+              { titulo: "Elaborar contratos intercompany", tipo: "DOCUMENTO" },
+            ],
+          },
+          {
+            titulo: "Deliberação e Assinatura",
+            descricao: "Realização de assembleia/reunião de sócios, coleta de assinaturas e reconhecimento de firmas",
+            ordem: 4,
+            tarefas_padrao: [
+              { titulo: "Realizar assembleia/reunião de sócios", tipo: "REUNIAO" },
+              { titulo: "Colher assinaturas dos sócios", tipo: "ASSINATURA" },
+              { titulo: "Reconhecer firmas", tipo: "DILIGENCIA" },
+            ],
+          },
+          {
+            titulo: "Registro",
+            descricao: "Registro na Junta Comercial, atualização de cadastros e comunicação a terceiros",
+            ordem: 5,
+            tarefas_padrao: [
+              { titulo: "Registrar na Junta Comercial", tipo: "REGISTRO" },
+              { titulo: "Atualizar cadastros (Receita, SEFAZ)", tipo: "REGISTRO" },
+              { titulo: "Comunicar bancos e terceiros", tipo: "COMUNICACAO" },
+            ],
+          },
+        ],
+        marcos_padrao: [
+          { titulo: "Diagnóstico apresentado", offset_dias: 15 },
+          { titulo: "Nova estrutura aprovada", offset_dias: 30 },
+          { titulo: "Documentação assinada", offset_dias: 50 },
+          { titulo: "Registro concluído", offset_dias: 70 },
+        ],
+      },
+      // Template 6: Operação de Crédito Rural
+      {
+        titulo: "Operação de Crédito Rural",
+        categoria: "OPERACAO_CREDITO_RURAL",
+        descricao: "Modelo completo para projetos de formalização de operações de crédito rural, incluindo levantamento de documentação do produtor, análise de garantias, formalização contratual, registro e acompanhamento da liberação.",
+        fases_padrao: [
+          {
+            titulo: "Documentação",
+            descricao: "Levantamento de documentação do produtor, obtenção de certidões e verificação cadastral",
+            ordem: 1,
+            tarefas_padrao: [
+              { titulo: "Levantar documentação do produtor", tipo: "DOCUMENTO" },
+              { titulo: "Obter certidões negativas", tipo: "OBTENCAO_CERTIDAO" },
+              { titulo: "Verificar situação cadastral", tipo: "ANALISE" },
+            ],
+          },
+          {
+            titulo: "Análise de Garantias",
+            descricao: "Avaliação de imóveis rurais, verificação de ônus e obtenção de laudo de avaliação",
+            ordem: 2,
+            tarefas_padrao: [
+              { titulo: "Avaliar imóveis rurais (matrícula)", tipo: "ANALISE" },
+              { titulo: "Verificar ônus e gravames", tipo: "ANALISE" },
+              { titulo: "Laudo de avaliação dos bens", tipo: "DOCUMENTO" },
+            ],
+          },
+          {
+            titulo: "Formalização",
+            descricao: "Elaboração da cédula de crédito rural, contrato de penhor/hipoteca e coleta de assinaturas",
+            ordem: 3,
+            tarefas_padrao: [
+              { titulo: "Elaborar cédula de crédito rural", tipo: "DOCUMENTO" },
+              { titulo: "Preparar contrato de penhor/hipoteca", tipo: "DOCUMENTO" },
+              { titulo: "Colher assinaturas", tipo: "ASSINATURA" },
+            ],
+          },
+          {
+            titulo: "Registro",
+            descricao: "Registro de garantia no Cartório de Imóveis e penhor agrícola no CRDA",
+            ordem: 4,
+            tarefas_padrao: [
+              { titulo: "Registrar garantia no Cartório de Imóveis", tipo: "REGISTRO" },
+              { titulo: "Registrar penhor agrícola no CRDA", tipo: "REGISTRO" },
+            ],
+          },
+          {
+            titulo: "Liberação",
+            descricao: "Acompanhamento da liberação do crédito, confirmação de depósito e entrega de documentação",
+            ordem: 5,
+            tarefas_padrao: [
+              { titulo: "Acompanhar liberação do crédito", tipo: "ACOMPANHAMENTO" },
+              { titulo: "Confirmar depósito na conta", tipo: "LIBERACAO_VALORES" },
+              { titulo: "Entregar documentação ao cliente", tipo: "COMUNICACAO" },
+            ],
+          },
+        ],
+        marcos_padrao: [
+          { titulo: "Documentação completa", offset_dias: 10 },
+          { titulo: "Garantias aprovadas", offset_dias: 20 },
+          { titulo: "Contrato assinado", offset_dias: 35 },
+          { titulo: "Registro concluído", offset_dias: 50 },
+          { titulo: "Crédito liberado", offset_dias: 60 },
+        ],
+      },
+      // Template 7: Consultoria Permanente
       {
         titulo: "Consultoria Permanente",
         categoria: "CONSULTORIA_PERMANENTE",
-        descricao: "Modelo para projetos de consultoria jurídica mensal/permanente com ciclos recorrentes.",
+        descricao: "Modelo para projetos de consultoria jurídica mensal/permanente com ciclos recorrentes. Inclui recebimento e classificação de demandas, execução e relatório mensal de atividades.",
         fases_padrao: [
-          { titulo: "Demandas do Mês", descricao: "Recebimento e classificação das demandas mensais", ordem: 1, tarefas_padrao: [{ titulo: "Reunião de alinhamento mensal", tipo: "REUNIAO" }, { titulo: "Classificar demandas por urgência", tipo: "ANALISE" }] },
-          { titulo: "Execução", descricao: "Execução das demandas priorizadas", ordem: 2, tarefas_padrao: [{ titulo: "Executar demandas prioritárias", tipo: "OUTRO" }] },
-          { titulo: "Relatório", descricao: "Elaboração e entrega do relatório mensal", ordem: 3, tarefas_padrao: [{ titulo: "Elaborar relatório mensal", tipo: "DOCUMENTO" }, { titulo: "Enviar relatório ao cliente", tipo: "COMUNICACAO" }] },
+          {
+            titulo: "Demandas do Mês",
+            descricao: "Reunião de alinhamento, classificação de demandas por urgência e distribuição de tarefas",
+            ordem: 1,
+            tarefas_padrao: [
+              { titulo: "Reunião de alinhamento mensal", tipo: "REUNIAO" },
+              { titulo: "Classificar demandas por urgência", tipo: "ANALISE" },
+              { titulo: "Distribuir tarefas à equipe", tipo: "OUTRO" },
+            ],
+          },
+          {
+            titulo: "Execução",
+            descricao: "Execução das demandas prioritárias, atendimento a consultas e acompanhamento de processos",
+            ordem: 2,
+            tarefas_padrao: [
+              { titulo: "Executar demandas prioritárias", tipo: "OUTRO" },
+              { titulo: "Prestar atendimento a consultas", tipo: "ANALISE" },
+              { titulo: "Acompanhar processos em andamento", tipo: "ACOMPANHAMENTO" },
+            ],
+          },
+          {
+            titulo: "Relatório",
+            descricao: "Elaboração e envio do relatório mensal de atividades e planejamento do mês seguinte",
+            ordem: 3,
+            tarefas_padrao: [
+              { titulo: "Elaborar relatório mensal de atividades", tipo: "DOCUMENTO" },
+              { titulo: "Enviar relatório ao cliente", tipo: "COMUNICACAO" },
+              { titulo: "Planejar mês seguinte", tipo: "ANALISE" },
+            ],
+          },
         ],
         marcos_padrao: [
           { titulo: "Relatório mensal entregue", offset_dias: 30 },
@@ -878,7 +1260,7 @@ async function main() {
     ],
   });
 
-  console.log("📐 Created 3 project templates");
+  console.log("📐 Created 7 project templates");
 
   // ============================================================
   // 10. LIBRARY ENTRIES (5)
@@ -1048,7 +1430,7 @@ async function main() {
   console.log("   - 15 deadlines");
   console.log("   - 10 creditors (5 per RJ)");
   console.log("   - 10 document templates");
-  console.log("   - 3 project templates");
+  console.log("   - 7 project templates");
   console.log("   - 5 library entries");
   console.log(`   - ${holidays.length} holidays (nacionais + SP/PR/TO/MA)`);
 }
