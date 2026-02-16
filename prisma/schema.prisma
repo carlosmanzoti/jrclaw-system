@@ -3,8 +3,9 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 // ============================================================
@@ -927,6 +928,17 @@ model ProjectNote {
   created_at DateTime @default(now())
 
   @@map("project_notes")
+}
+
+model Holiday {
+  id   String   @id @default(cuid())
+  data DateTime @db.Date
+  nome String
+  tipo String   // NACIONAL, ESTADUAL, MUNICIPAL
+  uf   String?  // null for national, state code for state holidays
+
+  @@unique([data, nome])
+  @@map("holidays")
 }
 
 model ProjectTemplate {

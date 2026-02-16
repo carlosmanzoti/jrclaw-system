@@ -31,6 +31,7 @@ async function main() {
   await prisma.template.deleteMany();
   await prisma.projectTemplate.deleteMany();
   await prisma.libraryEntry.deleteMany();
+  await prisma.holiday.deleteMany();
   await prisma.user.deleteMany();
 
   console.log("🗑️  Cleaned existing data");
@@ -969,6 +970,76 @@ async function main() {
 
   console.log("📝 Created movements and activities");
 
+  // ============================================================
+  // 12. HOLIDAYS (Nacional + SP, PR, TO, MA — 2024 a 2027)
+  // ============================================================
+  // Easter dates (Computus algorithm)
+  const easterDates: Record<number, Date> = {
+    2024: new Date(2024, 2, 31), // March 31
+    2025: new Date(2025, 3, 20), // April 20
+    2026: new Date(2026, 3, 5),  // April 5
+    2027: new Date(2027, 2, 28), // March 28
+  };
+
+  function daysFrom(base: Date, offset: number): Date {
+    const d = new Date(base);
+    d.setDate(d.getDate() + offset);
+    return d;
+  }
+
+  const holidays: { data: Date; nome: string; tipo: string; uf: string | null }[] = [];
+
+  for (const year of [2024, 2025, 2026, 2027]) {
+    const easter = easterDates[year];
+
+    // ── NACIONAIS ──
+    const nacionais: [Date, string][] = [
+      [new Date(year, 0, 1),   "Confraternizacao Universal"],
+      [daysFrom(easter, -48),  "Carnaval (segunda-feira)"],
+      [daysFrom(easter, -47),  "Carnaval (terca-feira)"],
+      [daysFrom(easter, -2),   "Sexta-feira Santa"],
+      [new Date(year, 3, 21),  "Tiradentes"],
+      [new Date(year, 4, 1),   "Dia do Trabalho"],
+      [daysFrom(easter, 60),   "Corpus Christi"],
+      [new Date(year, 8, 7),   "Independencia do Brasil"],
+      [new Date(year, 9, 12),  "Nossa Senhora Aparecida"],
+      [new Date(year, 10, 2),  "Finados"],
+      [new Date(year, 10, 15), "Proclamacao da Republica"],
+      [new Date(year, 10, 20), "Dia da Consciencia Negra"],
+      [new Date(year, 11, 25), "Natal"],
+    ];
+
+    for (const [data, nome] of nacionais) {
+      holidays.push({ data, nome, tipo: "NACIONAL", uf: null });
+    }
+
+    // ── SP (estaduais) ──
+    holidays.push({ data: new Date(year, 0, 25), nome: "Aniversario de Sao Paulo", tipo: "ESTADUAL", uf: "SP" });
+    holidays.push({ data: new Date(year, 6, 9),  nome: "Revolucao Constitucionalista", tipo: "ESTADUAL", uf: "SP" });
+
+    // ── PR (estaduais) ──
+    holidays.push({ data: new Date(year, 11, 19), nome: "Emancipacao do Parana", tipo: "ESTADUAL", uf: "PR" });
+
+    // ── TO (estaduais) ──
+    holidays.push({ data: new Date(year, 9, 5),  nome: "Criacao do Estado do Tocantins", tipo: "ESTADUAL", uf: "TO" });
+    holidays.push({ data: new Date(year, 8, 8),  nome: "Nossa Senhora da Natividade", tipo: "ESTADUAL", uf: "TO" });
+
+    // ── MA (estaduais) ──
+    holidays.push({ data: new Date(year, 6, 28), nome: "Adesao do Maranhao a Independencia", tipo: "ESTADUAL", uf: "MA" });
+  }
+
+  await prisma.holiday.createMany({
+    data: holidays.map((h) => ({
+      data: h.data,
+      nome: h.nome,
+      tipo: h.tipo,
+      uf: h.uf,
+    })),
+    skipDuplicates: true,
+  });
+
+  console.log(`📅 Created ${holidays.length} holidays (2024-2027, 4 years × nacionais + SP/PR/TO/MA)`);
+
   console.log("\n✅ Seed completed successfully!");
   console.log("   - 3 users (admin, advogado1, advogado2)");
   console.log("   - 8 clients + 8 creditors + 2 judges = 18 persons");
@@ -979,6 +1050,7 @@ async function main() {
   console.log("   - 10 document templates");
   console.log("   - 3 project templates");
   console.log("   - 5 library entries");
+  console.log(`   - ${holidays.length} holidays (nacionais + SP/PR/TO/MA)`);
 }
 
 main()

@@ -1,97 +1,124 @@
 import { auth } from "@/lib/auth"
+import { db } from "@/lib/db"
+import Link from "next/link"
 import {
   Clock,
   CalendarDays,
   FileText,
-  Gavel,
   Scale,
-  FolderKanban,
-  Banknote,
-  Handshake,
+  ChevronRight,
 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import {
+  DEADLINE_TYPE_LABELS, formatCNJ, deadlineColor,
+} from "@/lib/constants"
 
-const kpiCards = [
-  {
-    title: "Prazos Hoje",
-    value: "3",
-    description: "2 fatais, 1 ordinário",
-    icon: Clock,
-    color: "text-red-600",
-    bg: "bg-red-50",
-  },
-  {
-    title: "Prazos da Semana",
-    value: "12",
-    description: "5 fatais, 7 ordinários",
-    icon: CalendarDays,
-    color: "text-amber-600",
-    bg: "bg-amber-50",
-  },
-  {
-    title: "Movimentações Não Lidas",
-    value: "8",
-    description: "3 decisões, 5 despachos",
-    icon: FileText,
-    color: "text-blue-600",
-    bg: "bg-blue-50",
-  },
-  {
-    title: "Próximas Audiências",
-    value: "4",
-    description: "Próxima: 18/02/2026",
-    icon: Gavel,
-    color: "text-purple-600",
-    bg: "bg-purple-50",
-  },
-  {
-    title: "Processos Ativos",
-    value: "47",
-    description: "5 novos este mês",
-    icon: Scale,
-    color: "text-primary",
-    bg: "bg-primary/5",
-  },
-  {
-    title: "Projetos com Ação Pendente",
-    value: "6",
-    description: "2 críticos, 4 alta prioridade",
-    icon: FolderKanban,
-    color: "text-orange-600",
-    bg: "bg-orange-50",
-  },
-  {
-    title: "Liberações de Valores",
-    value: "3",
-    description: "R$ 450.000 em andamento",
-    icon: Banknote,
-    color: "text-emerald-600",
-    bg: "bg-emerald-50",
-  },
-  {
-    title: "Negociações Pendentes",
-    value: "5",
-    description: "2 com contraproposta",
-    icon: Handshake,
-    color: "text-sky-600",
-    bg: "bg-sky-50",
-  },
-]
+function startOfDay(d: Date): Date {
+  const r = new Date(d); r.setHours(0, 0, 0, 0); return r;
+}
+function endOfDay(d: Date): Date {
+  const r = new Date(d); r.setHours(23, 59, 59, 999); return r;
+}
+function addDays(d: Date, n: number): Date {
+  const r = new Date(d); r.setDate(r.getDate() + n); return r;
+}
+function endOfWeek(d: Date): Date {
+  const r = new Date(d);
+  const day = r.getDay();
+  const diff = day === 0 ? 0 : 7 - day;
+  r.setDate(r.getDate() + diff);
+  r.setHours(23, 59, 59, 999);
+  return r;
+}
 
 export default async function DashboardPage() {
   const session = await auth()
-  const firstName = session?.user?.name?.split(" ")[0] || "Usuário"
+  const firstName = session?.user?.name?.split(" ")[0] || "Usuario"
+  const now = new Date()
+
+  // Fetch real counts from DB in parallel
+  const [
+    prazosHoje,
+    prazosSemana,
+    movNaoLidas,
+    processosAtivos,
+    upcomingDeadlines,
+    recentActivities,
+  ] = await Promise.all([
+    db.deadline.count({
+      where: { status: "PENDENTE", data_limite: { gte: startOfDay(now), lte: endOfDay(now) } },
+    }),
+    db.deadline.count({
+      where: { status: "PENDENTE", data_limite: { gte: startOfDay(now), lte: endOfWeek(now) } },
+    }),
+    db.caseMovement.count({ where: { lida: false } }),
+    db.case.count({ where: { status: "ATIVO" } }),
+    db.deadline.findMany({
+      where: { status: "PENDENTE", data_limite: { gte: startOfDay(now) } },
+      take: 5,
+      orderBy: { data_limite: "asc" },
+      include: {
+        case_: { select: { id: true, numero_processo: true, cliente: { select: { nome: true } } } },
+      },
+    }),
+    db.activity.findMany({
+      take: 5,
+      orderBy: { data: "desc" },
+      include: { user: { select: { name: true } } },
+    }),
+  ])
+
+  const dateStr = now.toLocaleDateString("pt-BR", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  })
+
+  const kpiCards = [
+    {
+      title: "Prazos Hoje",
+      value: String(prazosHoje),
+      description: prazosHoje === 0 ? "Nenhum prazo hoje" : `${prazosHoje} prazo(s) vencem hoje`,
+      icon: Clock,
+      color: "text-red-600",
+      bg: "bg-red-50",
+    },
+    {
+      title: "Prazos da Semana",
+      value: String(prazosSemana),
+      description: `Ate o fim da semana`,
+      icon: CalendarDays,
+      color: "text-amber-600",
+      bg: "bg-amber-50",
+    },
+    {
+      title: "Movimentacoes Nao Lidas",
+      value: String(movNaoLidas),
+      description: movNaoLidas === 0 ? "Tudo em dia" : `${movNaoLidas} pendente(s)`,
+      icon: FileText,
+      color: "text-blue-600",
+      bg: "bg-blue-50",
+    },
+    {
+      title: "Processos Ativos",
+      value: String(processosAtivos),
+      description: "Em andamento",
+      icon: Scale,
+      color: "text-primary",
+      bg: "bg-primary/5",
+    },
+  ]
 
   return (
     <div className="space-y-6">
-      {/* Welcome section */}
+      {/* Welcome */}
       <div>
         <h1 className="text-2xl font-bold tracking-tight">
           Bem-vindo, {firstName}
         </h1>
-        <p className="text-muted-foreground">
-          Aqui está o resumo do seu dia. Segunda-feira, 16 de fevereiro de 2026.
-        </p>
+        <p className="text-muted-foreground capitalize">{dateStr}</p>
       </div>
 
       {/* KPI Grid */}
@@ -118,103 +145,82 @@ export default async function DashboardPage() {
         ))}
       </div>
 
-      {/* Quick sections placeholder */}
+      {/* Bottom sections */}
       <div className="grid gap-4 grid-cols-1 lg:grid-cols-2">
+        {/* Upcoming Deadlines */}
         <Card className="shadow-sm">
-          <CardHeader>
-            <CardTitle className="text-base">Prazos Urgentes</CardTitle>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle className="text-base">Proximos Prazos</CardTitle>
+            <Link href="/prazos" className="text-xs text-primary hover:underline flex items-center gap-1">
+              Ver todos <ChevronRight className="size-3" />
+            </Link>
           </CardHeader>
           <CardContent>
-            <div className="space-y-3">
-              {[
-                {
-                  processo: "0001234-56.2025.8.16.0001",
-                  prazo: "Contestação",
-                  data: "Hoje",
-                  tipo: "FATAL",
-                },
-                {
-                  processo: "0005678-90.2025.8.16.0001",
-                  prazo: "Réplica",
-                  data: "Amanhã",
-                  tipo: "FATAL",
-                },
-                {
-                  processo: "0009876-12.2024.8.16.0001",
-                  prazo: "Juntada de documentos",
-                  data: "18/02",
-                  tipo: "ORDINARIO",
-                },
-              ].map((item) => (
-                <div
-                  key={item.processo}
-                  className="flex items-center justify-between rounded-lg border p-3"
-                >
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium truncate">
-                      {item.prazo}
-                    </p>
-                    <p className="text-xs text-muted-foreground font-mono truncate">
-                      {item.processo}
-                    </p>
-                  </div>
-                  <div className="ml-3 flex items-center gap-2">
-                    <span
-                      className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
-                        item.tipo === "FATAL"
-                          ? "bg-red-100 text-red-700"
-                          : "bg-amber-100 text-amber-700"
-                      }`}
-                    >
-                      {item.data}
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
+            {upcomingDeadlines.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-4">Nenhum prazo proximo.</p>
+            ) : (
+              <div className="space-y-3">
+                {upcomingDeadlines.map((d) => (
+                  <Link
+                    key={d.id}
+                    href={`/processos/${d.case_.id}`}
+                    className="flex items-center justify-between rounded-lg border p-3 hover:bg-muted/50 transition-colors"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium truncate">{d.descricao}</p>
+                      <p className="text-xs text-muted-foreground font-mono truncate">
+                        {formatCNJ(d.case_.numero_processo)} — {d.case_.cliente.nome}
+                      </p>
+                    </div>
+                    <div className="ml-3 flex items-center gap-2">
+                      <Badge variant="secondary" className="text-[10px]">
+                        {DEADLINE_TYPE_LABELS[d.tipo]}
+                      </Badge>
+                      <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${deadlineColor(d.data_limite)}`}>
+                        {new Date(d.data_limite).toLocaleDateString("pt-BR")}
+                      </span>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
 
+        {/* Recent Activity */}
         <Card className="shadow-sm">
           <CardHeader>
             <CardTitle className="text-base">Atividade Recente</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-3">
-              {[
-                {
-                  acao: "Petição protocolada",
-                  detalhe: "Agravo de Instrumento — Fazenda São Jorge",
-                  tempo: "Há 2 horas",
-                },
-                {
-                  acao: "Marco alcançado",
-                  detalhe: "Alvará expedido — Projeto PRJ-2026-003",
-                  tempo: "Há 4 horas",
-                },
-                {
-                  acao: "Nova movimentação",
-                  detalhe: "Decisão interlocutória — Proc. 0001234-56",
-                  tempo: "Há 6 horas",
-                },
-              ].map((item) => (
-                <div
-                  key={item.detalhe}
-                  className="flex items-start gap-3 rounded-lg border p-3"
-                >
-                  <div className="mt-0.5 size-2 rounded-full bg-primary shrink-0" />
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium">{item.acao}</p>
-                    <p className="text-xs text-muted-foreground truncate">
-                      {item.detalhe}
-                    </p>
-                  </div>
-                  <span className="text-xs text-muted-foreground whitespace-nowrap">
-                    {item.tempo}
-                  </span>
-                </div>
-              ))}
-            </div>
+            {recentActivities.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-4">Nenhuma atividade recente.</p>
+            ) : (
+              <div className="space-y-3">
+                {recentActivities.map((a) => {
+                  const diff = Math.floor((now.getTime() - new Date(a.data).getTime()) / 3600000)
+                  const timeLabel = diff < 1 ? "Agora" : diff < 24 ? `Ha ${diff}h` : `Ha ${Math.floor(diff / 24)}d`
+
+                  return (
+                    <div
+                      key={a.id}
+                      className="flex items-start gap-3 rounded-lg border p-3"
+                    >
+                      <div className="mt-0.5 size-2 rounded-full bg-primary shrink-0" />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium truncate">{a.descricao}</p>
+                        <p className="text-xs text-muted-foreground">
+                          por {a.user.name}
+                        </p>
+                      </div>
+                      <span className="text-xs text-muted-foreground whitespace-nowrap">
+                        {timeLabel}
+                      </span>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
