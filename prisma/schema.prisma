@@ -1,0 +1,943 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================
+// ENUMS
+// ============================================================
+
+enum UserRole {
+  ADMIN
+  SOCIO
+  ADVOGADO
+  ESTAGIARIO
+}
+
+enum PersonType {
+  CLIENTE
+  PARTE_CONTRARIA
+  JUIZ
+  DESEMBARGADOR
+  PERITO
+  ADMINISTRADOR_JUDICIAL
+  CREDOR
+  TESTEMUNHA
+  OUTRO
+}
+
+enum PersonSubtype {
+  PESSOA_FISICA
+  PESSOA_JURIDICA
+}
+
+enum PersonSegment {
+  AGRO
+  INDUSTRIA
+  COMERCIO
+  SERVICOS
+  FINANCEIRO
+  GOVERNO
+  OUTRO
+}
+
+enum PersonDocType {
+  CNH
+  RG
+  CPF
+  CNPJ_CARD
+  CONTRATO_SOCIAL
+  ALTERACAO_CONTRATO_SOCIAL
+  PROCURACAO
+  IMPOSTO_RENDA
+  BALANCO
+  DRE
+  ESCRITURA
+  CERTIDAO
+  COMPROVANTE_ENDERECO
+  DOCUMENTO_FINANCEIRO
+  DOCUMENTO_FISCAL
+  OUTRO
+}
+
+enum CaseType {
+  RECUPERACAO_JUDICIAL
+  FALENCIA
+  EXECUCAO
+  COBRANCA
+  REESTRUTURACAO_EXTRAJUDICIAL
+  AGRARIO
+  TRABALHISTA
+  TRIBUTARIO
+  SOCIETARIO
+  CONTRATUAL
+  OUTRO
+}
+
+enum CaseStatus {
+  ATIVO
+  SUSPENSO
+  ARQUIVADO
+  ENCERRADO
+}
+
+enum CasePartyRole {
+  AUTOR
+  REU
+  TERCEIRO_INTERESSADO
+  ASSISTENTE
+  LITISCONSORTE
+  AMICUS_CURIAE
+  ADMINISTRADOR_JUDICIAL
+  MINISTERIO_PUBLICO
+  OUTRO
+}
+
+enum CaseTeamRole {
+  RESPONSAVEL
+  MEMBRO
+  CONSULTOR
+  ESTAGIARIO
+}
+
+enum DeadlineType {
+  FATAL
+  ORDINARIO
+  DILIGENCIA
+  AUDIENCIA
+  ASSEMBLEIA
+}
+
+enum DeadlineStatus {
+  PENDENTE
+  CUMPRIDO
+  PERDIDO
+  CANCELADO
+}
+
+enum MovementType {
+  DESPACHO
+  DECISAO
+  SENTENCA
+  ACORDAO
+  PUBLICACAO
+  INTIMACAO
+  CITACAO
+  ATO_ORDINATORIO
+  OUTRO
+}
+
+enum DocumentType {
+  PETICAO_INICIAL
+  CONTESTACAO
+  REPLICA
+  EMBARGOS_DECLARACAO
+  AGRAVO_INSTRUMENTO
+  APELACAO
+  RECURSO_ESPECIAL
+  RECURSO_EXTRAORDINARIO
+  CONTRARRAZOES
+  MEMORIAIS
+  PLANO_RJ
+  LISTA_CREDORES
+  HABILITACAO_CREDITO
+  IMPUGNACAO_CREDITO
+  RELATORIO_AJ
+  PARECER
+  MEMORANDO
+  CONTRATO
+  PROCURACAO
+  NOTIFICACAO
+  PROPOSTA
+  CONTRAPROPOSTA
+  RELATORIO_CLIENTE
+  PLANILHA
+  EMAIL_SALVO
+  ALVARA
+  CERTIDAO
+  ACORDO
+  OUTRO
+}
+
+enum TemplateArea {
+  RECUPERACAO_JUDICIAL
+  FALENCIA
+  EXECUCAO
+  AGRARIO
+  TRABALHISTA
+  TRIBUTARIO
+  SOCIETARIO
+  CONTRATUAL
+  GERAL
+}
+
+enum ProjectCategory {
+  NEGOCIACAO_COMERCIAL
+  FECHAMENTO_OPERACAO
+  RECUPERACAO_CREDITO
+  PLANEJAMENTO_TRIBUTARIO
+  ALVARA_LIBERACAO
+  DUE_DILIGENCE
+  REESTRUTURACAO_SOCIETARIA
+  CONSULTORIA_PERMANENTE
+  COMPLIANCE
+  SUCESSAO_PATRIMONIAL
+  OPERACAO_CREDITO_RURAL
+  OUTRO
+}
+
+enum ProjectStatus {
+  PLANEJAMENTO
+  EM_ANDAMENTO
+  AGUARDANDO_CLIENTE
+  AGUARDANDO_TERCEIRO
+  AGUARDANDO_ORGAO
+  PAUSADO
+  CONCLUIDO
+  CANCELADO
+}
+
+enum Priority {
+  CRITICA
+  ALTA
+  MEDIA
+  BAIXA
+}
+
+enum ProjectPhaseStatus {
+  NAO_INICIADA
+  EM_ANDAMENTO
+  CONCLUIDA
+  BLOQUEADA
+}
+
+enum ProjectTaskType {
+  DOCUMENTO
+  REUNIAO
+  DILIGENCIA
+  ANALISE
+  COMUNICACAO
+  COBRANCA
+  ACOMPANHAMENTO
+  PROTOCOLO
+  OBTENCAO_CERTIDAO
+  OBTENCAO_ALVARA
+  LIBERACAO_VALORES
+  NEGOCIACAO
+  ASSINATURA
+  REGISTRO
+  PAGAMENTO
+  OUTRO
+}
+
+enum ProjectTaskStatus {
+  BACKLOG
+  A_FAZER
+  EM_ANDAMENTO
+  EM_REVISAO
+  AGUARDANDO
+  CONCLUIDA
+  CANCELADA
+}
+
+enum MilestoneStatus {
+  PENDENTE
+  ALCANCADO
+  ATRASADO
+  CANCELADO
+}
+
+enum MilestoneImpact {
+  CRITICO
+  ALTO
+  MEDIO
+  BAIXO
+}
+
+enum CalendarEventType {
+  REUNIAO
+  AUDIENCIA
+  SUSTENTACAO_ORAL
+  DESPACHO_ORAL
+  PESQUISA_JURIDICA
+  ANALISE_CASO
+  PRAZO_ANTECIPADO
+  PRAZO_FATAL
+  RETORNO_EMAIL
+  ATIVIDADE_GERAL
+}
+
+enum CalendarEventStatus {
+  AGENDADO
+  EM_ANDAMENTO
+  CONCLUIDO
+  CANCELADO
+}
+
+enum ActivityType {
+  REUNIAO
+  AUDIENCIA
+  SUSTENTACAO
+  DESPACHO
+  PESQUISA
+  ANALISE
+  PETICAO
+  EMAIL
+  TELEFONEMA
+  NEGOCIACAO
+  DILIGENCIA
+  TAREFA_PROJETO
+  MARCO_ALCANCADO
+  OUTRO
+}
+
+enum CreditorClass {
+  I_TRABALHISTA
+  II_GARANTIA_REAL
+  III_QUIROGRAFARIO
+  IV_ME_EPP
+}
+
+enum CreditorStatus {
+  PENDENTE
+  HABILITADO
+  IMPUGNADO
+  RETIFICADO
+  EXCLUIDO
+}
+
+enum NegotiationStatus {
+  PREPARACAO
+  EM_CURSO
+  PROPOSTA_ENVIADA
+  CONTRAPROPOSTA
+  ACORDO
+  IMPASSE
+  ENCERRADA
+}
+
+enum StakeholderRole {
+  CLIENTE
+  PARTE
+  CREDOR
+  ORGAO_PUBLICO
+  BANCO
+  NOTARIO
+  CONTADOR
+  OUTRO
+}
+
+enum ProjectTeamRole {
+  RESPONSAVEL
+  MEMBRO
+  CONSULTOR
+  ESTAGIARIO
+}
+
+enum LibraryEntryType {
+  JURISPRUDENCIA
+  DOUTRINA
+  LEGISLACAO
+  MODELO
+  ARTIGO
+  PARECER
+  SUMULA
+  OUTRO
+}
+
+// ============================================================
+// MODELS
+// ============================================================
+
+model User {
+  id              String   @id @default(cuid())
+  name            String
+  email           String   @unique
+  password        String
+  role            UserRole @default(ADVOGADO)
+  oab_number      String?
+  microsoft_tokens Json?
+  avatar_url      String?
+  active          Boolean  @default(true)
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+
+  // Relations
+  cases_responsible    Case[]               @relation("CaseResponsible")
+  case_teams           CaseTeam[]
+  deadlines            Deadline[]
+  documents_created    Document[]
+  templates_created    Template[]
+  activities           Activity[]
+  calendar_events      CalendarEvent[]       @relation("EventResponsible")
+  calendar_created     CalendarEvent[]       @relation("EventCreator")
+  projects_responsible Project[]             @relation("ProjectResponsible")
+  project_teams        ProjectTeam[]
+  project_tasks        ProjectTask[]
+  task_comments        ProjectTaskComment[]
+  task_check_done      ProjectTaskCheckItem[] @relation("CheckItemDoneBy")
+  project_notes        ProjectNote[]
+  persons_created      Person[]              @relation("PersonCreator")
+  person_docs_uploaded PersonDocument[]
+
+  @@map("users")
+}
+
+model Person {
+  id              String        @id @default(cuid())
+  tipo            PersonType
+  subtipo         PersonSubtype
+  nome            String
+  razao_social    String?
+  cpf_cnpj        String?       @unique
+  rg              String?
+  orgao_emissor   String?
+  nacionalidade   String?
+  estado_civil    String?
+  profissao       String?
+  data_nascimento DateTime?
+
+  // Address
+  cep          String?
+  logradouro   String?
+  numero       String?
+  complemento  String?
+  bairro       String?
+  cidade       String?
+  estado       String?
+  pais         String?  @default("Brasil")
+
+  // Contacts
+  telefone_fixo    String?
+  celular          String?
+  whatsapp         String?
+  email            String?
+  email_secundario String?
+
+  // Banking (encrypted in practice)
+  banco   String?
+  agencia String?
+  conta   String?
+  pix     String?
+
+  segmento    PersonSegment?
+  observacoes String?
+
+  // Portal access
+  portal_access   Boolean @default(false)
+  portal_password String?
+
+  created_at    DateTime @default(now())
+  updated_at    DateTime @updatedAt
+  created_by_id String?
+  created_by    User?    @relation("PersonCreator", fields: [created_by_id], references: [id])
+
+  // Relations
+  person_documents     PersonDocument[]
+  case_parties         CaseParty[]
+  cases_as_client      Case[]              @relation("CaseClient")
+  cases_as_judge       Case[]              @relation("CaseJudge")
+  creditors            Creditor[]
+  negotiations         Negotiation[]       @relation("NegotiationPerson")
+  projects_as_client   Project[]           @relation("ProjectClient")
+  project_stakeholders ProjectStakeholder[]
+
+  @@map("persons")
+}
+
+model PersonDocument {
+  id           String        @id @default(cuid())
+  person_id    String
+  person       Person        @relation(fields: [person_id], references: [id], onDelete: Cascade)
+  tipo         PersonDocType
+  titulo       String
+  arquivo_url  String
+  data_validade DateTime?
+  observacoes  String?
+  uploaded_at  DateTime      @default(now())
+  uploaded_by_id String?
+  uploaded_by  User?         @relation(fields: [uploaded_by_id], references: [id])
+
+  @@map("person_documents")
+}
+
+model Case {
+  id               String     @id @default(cuid())
+  numero_processo  String?    @unique
+  tipo             CaseType
+  status           CaseStatus @default(ATIVO)
+  fase_processual  String?
+  vara             String?
+  comarca          String?
+  tribunal         String?
+  uf               String?
+  juiz_id          String?
+  juiz             Person?    @relation("CaseJudge", fields: [juiz_id], references: [id])
+  valor_causa      Decimal?   @db.Decimal(18, 2)
+  valor_risco      Decimal?   @db.Decimal(18, 2)
+
+  cliente_id              String
+  cliente                 Person  @relation("CaseClient", fields: [cliente_id], references: [id])
+  advogado_responsavel_id String
+  advogado_responsavel    User    @relation("CaseResponsible", fields: [advogado_responsavel_id], references: [id])
+
+  projeto_id String?
+  projeto    Project? @relation(fields: [projeto_id], references: [id])
+
+  tags String[] @default([])
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  // Relations
+  partes        CaseParty[]
+  equipe        CaseTeam[]
+  prazos        Deadline[]
+  documentos    Document[]
+  movimentacoes CaseMovement[]
+  atividades    Activity[]
+  credores      Creditor[]
+  negociacoes   Negotiation[]
+  calendar_events CalendarEvent[]
+  library_entries LibraryEntry[] @relation("LibraryCases")
+
+  @@map("cases")
+}
+
+model CaseParty {
+  id        String        @id @default(cuid())
+  case_id   String
+  case_     Case          @relation(fields: [case_id], references: [id], onDelete: Cascade)
+  person_id String
+  person    Person        @relation(fields: [person_id], references: [id])
+  role      CasePartyRole
+
+  @@unique([case_id, person_id, role])
+  @@map("case_parties")
+}
+
+model CaseTeam {
+  id      String       @id @default(cuid())
+  case_id String
+  case_   Case         @relation(fields: [case_id], references: [id], onDelete: Cascade)
+  user_id String
+  user    User         @relation(fields: [user_id], references: [id])
+  role    CaseTeamRole
+
+  @@unique([case_id, user_id])
+  @@map("case_teams")
+}
+
+model Deadline {
+  id             String         @id @default(cuid())
+  case_id        String
+  case_          Case           @relation(fields: [case_id], references: [id], onDelete: Cascade)
+  tipo           DeadlineType
+  descricao      String
+  data_limite    DateTime
+  data_alerta    DateTime[]
+  status         DeadlineStatus @default(PENDENTE)
+  responsavel_id String
+  responsavel    User           @relation(fields: [responsavel_id], references: [id])
+  recorrente     Boolean        @default(false)
+  origem         String?
+  movimento_id   String?
+  lembrete_enviado Boolean      @default(false)
+  documento_cumprimento_id String?
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@map("deadlines")
+}
+
+model CaseMovement {
+  id                String       @id @default(cuid())
+  case_id           String
+  case_             Case         @relation(fields: [case_id], references: [id], onDelete: Cascade)
+  data              DateTime
+  tipo              MovementType
+  descricao         String
+  conteudo_integral String?      @db.Text
+  fonte             String?
+  fonte_url         String?
+  prazo_gerado      Boolean      @default(false)
+  notificar_cliente Boolean      @default(false)
+  lida              Boolean      @default(false)
+  created_at        DateTime     @default(now())
+
+  @@map("case_movements")
+}
+
+model Document {
+  id               String       @id @default(cuid())
+  case_id          String?
+  case_            Case?        @relation(fields: [case_id], references: [id])
+  person_id        String?
+  negotiation_id   String?
+  negotiation      Negotiation? @relation(fields: [negotiation_id], references: [id])
+  project_id       String?
+  project          Project?     @relation(fields: [project_id], references: [id])
+  task_id          String?
+  task             ProjectTask? @relation(fields: [task_id], references: [id])
+  tipo             DocumentType
+  titulo           String
+  arquivo_url      String?
+  versao           Int          @default(1)
+  gerado_por_ia    Boolean      @default(false)
+  template_id      String?
+  criado_por_id    String?
+  criado_por       User?        @relation(fields: [criado_por_id], references: [id])
+  compartilhado_portal Boolean  @default(false)
+  tags             String[]     @default([])
+  created_at       DateTime     @default(now())
+  updated_at       DateTime     @updatedAt
+
+  @@map("documents")
+}
+
+model Template {
+  id              String       @id @default(cuid())
+  nome            String
+  tipo_documento  DocumentType
+  area            TemplateArea
+  conteudo        String       @db.Text
+  variaveis       String[]     @default([])
+  prompt_ia       String?      @db.Text
+  estrutura_topicos String?    @db.Text
+  ativo           Boolean      @default(true)
+  created_by_id   String?
+  created_by      User?        @relation(fields: [created_by_id], references: [id])
+  created_at      DateTime     @default(now())
+  updated_at      DateTime     @updatedAt
+
+  @@map("templates")
+}
+
+model Creditor {
+  id                 String        @id @default(cuid())
+  case_id            String
+  case_              Case          @relation(fields: [case_id], references: [id], onDelete: Cascade)
+  person_id          String
+  person             Person        @relation(fields: [person_id], references: [id])
+  classe             CreditorClass
+  valor_original     Decimal       @db.Decimal(18, 2)
+  valor_atualizado   Decimal?      @db.Decimal(18, 2)
+  valor_sujeito_plano Decimal?     @db.Decimal(18, 2)
+  garantias          String?
+  status_credito     CreditorStatus @default(PENDENTE)
+  voto               String?
+  created_at         DateTime      @default(now())
+  updated_at         DateTime      @updatedAt
+
+  @@map("creditors")
+}
+
+model Negotiation {
+  id                String            @id @default(cuid())
+  case_id           String?
+  case_             Case?             @relation(fields: [case_id], references: [id])
+  project_id        String?
+  project           Project?          @relation(fields: [project_id], references: [id])
+  creditor_id       String?
+  person_id         String?
+  person            Person?           @relation("NegotiationPerson", fields: [person_id], references: [id])
+  status            NegotiationStatus @default(PREPARACAO)
+  timeline_eventos  Json?
+  propostas         Json?
+  contrapropostas   Json?
+  valor_pretendido  Decimal?          @db.Decimal(18, 2)
+  valor_proposto    Decimal?          @db.Decimal(18, 2)
+  valor_acordado    Decimal?          @db.Decimal(18, 2)
+  analise_financeira Json?
+  created_at        DateTime          @default(now())
+  updated_at        DateTime          @updatedAt
+
+  documents Document[]
+
+  @@map("negotiations")
+}
+
+model CalendarEvent {
+  id            String              @id @default(cuid())
+  case_id       String?
+  case_         Case?               @relation(fields: [case_id], references: [id])
+  project_id    String?
+  project       Project?            @relation(fields: [project_id], references: [id])
+  task_id       String?
+  task          ProjectTask?        @relation(fields: [task_id], references: [id])
+  tipo_evento   CalendarEventType
+  titulo        String
+  descricao     String?             @db.Text
+  data_inicio   DateTime
+  data_fim      DateTime?
+  dia_inteiro   Boolean             @default(false)
+  local         String?
+  link_virtual  String?
+  campos_especificos Json?
+  status        CalendarEventStatus @default(AGENDADO)
+  responsavel_id String?
+  responsavel   User?               @relation("EventResponsible", fields: [responsavel_id], references: [id])
+  participantes_internos String[]   @default([])
+  participantes_externos String[]   @default([])
+  lembrete_minutos Int?
+  recorrencia   Json?
+  sincronizado_outlook Boolean      @default(false)
+  outlook_event_id     String?
+  cor           String?
+  created_at    DateTime            @default(now())
+  updated_at    DateTime            @updatedAt
+  created_by_id String?
+  created_by    User?               @relation("EventCreator", fields: [created_by_id], references: [id])
+
+  activities Activity[]
+
+  @@map("calendar_events")
+}
+
+model Activity {
+  id                String        @id @default(cuid())
+  case_id           String?
+  case_             Case?         @relation(fields: [case_id], references: [id])
+  project_id        String?
+  project           Project?      @relation(fields: [project_id], references: [id])
+  task_id           String?
+  task              ProjectTask?  @relation(fields: [task_id], references: [id])
+  calendar_event_id String?
+  calendar_event    CalendarEvent? @relation(fields: [calendar_event_id], references: [id])
+  user_id           String
+  user              User          @relation(fields: [user_id], references: [id])
+  tipo              ActivityType
+  descricao         String        @db.Text
+  data              DateTime
+  duracao_minutos   Int?
+  resultado         String?       @db.Text
+  visivel_portal    Boolean       @default(false)
+  faturavel         Boolean       @default(true)
+  valor_hora        Decimal?      @db.Decimal(10, 2)
+  created_at        DateTime      @default(now())
+
+  @@map("activities")
+}
+
+model LibraryEntry {
+  id         String           @id @default(cuid())
+  tipo       LibraryEntryType
+  titulo     String
+  resumo     String?          @db.Text
+  conteudo   String?          @db.Text
+  fonte      String?
+  url_fonte  String?
+  area       TemplateArea?
+  tags       String[]         @default([])
+  arquivo_url String?
+  relevancia Int?             @default(0)
+  favorito   Boolean          @default(false)
+
+  utilizado_em_casos    Case[]    @relation("LibraryCases")
+  utilizado_em_projetos Project[] @relation("LibraryProjects")
+
+  created_at    DateTime @default(now())
+  created_by_id String?
+
+  @@map("library_entries")
+}
+
+// ============================================================
+// PROJECT MODULE MODELS
+// ============================================================
+
+model Project {
+  id          String          @id @default(cuid())
+  titulo      String
+  codigo      String          @unique
+  cliente_id  String
+  cliente     Person          @relation("ProjectClient", fields: [cliente_id], references: [id])
+  categoria   ProjectCategory
+  descricao   String?         @db.Text
+  valor_envolvido  Decimal?   @db.Decimal(18, 2)
+  valor_honorarios Decimal?   @db.Decimal(18, 2)
+  status      ProjectStatus   @default(PLANEJAMENTO)
+  prioridade  Priority        @default(MEDIA)
+  data_inicio DateTime?
+  data_prevista_conclusao DateTime?
+  data_conclusao_real     DateTime?
+  advogado_responsavel_id String
+  advogado_responsavel    User    @relation("ProjectResponsible", fields: [advogado_responsavel_id], references: [id])
+  visivel_portal Boolean     @default(false)
+  tags         String[]      @default([])
+  created_at   DateTime      @default(now())
+  updated_at   DateTime      @updatedAt
+  created_by_id String?
+
+  // Relations
+  equipe          ProjectTeam[]
+  stakeholders    ProjectStakeholder[]
+  processos       Case[]
+  etapas          ProjectPhase[]
+  tarefas         ProjectTask[]
+  marcos          ProjectMilestone[]
+  documentos      Document[]
+  atividades      Activity[]
+  anotacoes       ProjectNote[]
+  negociacoes     Negotiation[]
+  calendar_events CalendarEvent[]
+  library_entries LibraryEntry[] @relation("LibraryProjects")
+
+  @@map("projects")
+}
+
+model ProjectTeam {
+  id         String          @id @default(cuid())
+  project_id String
+  project    Project         @relation(fields: [project_id], references: [id], onDelete: Cascade)
+  user_id    String
+  user       User            @relation(fields: [user_id], references: [id])
+  role       ProjectTeamRole
+
+  @@unique([project_id, user_id])
+  @@map("project_teams")
+}
+
+model ProjectStakeholder {
+  id         String          @id @default(cuid())
+  project_id String
+  project    Project         @relation(fields: [project_id], references: [id], onDelete: Cascade)
+  person_id  String
+  person     Person          @relation(fields: [person_id], references: [id])
+  role       StakeholderRole
+
+  @@unique([project_id, person_id, role])
+  @@map("project_stakeholders")
+}
+
+model ProjectPhase {
+  id                    String             @id @default(cuid())
+  project_id            String
+  project               Project            @relation(fields: [project_id], references: [id], onDelete: Cascade)
+  titulo                String
+  descricao             String?            @db.Text
+  ordem                 Int
+  status                ProjectPhaseStatus @default(NAO_INICIADA)
+  data_inicio_prevista  DateTime?
+  data_fim_prevista     DateTime?
+  data_inicio_real      DateTime?
+  data_fim_real         DateTime?
+  percentual_conclusao  Int                @default(0)
+  dependencia_fase_id   String?
+  dependencia_fase      ProjectPhase?      @relation("PhaseDependency", fields: [dependencia_fase_id], references: [id])
+  fases_dependentes     ProjectPhase[]     @relation("PhaseDependency")
+  cor                   String?
+
+  tarefas ProjectTask[]
+
+  @@map("project_phases")
+}
+
+model ProjectTask {
+  id          String            @id @default(cuid())
+  project_id  String
+  project     Project           @relation(fields: [project_id], references: [id], onDelete: Cascade)
+  phase_id    String?
+  phase       ProjectPhase?     @relation(fields: [phase_id], references: [id])
+  case_id     String?
+  titulo      String
+  descricao   String?           @db.Text
+  tipo        ProjectTaskType   @default(OUTRO)
+  status      ProjectTaskStatus @default(BACKLOG)
+  prioridade  Priority          @default(MEDIA)
+  responsavel_id String?
+  responsavel User?             @relation(fields: [responsavel_id], references: [id])
+  data_limite DateTime?
+  data_alerta DateTime?
+  data_conclusao DateTime?
+  estimativa_horas Decimal?     @db.Decimal(6, 2)
+  horas_gastas     Decimal?     @db.Decimal(6, 2)
+  campos_especificos Json?
+  dependencia_tarefa_id String?
+  dependencia_tarefa    ProjectTask?  @relation("TaskDependency", fields: [dependencia_tarefa_id], references: [id])
+  tarefas_dependentes   ProjectTask[] @relation("TaskDependency")
+  notificar_cliente Boolean       @default(false)
+  created_at  DateTime          @default(now())
+  updated_at  DateTime          @updatedAt
+
+  // Relations
+  checklist       ProjectTaskCheckItem[]
+  comentarios     ProjectTaskComment[]
+  documentos      Document[]
+  calendar_events CalendarEvent[]
+  activities      Activity[]
+
+  @@map("project_tasks")
+}
+
+model ProjectTaskCheckItem {
+  id             String    @id @default(cuid())
+  task_id        String
+  task           ProjectTask @relation(fields: [task_id], references: [id], onDelete: Cascade)
+  descricao      String
+  concluido      Boolean   @default(false)
+  concluido_por_id String?
+  concluido_por  User?     @relation("CheckItemDoneBy", fields: [concluido_por_id], references: [id])
+  concluido_em   DateTime?
+  ordem          Int       @default(0)
+
+  @@map("project_task_check_items")
+}
+
+model ProjectTaskComment {
+  id         String      @id @default(cuid())
+  task_id    String
+  task       ProjectTask @relation(fields: [task_id], references: [id], onDelete: Cascade)
+  user_id    String
+  user       User        @relation(fields: [user_id], references: [id])
+  conteudo   String      @db.Text
+  created_at DateTime    @default(now())
+
+  @@map("project_task_comments")
+}
+
+model ProjectMilestone {
+  id               String          @id @default(cuid())
+  project_id       String
+  project          Project         @relation(fields: [project_id], references: [id], onDelete: Cascade)
+  titulo           String
+  descricao        String?         @db.Text
+  data_prevista    DateTime?
+  data_alcancada   DateTime?
+  status           MilestoneStatus @default(PENDENTE)
+  impacto          MilestoneImpact @default(MEDIO)
+  notificar_cliente Boolean        @default(false)
+
+  @@map("project_milestones")
+}
+
+model ProjectNote {
+  id         String   @id @default(cuid())
+  project_id String
+  project    Project  @relation(fields: [project_id], references: [id], onDelete: Cascade)
+  user_id    String
+  user       User     @relation(fields: [user_id], references: [id])
+  conteudo   String   @db.Text
+  fixada     Boolean  @default(false)
+  created_at DateTime @default(now())
+
+  @@map("project_notes")
+}
+
+model ProjectTemplate {
+  id           String          @id @default(cuid())
+  titulo       String
+  categoria    ProjectCategory
+  descricao    String?         @db.Text
+  fases_padrao Json?
+  marcos_padrao Json?
+  ativo        Boolean         @default(true)
+  created_at   DateTime        @default(now())
+
+  @@map("project_templates")
+}
