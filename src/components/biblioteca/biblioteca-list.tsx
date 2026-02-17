@@ -31,12 +31,21 @@ import {
 import {
   Plus, Search, Star, Heart, MoreHorizontal, Pencil, Trash2,
   BookOpen, Scale, FileText, X, Scissors, LayoutGrid, List, Layers,
-  Upload, Eye,
+  Upload, Eye, Download,
 } from "lucide-react"
+import Link from "next/link"
 import { BibliotecaForm } from "./biblioteca-form"
 import { BibliotecaClipper } from "./biblioteca-clipper"
 import { BibliotecaClippers } from "./biblioteca-clippers"
 import { BibliotecaBulkUpload } from "./biblioteca-bulk-upload"
+import { BibliotecaFileViewer } from "./biblioteca-file-viewer"
+import {
+  getFileCategory,
+  getFileCategoryLabel,
+  getFileCategoryColor,
+  formatFileSize,
+  canViewInApp,
+} from "@/lib/file-type-utils"
 
 export const TYPE_LABELS: Record<string, string> = {
   JURISPRUDENCIA: "Jurisprudência",
@@ -115,6 +124,8 @@ export function BibliotecaList({ sidebarTipoFilter }: BibliotecaListProps) {
   const [bulkUploadOpen, setBulkUploadOpen] = useState(false)
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null)
+  const [viewerEntry, setViewerEntry] = useState<any>(null)
+  const [viewerOpen, setViewerOpen] = useState(false)
 
   const utils = trpc.useUtils()
 
@@ -356,70 +367,83 @@ export function BibliotecaList({ sidebarTipoFilter }: BibliotecaListProps) {
               onEdit={() => { setEditId(entry.id); setFormOpen(true) }}
               onDelete={() => { setDeleteTargetId(entry.id); setDeleteConfirmOpen(true) }}
               onToggleFav={() => toggleFavMutation.mutate({ id: entry.id })}
+              onView={() => { setViewerEntry(entry); setViewerOpen(true) }}
             />
           ))}
         </div>
       ) : viewMode === "lista" ? (
         /* List view */
         <div className="border rounded-lg divide-y">
-          {items.map((entry) => (
-            <div key={entry.id} className="flex items-center gap-3 px-4 py-2 hover:bg-[#F7F3F1]/50 group">
-              <Badge className={`text-[9px] shrink-0 ${TYPE_COLORS[entry.tipo] || TYPE_COLORS.OUTRO}`}>
-                {TYPE_LABELS[entry.tipo] || entry.tipo}
-              </Badge>
-              <span className="text-sm font-medium flex-1 truncate">{entry.titulo}</span>
-              {entry.area && (
-                <Badge variant="outline" className="text-[9px] shrink-0">
-                  {AREA_LABELS[entry.area] || entry.area}
+          {items.map((entry) => {
+            const fileCat = getFileCategory(entry.arquivo_tipo, entry.arquivo_url)
+            return (
+              <div key={entry.id} className="flex items-center gap-3 px-4 py-2 hover:bg-[#F7F3F1]/50 group">
+                <Badge className={`text-[9px] shrink-0 ${TYPE_COLORS[entry.tipo] || TYPE_COLORS.OUTRO}`}>
+                  {TYPE_LABELS[entry.tipo] || entry.tipo}
                 </Badge>
-              )}
-              <div className="flex items-center gap-0.5 shrink-0">
-                {Array.from({ length: 5 }).map((_, i) => (
-                  <Star
-                    key={i}
-                    className={`size-2.5 ${
-                      i < (entry.relevancia || 0) ? "fill-[#C9A961] text-[#C9A961]" : "text-[#666666]/20"
-                    }`}
-                  />
-                ))}
-              </div>
-              <div className="flex gap-1 shrink-0">
-                {entry.tags.slice(0, 2).map((tag) => (
-                  <span key={tag} className="text-[9px] bg-muted px-1 py-0 rounded">{tag}</span>
-                ))}
-              </div>
-              <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 shrink-0">
-                <button
-                  onClick={() => toggleFavMutation.mutate({ id: entry.id })}
-                  className="p-1 hover:text-[#DC3545]"
+                <Link
+                  href={`/biblioteca/${entry.id}`}
+                  className="text-sm font-medium flex-1 truncate hover:text-[#17A2B8] transition-colors"
                 >
-                  <Heart className={`size-3 ${entry.favorito ? "fill-[#DC3545] text-[#DC3545]" : "text-[#666666]/50"}`} />
-                </button>
+                  {entry.titulo}
+                </Link>
                 {entry.arquivo_url && (
-                  <a
-                    href={entry.arquivo_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                  <Badge className={`text-[8px] shrink-0 ${getFileCategoryColor(fileCat)}`}>
+                    {getFileCategoryLabel(fileCat)}
+                    {entry.arquivo_tamanho ? ` · ${formatFileSize(entry.arquivo_tamanho)}` : ""}
+                  </Badge>
+                )}
+                {entry.area && (
+                  <Badge variant="outline" className="text-[9px] shrink-0">
+                    {AREA_LABELS[entry.area] || entry.area}
+                  </Badge>
+                )}
+                <div className="flex items-center gap-0.5 shrink-0">
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <Star
+                      key={i}
+                      className={`size-2.5 ${
+                        i < (entry.relevancia || 0) ? "fill-[#C9A961] text-[#C9A961]" : "text-[#666666]/20"
+                      }`}
+                    />
+                  ))}
+                </div>
+                <div className="flex gap-1 shrink-0">
+                  {entry.tags.slice(0, 2).map((tag) => (
+                    <span key={tag} className="text-[9px] bg-muted px-1 py-0 rounded">{tag}</span>
+                  ))}
+                </div>
+                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 shrink-0">
+                  <button
+                    onClick={() => toggleFavMutation.mutate({ id: entry.id })}
+                    className="p-1 hover:text-[#DC3545]"
+                  >
+                    <Heart className={`size-3 ${entry.favorito ? "fill-[#DC3545] text-[#DC3545]" : "text-[#666666]/50"}`} />
+                  </button>
+                  {entry.arquivo_url && (
+                    <button
+                      onClick={() => { setViewerEntry(entry); setViewerOpen(true) }}
+                      className="p-1 hover:text-[#17A2B8]"
+                    >
+                      <Eye className="size-3 text-[#666666]/50" />
+                    </button>
+                  )}
+                  <button
+                    onClick={() => { setEditId(entry.id); setFormOpen(true) }}
                     className="p-1 hover:text-[#17A2B8]"
                   >
-                    <Eye className="size-3 text-[#666666]/50" />
-                  </a>
-                )}
-                <button
-                  onClick={() => { setEditId(entry.id); setFormOpen(true) }}
-                  className="p-1 hover:text-[#17A2B8]"
-                >
-                  <Pencil className="size-3 text-[#666666]/50" />
-                </button>
-                <button
-                  onClick={() => { setDeleteTargetId(entry.id); setDeleteConfirmOpen(true) }}
-                  className="p-1 hover:text-[#DC3545]"
-                >
-                  <Trash2 className="size-3 text-[#666666]/50" />
-                </button>
+                    <Pencil className="size-3 text-[#666666]/50" />
+                  </button>
+                  <button
+                    onClick={() => { setDeleteTargetId(entry.id); setDeleteConfirmOpen(true) }}
+                    className="p-1 hover:text-[#DC3545]"
+                  >
+                    <Trash2 className="size-3 text-[#666666]/50" />
+                  </button>
+                </div>
               </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
       ) : (
         /* Area view — accordion by area */
@@ -433,54 +457,65 @@ export function BibliotecaList({ sidebarTipoFilter }: BibliotecaListProps) {
                 <span className="text-xs text-[#666666]">{areaItems.length} entrada(s)</span>
               </div>
               <div className="divide-y">
-                {areaItems.map((entry) => (
-                  <div key={entry.id} className="flex items-center gap-3 px-4 py-2 hover:bg-[#F7F3F1]/30 group">
-                    <Badge className={`text-[9px] shrink-0 ${TYPE_COLORS[entry.tipo] || TYPE_COLORS.OUTRO}`}>
-                      {TYPE_LABELS[entry.tipo] || entry.tipo}
-                    </Badge>
-                    <span className="text-sm flex-1 truncate">{entry.titulo}</span>
-                    <div className="flex items-center gap-0.5 shrink-0">
-                      {Array.from({ length: 5 }).map((_, i) => (
-                        <Star
-                          key={i}
-                          className={`size-2.5 ${
-                            i < (entry.relevancia || 0) ? "fill-[#C9A961] text-[#C9A961]" : "text-[#666666]/20"
-                          }`}
-                        />
-                      ))}
-                    </div>
-                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 shrink-0">
-                      <button
-                        onClick={() => toggleFavMutation.mutate({ id: entry.id })}
-                        className="p-1 hover:text-[#DC3545]"
+                {areaItems.map((entry) => {
+                  const fileCat = getFileCategory(entry.arquivo_tipo, entry.arquivo_url)
+                  return (
+                    <div key={entry.id} className="flex items-center gap-3 px-4 py-2 hover:bg-[#F7F3F1]/30 group">
+                      <Badge className={`text-[9px] shrink-0 ${TYPE_COLORS[entry.tipo] || TYPE_COLORS.OUTRO}`}>
+                        {TYPE_LABELS[entry.tipo] || entry.tipo}
+                      </Badge>
+                      <Link
+                        href={`/biblioteca/${entry.id}`}
+                        className="text-sm flex-1 truncate hover:text-[#17A2B8] transition-colors"
                       >
-                        <Heart className={`size-3 ${entry.favorito ? "fill-[#DC3545] text-[#DC3545]" : "text-[#666666]/50"}`} />
-                      </button>
+                        {entry.titulo}
+                      </Link>
                       {entry.arquivo_url && (
-                        <a
-                          href={entry.arquivo_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
+                        <Badge className={`text-[8px] shrink-0 ${getFileCategoryColor(fileCat)}`}>
+                          {getFileCategoryLabel(fileCat)}
+                        </Badge>
+                      )}
+                      <div className="flex items-center gap-0.5 shrink-0">
+                        {Array.from({ length: 5 }).map((_, i) => (
+                          <Star
+                            key={i}
+                            className={`size-2.5 ${
+                              i < (entry.relevancia || 0) ? "fill-[#C9A961] text-[#C9A961]" : "text-[#666666]/20"
+                            }`}
+                          />
+                        ))}
+                      </div>
+                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 shrink-0">
+                        <button
+                          onClick={() => toggleFavMutation.mutate({ id: entry.id })}
+                          className="p-1 hover:text-[#DC3545]"
+                        >
+                          <Heart className={`size-3 ${entry.favorito ? "fill-[#DC3545] text-[#DC3545]" : "text-[#666666]/50"}`} />
+                        </button>
+                        {entry.arquivo_url && (
+                          <button
+                            onClick={() => { setViewerEntry(entry); setViewerOpen(true) }}
+                            className="p-1 hover:text-[#17A2B8]"
+                          >
+                            <Eye className="size-3 text-[#666666]/50" />
+                          </button>
+                        )}
+                        <button
+                          onClick={() => { setEditId(entry.id); setFormOpen(true) }}
                           className="p-1 hover:text-[#17A2B8]"
                         >
-                          <Eye className="size-3 text-[#666666]/50" />
-                        </a>
-                      )}
-                      <button
-                        onClick={() => { setEditId(entry.id); setFormOpen(true) }}
-                        className="p-1 hover:text-[#17A2B8]"
-                      >
-                        <Pencil className="size-3 text-[#666666]/50" />
-                      </button>
-                      <button
-                        onClick={() => { setDeleteTargetId(entry.id); setDeleteConfirmOpen(true) }}
-                        className="p-1 hover:text-[#DC3545]"
-                      >
-                        <Trash2 className="size-3 text-[#666666]/50" />
-                      </button>
+                          <Pencil className="size-3 text-[#666666]/50" />
+                        </button>
+                        <button
+                          onClick={() => { setDeleteTargetId(entry.id); setDeleteConfirmOpen(true) }}
+                          className="p-1 hover:text-[#DC3545]"
+                        >
+                          <Trash2 className="size-3 text-[#666666]/50" />
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             </div>
           ))}
@@ -517,6 +552,13 @@ export function BibliotecaList({ sidebarTipoFilter }: BibliotecaListProps) {
       <BibliotecaClipper open={clipperOpen} onOpenChange={setClipperOpen} />
       <BibliotecaClippers open={clippersOpen} onOpenChange={setClippersOpen} />
       <BibliotecaBulkUpload open={bulkUploadOpen} onOpenChange={setBulkUploadOpen} />
+
+      {/* File viewer */}
+      <BibliotecaFileViewer
+        entry={viewerEntry}
+        open={viewerOpen}
+        onOpenChange={(open) => { setViewerOpen(open); if (!open) setViewerEntry(null) }}
+      />
 
       {/* Delete confirmation dialog */}
       <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
@@ -556,14 +598,19 @@ function EntryCard({
   onEdit,
   onDelete,
   onToggleFav,
+  onView,
 }: {
   entry: any
   onEdit: () => void
   onDelete: () => void
   onToggleFav: () => void
+  onView: () => void
 }) {
+  const fileCat = getFileCategory(entry.arquivo_tipo, entry.arquivo_url)
+  const hasFile = !!entry.arquivo_url
+
   return (
-    <Card className="group hover:shadow-md transition-shadow">
+    <Card className="group hover:shadow-md transition-shadow relative">
       <CardContent className="p-4">
         <div className="flex items-start justify-between gap-2">
           <div className="space-y-1 min-w-0 flex-1">
@@ -576,8 +623,19 @@ function EntryCard({
                   {AREA_LABELS[entry.area] || entry.area}
                 </Badge>
               )}
+              {hasFile && (
+                <Badge className={`text-[9px] ${getFileCategoryColor(fileCat)}`}>
+                  {getFileCategoryLabel(fileCat)}
+                  {entry.arquivo_tamanho ? ` · ${formatFileSize(entry.arquivo_tamanho)}` : ""}
+                </Badge>
+              )}
             </div>
-            <h3 className="text-sm font-medium line-clamp-2">{entry.titulo}</h3>
+            <Link
+              href={`/biblioteca/${entry.id}`}
+              className="text-sm font-medium line-clamp-2 hover:text-[#17A2B8] transition-colors block"
+            >
+              {entry.titulo}
+            </Link>
           </div>
 
           <div className="flex items-center gap-0.5 shrink-0">
@@ -594,10 +652,15 @@ function EntryCard({
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                {entry.arquivo_url && (
+                {hasFile && (
+                  <DropdownMenuItem onClick={onView}>
+                    <Eye className="size-3 mr-2" />Visualizar arquivo
+                  </DropdownMenuItem>
+                )}
+                {hasFile && (
                   <DropdownMenuItem asChild>
-                    <a href={entry.arquivo_url} target="_blank" rel="noopener noreferrer">
-                      <Eye className="size-3 mr-2" />Visualizar arquivo
+                    <a href={entry.arquivo_url} download>
+                      <Download className="size-3 mr-2" />Baixar arquivo
                     </a>
                   </DropdownMenuItem>
                 )}
@@ -645,6 +708,27 @@ function EntryCard({
           <p className="text-[10px] text-[#666666] mt-1">
             Utilizado em {entry._count.utilizado_em_casos} caso(s), {entry._count.utilizado_em_projetos} projeto(s)
           </p>
+        )}
+
+        {/* Hover action buttons */}
+        {hasFile && (
+          <div className="absolute bottom-3 right-3 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+            <Button
+              variant="secondary"
+              size="sm"
+              className="h-7 text-[10px] px-2"
+              onClick={onView}
+            >
+              <Eye className="size-3 mr-1" />
+              Visualizar
+            </Button>
+            <a href={entry.arquivo_url} download>
+              <Button variant="outline" size="sm" className="h-7 text-[10px] px-2">
+                <Download className="size-3 mr-1" />
+                Baixar
+              </Button>
+            </a>
+          </div>
         )}
       </CardContent>
     </Card>

@@ -36,12 +36,14 @@ export async function POST(req: NextRequest) {
     // Extract text inline
     let text = ""
     let extractionFailed = false
+    let pageCount: number | undefined
 
     try {
       if (name.endsWith(".pdf")) {
         const pdfParse = (await import("pdf-parse")).default
         const data = await pdfParse(buffer)
         text = data.text
+        pageCount = data.numpages
       } else if (name.endsWith(".docx")) {
         const mammoth = await import("mammoth")
         const result = await mammoth.extractRawText({ buffer })
@@ -81,6 +83,7 @@ export async function POST(req: NextRequest) {
       chars: text.length,
       filename: file.name,
       extractionFailed,
+      pageCount,
     })
   } catch (error: any) {
     console.error("Biblioteca upload error:", error)

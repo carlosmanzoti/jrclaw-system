@@ -281,101 +281,31 @@ export function BibliotecaBulkUpload({ open, onOpenChange }: BibliotecaBulkUploa
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col">
-        <DialogHeader>
-          <DialogTitle>Importação em Lote</DialogTitle>
+      <DialogContent className="min-w-[900px] max-w-[1100px] max-w-[95vw] max-h-[85vh] flex flex-col p-0 gap-0">
+        {/* FIXED HEADER */}
+        <DialogHeader className="shrink-0 px-6 pt-6 pb-4 border-b">
+          <DialogTitle>Importacao em Lote</DialogTitle>
         </DialogHeader>
 
-        {files.length === 0 ? (
-          /* Drop zone */
-          <div
-            onDrop={handleDrop}
-            onDragOver={handleDragOver}
-            onClick={() => fileInputRef.current?.click()}
-            className="flex flex-col items-center justify-center gap-3 border-2 border-dashed rounded-lg p-12 cursor-pointer hover:border-[#17A2B8] hover:bg-[#17A2B8]/5 transition-colors"
-          >
-            <Upload className="size-10 text-[#666666]/40" />
-            <div className="text-center">
-              <p className="text-sm font-medium">
-                Arraste arquivos aqui ou clique para selecionar
-              </p>
-              <p className="text-[10px] text-[#666666] mt-1">
-                Até 50 arquivos. Formatos: PDF, DOCX, TXT, XLSX, CSV, RTF, MD, JPG, PNG
-              </p>
-            </div>
-            <input
-              ref={fileInputRef}
-              type="file"
-              multiple
-              accept={ACCEPTED_MIME_TYPES.join(",")}
-              onChange={handleFileInput}
-              className="hidden"
-            />
-          </div>
-        ) : (
-          <>
-            {/* Batch actions bar */}
-            <div className="flex items-center gap-2 flex-wrap border rounded-lg p-2 bg-muted/30">
-              <Checkbox
-                checked={files.length > 0 && files.every((f) => f.selected)}
-                onCheckedChange={toggleSelectAll}
-              />
-              <span className="text-[10px] text-[#666666]">
-                {selectedCount} de {files.length} selecionado(s)
-              </span>
-
-              <div className="flex-1" />
-
-              <span className="text-[10px] text-[#666666]">Aplicar a selecionados:</span>
-              <Select value={batchTipo} onValueChange={setBatchTipo}>
-                <SelectTrigger className="w-[140px] h-7 text-[10px]">
-                  <SelectValue placeholder="Tipo..." />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Nenhum</SelectItem>
-                  {Object.entries(LIBRARY_TYPES).map(([k, v]) => (
-                    <SelectItem key={k} value={k}>
-                      {v}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              <Select value={batchArea} onValueChange={setBatchArea}>
-                <SelectTrigger className="w-[140px] h-7 text-[10px]">
-                  <SelectValue placeholder="Área..." />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Nenhuma</SelectItem>
-                  {Object.entries(LIBRARY_AREAS).map(([k, v]) => (
-                    <SelectItem key={k} value={k}>
-                      {v}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-7 text-[10px]"
-                onClick={applyBatchToSelected}
-                disabled={isProcessing || (!batchTipo && !batchArea)}
-              >
-                Aplicar
-              </Button>
-
-              {!isProcessing && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-7 text-[10px]"
-                  onClick={() => fileInputRef.current?.click()}
-                >
-                  + Adicionar
-                </Button>
-              )}
-
+        {/* SCROLLABLE BODY */}
+        <div className="flex-1 overflow-y-auto min-h-0 px-6 py-4">
+          {files.length === 0 ? (
+            /* Drop zone */
+            <div
+              onDrop={handleDrop}
+              onDragOver={handleDragOver}
+              onClick={() => fileInputRef.current?.click()}
+              className="flex flex-col items-center justify-center gap-3 border-2 border-dashed rounded-lg p-12 cursor-pointer hover:border-[#C9A961] hover:bg-[#C9A961]/5 transition-colors"
+            >
+              <Upload className="size-10 text-[#666666]/40" />
+              <div className="text-center">
+                <p className="text-sm font-medium">
+                  Arraste arquivos aqui ou clique para selecionar
+                </p>
+                <p className="text-xs text-[#666666] mt-1">
+                  Ate 50 arquivos. Formatos: PDF, DOCX, TXT, XLSX, CSV, RTF, MD, JPG, PNG
+                </p>
+              </div>
               <input
                 ref={fileInputRef}
                 type="file"
@@ -385,177 +315,248 @@ export function BibliotecaBulkUpload({ open, onOpenChange }: BibliotecaBulkUploa
                 className="hidden"
               />
             </div>
+          ) : (
+            <div className="space-y-4">
+              {/* Batch actions bar */}
+              <div className="flex items-center gap-3 flex-wrap bg-[#F2F2F2] rounded-lg p-3">
+                <Checkbox
+                  checked={files.length > 0 && files.every((f) => f.selected)}
+                  onCheckedChange={toggleSelectAll}
+                />
+                <span className="text-xs text-[#666666]">
+                  {selectedCount}/{files.length}
+                </span>
 
-            {/* File list */}
-            <ScrollArea className="flex-1 -mx-6 px-6">
-              <div className="space-y-1">
-                {/* Header */}
-                <div className="grid grid-cols-[28px_1fr_180px_140px_140px_120px_32px] gap-2 items-center px-2 py-1 text-[10px] text-[#666666] font-medium border-b">
-                  <span />
-                  <span>Arquivo / Título</span>
-                  <span>Título</span>
-                  <span>Tipo</span>
-                  <span>Área</span>
-                  <span>Tags</span>
-                  <span className="text-center">Status</span>
-                </div>
+                <div className="flex-1" />
 
-                {files.map((entry, index) => (
-                  <div
-                    key={`${entry.file.name}-${index}`}
-                    className="grid grid-cols-[28px_1fr_180px_140px_140px_120px_32px] gap-2 items-center px-2 py-1.5 rounded hover:bg-muted/30"
+                <span className="text-xs text-[#666666]">Aplicar a selecionados:</span>
+                <Select value={batchTipo} onValueChange={setBatchTipo}>
+                  <SelectTrigger className="w-[170px] h-8 text-xs">
+                    <SelectValue placeholder="Tipo..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Nenhum</SelectItem>
+                    {Object.entries(LIBRARY_TYPES).map(([k, v]) => (
+                      <SelectItem key={k} value={k}>{v}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                <Select value={batchArea} onValueChange={setBatchArea}>
+                  <SelectTrigger className="w-[180px] h-8 text-xs">
+                    <SelectValue placeholder="Area..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Nenhuma</SelectItem>
+                    {Object.entries(LIBRARY_AREAS).map(([k, v]) => (
+                      <SelectItem key={k} value={k}>{v}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                <Button
+                  size="sm"
+                  className="h-8 text-xs bg-[#C9A961] hover:bg-[#C9A961]/90 text-[#2A2A2A]"
+                  onClick={applyBatchToSelected}
+                  disabled={isProcessing || (!batchTipo && !batchArea)}
+                >
+                  Aplicar
+                </Button>
+
+                {!isProcessing && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8 text-xs"
+                    onClick={() => fileInputRef.current?.click()}
                   >
-                    {/* Checkbox */}
-                    <Checkbox
-                      checked={entry.selected}
-                      onCheckedChange={(checked) =>
-                        updateFile(index, { selected: !!checked })
-                      }
-                      disabled={isProcessing}
-                    />
+                    + Adicionar
+                  </Button>
+                )}
 
-                    {/* Filename */}
-                    <div className="flex items-center gap-1.5 min-w-0">
-                      <FileText className="size-3.5 text-[#666666] shrink-0" />
-                      <span className="text-xs truncate" title={entry.file.name}>
-                        {entry.file.name}
-                      </span>
-                      <Badge variant="outline" className="text-[10px] shrink-0">
-                        {(entry.file.size / 1024).toFixed(0)} KB
-                      </Badge>
-                    </div>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  multiple
+                  accept={ACCEPTED_MIME_TYPES.join(",")}
+                  onChange={handleFileInput}
+                  className="hidden"
+                />
+              </div>
 
-                    {/* Title input */}
-                    <Input
-                      value={entry.titulo}
-                      onChange={(e) => updateFile(index, { titulo: e.target.value })}
-                      className="h-7 text-[10px]"
-                      disabled={isProcessing}
-                    />
+              {/* File list with sticky header */}
+              <div className="border rounded-lg overflow-hidden">
+                {/* Table header - sticky */}
+                <div className="grid grid-cols-[40px_32px_180px_1fr_170px_180px_32px] gap-2 items-center px-3 py-2 text-xs text-[#666666] font-medium bg-[#F7F3F1] border-b sticky top-0 z-10">
+                  <span />
+                  <span />
+                  <span>Arquivo</span>
+                  <span>Titulo</span>
+                  <span>Tipo</span>
+                  <span>Area</span>
+                  <span />
+                </div>
 
-                    {/* Type select */}
-                    <Select
-                      value={entry.tipo}
-                      onValueChange={(v) => updateFile(index, { tipo: v })}
-                      disabled={isProcessing}
+                {/* Table body - scrollable */}
+                <div className="max-h-[400px] overflow-y-auto">
+                  {files.map((entry, index) => (
+                    <div
+                      key={`${entry.file.name}-${index}`}
+                      className={`grid grid-cols-[40px_32px_180px_1fr_170px_180px_32px] gap-2 items-center px-3 py-2 ${
+                        index % 2 === 0 ? "bg-white" : "bg-[#F7F3F1]"
+                      }`}
                     >
-                      <SelectTrigger className="h-7 text-[10px]">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {Object.entries(LIBRARY_TYPES).map(([k, v]) => (
-                          <SelectItem key={k} value={k}>
-                            {v}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                      {/* Checkbox */}
+                      <div className="flex items-center justify-center">
+                        <Checkbox
+                          checked={entry.selected}
+                          onCheckedChange={(checked) => updateFile(index, { selected: !!checked })}
+                          disabled={isProcessing}
+                        />
+                      </div>
 
-                    {/* Area select */}
-                    <Select
-                      value={entry.area || "none"}
-                      onValueChange={(v) =>
-                        updateFile(index, { area: v === "none" ? "" : v })
-                      }
-                      disabled={isProcessing}
-                    >
-                      <SelectTrigger className="h-7 text-[10px]">
-                        <SelectValue placeholder="Nenhuma" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">Nenhuma</SelectItem>
-                        {Object.entries(LIBRARY_AREAS).map(([k, v]) => (
-                          <SelectItem key={k} value={k}>
-                            {v}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                      {/* Status icon */}
+                      <div className="flex items-center justify-center">
+                        {entry.status === "pending" && (
+                          <FileText className="size-4 text-[#666666]/50" />
+                        )}
+                        {entry.status === "uploading" && (
+                          <Loader2 className="size-4 text-[#17A2B8] animate-spin" />
+                        )}
+                        {entry.status === "success" && (
+                          <Check className="size-4 text-[#28A745]" />
+                        )}
+                        {entry.status === "error" && (
+                          <X className="size-4 text-[#DC3545]" />
+                        )}
+                      </div>
 
-                    {/* Tags input */}
-                    <Input
-                      value={entry.tags}
-                      onChange={(e) => updateFile(index, { tags: e.target.value })}
-                      placeholder="tag1, tag2"
-                      className="h-7 text-[10px]"
-                      disabled={isProcessing}
-                    />
+                      {/* Filename (truncated) */}
+                      <div className="min-w-0" title={entry.file.name}>
+                        <p className="text-xs truncate">{entry.file.name}</p>
+                        <p className="text-[10px] text-[#666666]">{(entry.file.size / 1024).toFixed(0)} KB</p>
+                      </div>
 
-                    {/* Status */}
-                    <div className="flex items-center justify-center">
-                      {entry.status === "pending" && (
-                        <div className="size-4 rounded-full border-2 border-[#666666]/30" />
-                      )}
-                      {entry.status === "uploading" && (
-                        <Loader2 className="size-4 text-[#17A2B8] animate-spin" />
-                      )}
-                      {entry.status === "success" && (
-                        <Check className="size-4 text-[#28A745]" />
-                      )}
-                      {entry.status === "error" && (
-                        <X className="size-4 text-[#DC3545]" />
-                      )}
+                      {/* Title input (flex-1, full width) */}
+                      <Input
+                        value={entry.titulo}
+                        onChange={(e) => updateFile(index, { titulo: e.target.value })}
+                        className="h-8 text-xs"
+                        disabled={isProcessing}
+                      />
+
+                      {/* Type select (170px) */}
+                      <Select
+                        value={entry.tipo}
+                        onValueChange={(v) => updateFile(index, { tipo: v })}
+                        disabled={isProcessing}
+                      >
+                        <SelectTrigger className="h-8 text-xs">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {Object.entries(LIBRARY_TYPES).map(([k, v]) => (
+                            <SelectItem key={k} value={k}>{v}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+
+                      {/* Area select (180px) */}
+                      <Select
+                        value={entry.area || "none"}
+                        onValueChange={(v) => updateFile(index, { area: v === "none" ? "" : v })}
+                        disabled={isProcessing}
+                      >
+                        <SelectTrigger className="h-8 text-xs">
+                          <SelectValue placeholder="Nenhuma" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">Nenhuma</SelectItem>
+                          {Object.entries(LIBRARY_AREAS).map(([k, v]) => (
+                            <SelectItem key={k} value={k}>{v}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+
+                      {/* Remove button */}
+                      <div className="flex items-center justify-center">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 w-7 p-0"
+                          onClick={() => removeFile(index)}
+                          disabled={isProcessing}
+                        >
+                          <X className="size-3.5 text-[#666666]" />
+                        </Button>
+                      </div>
                     </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Progress bar */}
+              {isProcessing && (
+                <div className="space-y-2 p-3 bg-[#F7F3F1] rounded-lg">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-[#2A2A2A] font-medium">
+                      Processando {processedCount + 1} de {files.length}: {files[processedCount]?.file.name || ""}
+                    </span>
+                    <span className="text-[#666666]">{progressPercent}%</span>
                   </div>
-                ))}
-              </div>
-            </ScrollArea>
-
-            {/* Progress bar */}
-            {isProcessing && (
-              <div className="space-y-1.5">
-                <div className="flex items-center justify-between text-xs">
-                  <span className="text-[#666666]">
-                    Processando {processedCount + 1} de {files.length}...
-                  </span>
-                  <span className="text-[#666666]">{progressPercent}%</span>
+                  <Progress value={progressPercent} className="h-2" />
                 </div>
-                <Progress value={progressPercent} className="h-2" />
-              </div>
-            )}
+              )}
 
-            {/* Summary */}
-            {summary && (
-              <div className="flex items-center gap-3 p-3 rounded-lg border bg-muted/30">
-                <AlertCircle className="size-4 text-[#17A2B8] shrink-0" />
-                <div className="text-xs space-x-3">
-                  <span className="text-[#28A745] font-medium">
-                    {summary.success} importado(s)
-                  </span>
-                  {summary.noText > 0 && (
-                    <span className="text-[#C9A961]">
-                      {summary.noText} sem extração de texto
+              {/* Summary */}
+              {summary && (
+                <div className="flex items-center gap-3 p-3 rounded-lg border bg-[#F7F3F1]">
+                  <AlertCircle className="size-4 text-[#17A2B8] shrink-0" />
+                  <div className="text-xs space-x-3">
+                    <span className="text-[#28A745] font-medium">
+                      {summary.success} importado(s)
                     </span>
-                  )}
-                  {summary.error > 0 && (
-                    <span className="text-[#DC3545]">
-                      {summary.error} com erro
-                    </span>
-                  )}
+                    {summary.noText > 0 && (
+                      <span className="text-[#C9A961]">
+                        {summary.noText} sem extracao de texto
+                      </span>
+                    )}
+                    {summary.error > 0 && (
+                      <span className="text-[#DC3545]">
+                        {summary.error} com erro
+                      </span>
+                    )}
+                  </div>
                 </div>
-              </div>
-            )}
-          </>
-        )}
+              )}
+            </div>
+          )}
+        </div>
 
-        <DialogFooter>
-          <Button variant="outline" onClick={() => handleClose(false)} disabled={isProcessing}>
+        {/* FIXED FOOTER */}
+        <DialogFooter className="shrink-0 px-6 py-4 border-t">
+          <Button
+            variant="outline"
+            className="border-[#C9A961] text-[#2A2A2A]"
+            onClick={() => handleClose(false)}
+            disabled={isProcessing}
+          >
             {summary ? "Fechar" : "Cancelar"}
           </Button>
           {files.length > 0 && !summary && (
             <Button
-              className="bg-[#17A2B8] hover:bg-[#17A2B8]/90 text-white"
+              className="bg-[#C9A961] hover:bg-[#C9A961]/90 text-[#2A2A2A]"
               onClick={handleImportAll}
               disabled={isProcessing || files.length === 0}
             >
               {isProcessing ? (
                 <>
-                  <Loader2 className="size-4 mr-1 animate-spin" />
+                  <Loader2 className="size-4 mr-1.5 animate-spin" />
                   Processando...
                 </>
               ) : (
                 <>
-                  <Upload className="size-4 mr-1" />
+                  <Upload className="size-4 mr-1.5" />
                   Importar Todos ({files.length})
                 </>
               )}

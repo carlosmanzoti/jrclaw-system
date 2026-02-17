@@ -266,13 +266,14 @@ export function BibliotecaClippers({ open, onOpenChange }: BibliotecaClippersPro
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col">
-        <DialogHeader>
+      <DialogContent className="min-w-[700px] max-w-[800px] max-w-[95vw] max-h-[85vh] flex flex-col p-0 gap-0">
+        {/* FIXED HEADER */}
+        <DialogHeader className="shrink-0 px-6 pt-6 pb-4 border-b">
           <DialogTitle>Clippers Especializados</DialogTitle>
         </DialogHeader>
 
-        <Tabs defaultValue="jurisprudencia" className="flex-1 flex flex-col min-h-0">
-          <TabsList className="shrink-0">
+        <Tabs defaultValue="jurisprudencia" className="flex-1 flex flex-col min-h-0 px-6">
+          <TabsList className="shrink-0 mt-4">
             <TabsTrigger value="jurisprudencia" className="text-xs">Jurisprudencia</TabsTrigger>
             <TabsTrigger value="legislacao" className="text-xs">Legislacao</TabsTrigger>
             <TabsTrigger value="caso" className="text-xs">Caso Referencia</TabsTrigger>
@@ -280,9 +281,8 @@ export function BibliotecaClippers({ open, onOpenChange }: BibliotecaClippersPro
           </TabsList>
 
           {/* Tab 1: Jurisprudencia */}
-          <TabsContent value="jurisprudencia" className="flex-1 min-h-0">
-            <ScrollArea className="h-[55vh]">
-              <div className="space-y-3 pr-4 pb-4">
+          <TabsContent value="jurisprudencia" className="flex-1 min-h-0 overflow-y-auto">
+            <div className="space-y-3 pb-4">
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1">
                     <Label className="text-xs">Tribunal *</Label>
@@ -407,12 +407,12 @@ export function BibliotecaClippers({ open, onOpenChange }: BibliotecaClippersPro
                   <Label className="text-xs">Relevancia</Label>
                   <StarRating value={jurRelevancia} onChange={setJurRelevancia} />
                 </div>
-              </div>
-            </ScrollArea>
+            </div>
 
-            <DialogFooter className="mt-3">
+            <DialogFooter className="shrink-0 py-4 border-t mt-4">
               <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
               <Button
+                className="bg-[#C9A961] hover:bg-[#C9A961]/90 text-[#2A2A2A]"
                 onClick={handleSaveJurisprudencia}
                 disabled={!jurTribunal || !jurTipoJur || !jurNumeroRecurso || isPending}
               >
@@ -422,9 +422,8 @@ export function BibliotecaClippers({ open, onOpenChange }: BibliotecaClippersPro
           </TabsContent>
 
           {/* Tab 2: Legislacao */}
-          <TabsContent value="legislacao" className="flex-1 min-h-0">
-            <ScrollArea className="h-[55vh]">
-              <div className="space-y-3 pr-4 pb-4">
+          <TabsContent value="legislacao" className="flex-1 min-h-0 overflow-y-auto">
+            <div className="space-y-3 pb-4">
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1">
                     <Label className="text-xs">Lei/Norma *</Label>
@@ -484,11 +483,11 @@ export function BibliotecaClippers({ open, onOpenChange }: BibliotecaClippersPro
                   </div>
                 </div>
               </div>
-            </ScrollArea>
 
-            <DialogFooter className="mt-3">
+            <DialogFooter className="shrink-0 py-4 border-t mt-4">
               <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
               <Button
+                className="bg-[#C9A961] hover:bg-[#C9A961]/90 text-[#2A2A2A]"
                 onClick={handleSaveLegislacao}
                 disabled={!legLeiNorma || isPending}
               >
@@ -498,9 +497,8 @@ export function BibliotecaClippers({ open, onOpenChange }: BibliotecaClippersPro
           </TabsContent>
 
           {/* Tab 3: Caso Referencia */}
-          <TabsContent value="caso" className="flex-1 min-h-0">
-            <ScrollArea className="h-[55vh]">
-              <div className="space-y-3 pr-4 pb-4">
+          <TabsContent value="caso" className="flex-1 min-h-0 overflow-y-auto">
+            <div className="space-y-3 pb-4">
                 <div className="space-y-1">
                   <Label className="text-xs">Titulo do caso *</Label>
                   <Input
@@ -564,12 +562,12 @@ export function BibliotecaClippers({ open, onOpenChange }: BibliotecaClippersPro
                   <Label className="text-xs">Relevancia</Label>
                   <StarRating value={casoRelevancia} onChange={setCasoRelevancia} />
                 </div>
-              </div>
-            </ScrollArea>
+            </div>
 
-            <DialogFooter className="mt-3">
+            <DialogFooter className="shrink-0 py-4 border-t mt-4">
               <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
               <Button
+                className="bg-[#C9A961] hover:bg-[#C9A961]/90 text-[#2A2A2A]"
                 onClick={handleSaveCasoReferencia}
                 disabled={!casoTitulo || isPending}
               >
@@ -579,9 +577,8 @@ export function BibliotecaClippers({ open, onOpenChange }: BibliotecaClippersPro
           </TabsContent>
 
           {/* Tab 4: Livro/Doutrina */}
-          <TabsContent value="livro" className="flex-1 min-h-0">
-            <ScrollArea className="h-[55vh]">
-              <div className="space-y-3 pr-4 pb-4">
+          <TabsContent value="livro" className="flex-1 min-h-0 overflow-y-auto">
+            <div className="space-y-3 pb-4">
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1">
                     <Label className="text-xs">Titulo do livro *</Label>
@@ -685,12 +682,12 @@ export function BibliotecaClippers({ open, onOpenChange }: BibliotecaClippersPro
                   <Label className="text-xs">Relevancia</Label>
                   <StarRating value={livroRelevancia} onChange={setLivroRelevancia} />
                 </div>
-              </div>
-            </ScrollArea>
+            </div>
 
-            <DialogFooter className="mt-3">
+            <DialogFooter className="shrink-0 py-4 border-t mt-4">
               <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
               <Button
+                className="bg-[#C9A961] hover:bg-[#C9A961]/90 text-[#2A2A2A]"
                 onClick={handleSaveLivro}
                 disabled={!livroTitulo || !livroAutor || isPending}
               >

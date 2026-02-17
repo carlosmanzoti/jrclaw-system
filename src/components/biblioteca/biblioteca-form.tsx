@@ -9,6 +9,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
@@ -20,9 +21,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Loader2, Sparkles, Star, Upload, FileText, X } from "lucide-react"
+import { Loader2, Sparkles, Star, Upload, FileText, X, Eye, Image as ImageIcon, Table, FileCode } from "lucide-react"
 import { trpc } from "@/lib/trpc"
 import { TiptapEditor } from "@/components/ui/tiptap-editor"
+import {
+  getFileCategory,
+  getFileCategoryLabel,
+  getFileCategoryColor,
+  formatFileSize,
+} from "@/lib/file-type-utils"
 
 const LIBRARY_TYPES = [
   { value: "JURISPRUDENCIA", label: "Jurisprudência", group: "Jurisprudencial" },
@@ -92,6 +99,7 @@ export function BibliotecaForm({ open, onOpenChange, entryId, prefill }: Bibliot
   const [arquivoTipo, setArquivoTipo] = useState("")
   const [arquivoTamanho, setArquivoTamanho] = useState(0)
   const [uploading, setUploading] = useState(false)
+  const [pageCount, setPageCount] = useState<number | undefined>()
 
   // Metadata fields
   const [metaTribunal, setMetaTribunal] = useState("")
@@ -169,6 +177,7 @@ export function BibliotecaForm({ open, onOpenChange, entryId, prefill }: Bibliot
       setArquivoUrl("")
       setArquivoTipo("")
       setArquivoTamanho(0)
+      setPageCount(undefined)
       setMetaTribunal("")
       setMetaRelator("")
       setMetaNumeroRecurso("")
@@ -202,6 +211,7 @@ export function BibliotecaForm({ open, onOpenChange, entryId, prefill }: Bibliot
       setArquivoUrl(data.url)
       setArquivoTipo(file.name.split(".").pop() || "")
       setArquivoTamanho(file.size)
+      if (data.pageCount) setPageCount(data.pageCount)
 
       // If text was extracted and conteudo is empty, populate
       if (data.text && !conteudo) {
@@ -322,15 +332,69 @@ export function BibliotecaForm({ open, onOpenChange, entryId, prefill }: Bibliot
   const showLegislacaoFields = tipo === "LEGISLACAO"
   const showDoutrinaFields = tipo === "DOUTRINA" || tipo === "LIVRO"
 
+  const handleSubmitAndNew = () => {
+    if (!tipo || !titulo) return
+
+    const data: any = {
+      tipo,
+      titulo,
+      resumo: resumo || undefined,
+      conteudo: conteudo || undefined,
+      fonte: fonte || undefined,
+      url_fonte: urlFonte || undefined,
+      area: area && area !== "none" ? area : undefined,
+      tags: tags ? tags.split(",").map((t) => t.trim()).filter(Boolean) : [],
+      relevancia,
+      arquivo_url: arquivoUrl || undefined,
+      arquivo_tipo: arquivoTipo || undefined,
+      arquivo_tamanho: arquivoTamanho || undefined,
+      metadata: buildMetadata(),
+    }
+
+    createMutation.mutate(data, {
+      onSuccess: () => {
+        utils.biblioteca.list.invalidate()
+        utils.biblioteca.countsByType.invalidate()
+        // Reset form for next entry
+        setTitulo("")
+        setResumo("")
+        setConteudo("")
+        setFonte("")
+        setUrlFonte("")
+        setTags("")
+        setRelevancia(0)
+        setArquivoUrl("")
+        setArquivoTipo("")
+        setArquivoTamanho(0)
+        setPageCount(undefined)
+        setMetaTribunal("")
+        setMetaRelator("")
+        setMetaNumeroRecurso("")
+        setMetaOrgaoJulgador("")
+        setMetaDataJulgamento("")
+        setMetaLeiNorma("")
+        setMetaArtigos("")
+        setMetaAutor("")
+        setMetaEditora("")
+        setMetaEdicaoAno("")
+        setMetaCapitulo("")
+        setMetaPaginas("")
+      },
+    })
+  }
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col">
-        <DialogHeader>
+      <DialogContent className="min-w-[700px] max-w-[800px] max-w-[95vw] max-h-[85vh] flex flex-col p-0 gap-0">
+        {/* FIXED HEADER */}
+        <DialogHeader className="shrink-0 px-6 pt-6 pb-4 border-b">
           <DialogTitle>{isEdit ? "Editar Entrada" : "Nova Entrada"}</DialogTitle>
         </DialogHeader>
 
-        <ScrollArea className="flex-1 -mx-6 px-6">
-          <div className="space-y-4 pb-4">
+        {/* SCROLLABLE BODY */}
+        <div className="flex-1 overflow-y-auto min-h-0 px-6 py-4">
+          <div className="space-y-4">
+            {/* Line 1: Tipo + Área */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <Label>Tipo *</Label>
@@ -362,6 +426,7 @@ export function BibliotecaForm({ open, onOpenChange, entryId, prefill }: Bibliot
               </div>
             </div>
 
+            {/* Line 2: Título */}
             <div className="space-y-1.5">
               <Label>Título *</Label>
               <Input
@@ -371,31 +436,117 @@ export function BibliotecaForm({ open, onOpenChange, entryId, prefill }: Bibliot
               />
             </div>
 
-            {/* File upload */}
+            {/* Line 3: Resumo */}
+            <div className="space-y-1.5">
+              <Label>Resumo</Label>
+              <Textarea
+                value={resumo}
+                onChange={(e) => setResumo(e.target.value)}
+                placeholder="Resumo ou ementa..."
+                rows={3}
+              />
+            </div>
+
+            {/* Line 4: Conteúdo + IA */}
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <Label>Conteúdo</Label>
+                {conteudo && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-xs"
+                    onClick={handleExtractWithAI}
+                    disabled={extracting}
+                  >
+                    {extracting ? (
+                      <Loader2 className="size-3 mr-1 animate-spin" />
+                    ) : (
+                      <Sparkles className="size-3 mr-1" />
+                    )}
+                    Extrair com IA
+                  </Button>
+                )}
+              </div>
+              <TiptapEditor content={conteudo} onChange={setConteudo} />
+            </div>
+
+            {/* Line 5: Fonte + URL da Fonte */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label className="text-xs">Fonte</Label>
+                <Input
+                  value={fonte}
+                  onChange={(e) => setFonte(e.target.value)}
+                  placeholder="STJ, TJ-SP, Doutrina..."
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs">URL da Fonte</Label>
+                <Input
+                  value={urlFonte}
+                  onChange={(e) => setUrlFonte(e.target.value)}
+                  placeholder="https://..."
+                />
+              </div>
+            </div>
+
+            {/* Line 6: Tags + Relevância */}
+            <div className="grid grid-cols-[1fr_auto] gap-4 items-end">
+              <div className="space-y-1.5">
+                <Label className="text-xs">Tags (separadas por vírgula)</Label>
+                <Input
+                  value={tags}
+                  onChange={(e) => setTags(e.target.value)}
+                  placeholder="recuperação, crédito, cessão fiduciária"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs">Relevância</Label>
+                <div className="flex gap-1">
+                  {[1, 2, 3, 4, 5].map((n) => (
+                    <button
+                      key={n}
+                      type="button"
+                      onClick={() => setRelevancia(n)}
+                      className="p-0.5"
+                    >
+                      <Star
+                        className={`size-5 ${
+                          n <= relevancia ? "fill-[#C9A961] text-[#C9A961]" : "text-[#666666]/30"
+                        }`}
+                      />
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Line 7: Arquivo (opcional) */}
             <div className="space-y-1.5">
               <Label className="text-xs">Arquivo (opcional)</Label>
               {arquivoUrl ? (
-                <div className="flex items-center gap-2 p-2 rounded border bg-[#F7F3F1]">
-                  <FileText className="size-4 text-[#17A2B8]" />
-                  <span className="text-xs flex-1 truncate">{arquivoUrl.split("/").pop()}</span>
-                  <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => { setArquivoUrl(""); setArquivoTipo(""); setArquivoTamanho(0) }}>
-                    <X className="size-3" />
-                  </Button>
-                </div>
+                <FileUploadPreview
+                  arquivoUrl={arquivoUrl}
+                  arquivoTipo={arquivoTipo}
+                  arquivoTamanho={arquivoTamanho}
+                  pageCount={pageCount}
+                  onRemove={() => { setArquivoUrl(""); setArquivoTipo(""); setArquivoTamanho(0); setPageCount(undefined) }}
+                />
               ) : (
                 <div
-                  className="border-2 border-dashed rounded-lg p-4 text-center cursor-pointer hover:border-[#C9A961]/50 transition-colors"
+                  className="border-2 border-dashed rounded-lg p-3 text-center cursor-pointer hover:border-[#C9A961]/50 transition-colors"
                   onClick={() => fileInputRef.current?.click()}
                 >
                   {uploading ? (
                     <Loader2 className="size-5 animate-spin text-[#17A2B8] mx-auto" />
                   ) : (
-                    <>
-                      <Upload className="size-5 text-[#666666]/50 mx-auto" />
-                      <p className="text-[10px] text-[#666666] mt-1">
+                    <div className="flex items-center justify-center gap-2">
+                      <Upload className="size-4 text-[#666666]/50" />
+                      <p className="text-xs text-[#666666]">
                         PDF, DOCX, TXT, XLSX, CSV, RTF, MD, JPG, PNG
                       </p>
-                    </>
+                    </div>
                   )}
                   <input
                     ref={fileInputRef}
@@ -495,97 +646,95 @@ export function BibliotecaForm({ open, onOpenChange, entryId, prefill }: Bibliot
                 </div>
               </div>
             )}
-
-            <div className="space-y-1.5">
-              <Label>Resumo</Label>
-              <Textarea
-                value={resumo}
-                onChange={(e) => setResumo(e.target.value)}
-                placeholder="Resumo ou ementa..."
-                rows={3}
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <div className="flex items-center justify-between">
-                <Label>Conteúdo</Label>
-                {conteudo && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="text-xs"
-                    onClick={handleExtractWithAI}
-                    disabled={extracting}
-                  >
-                    {extracting ? (
-                      <Loader2 className="size-3 mr-1 animate-spin" />
-                    ) : (
-                      <Sparkles className="size-3 mr-1" />
-                    )}
-                    Extrair com IA
-                  </Button>
-                )}
-              </div>
-              <TiptapEditor content={conteudo} onChange={setConteudo} />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <Label className="text-xs">Fonte</Label>
-                <Input
-                  value={fonte}
-                  onChange={(e) => setFonte(e.target.value)}
-                  placeholder="STJ, TJ-SP, Doutrina..."
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs">URL da Fonte</Label>
-                <Input
-                  value={urlFonte}
-                  onChange={(e) => setUrlFonte(e.target.value)}
-                  placeholder="https://..."
-                />
-              </div>
-            </div>
-
-            <div className="space-y-1.5">
-              <Label className="text-xs">Tags (separadas por vírgula)</Label>
-              <Input
-                value={tags}
-                onChange={(e) => setTags(e.target.value)}
-                placeholder="recuperação, crédito, cessão fiduciária"
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <Label className="text-xs">Relevância</Label>
-              <div className="flex gap-1">
-                {[1, 2, 3, 4, 5].map((n) => (
-                  <button
-                    key={n}
-                    type="button"
-                    onClick={() => setRelevancia(n)}
-                    className="p-0.5"
-                  >
-                    <Star
-                      className={`size-5 ${
-                        n <= relevancia ? "fill-[#C9A961] text-[#C9A961]" : "text-[#666666]/30"
-                      }`}
-                    />
-                  </button>
-                ))}
-              </div>
-            </div>
           </div>
-        </ScrollArea>
+        </div>
 
-        <DialogFooter>
+        {/* FIXED FOOTER */}
+        <DialogFooter className="shrink-0 px-6 py-4 border-t gap-2 sm:gap-0">
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
-          <Button onClick={handleSubmit} disabled={!tipo || !titulo || isPending}>
-            {isPending ? "Salvando..." : isEdit ? "Salvar" : "Criar Entrada"}
+          {!isEdit && (
+            <Button
+              variant="ghost"
+              onClick={handleSubmitAndNew}
+              disabled={!tipo || !titulo || isPending}
+            >
+              {isPending ? "Salvando..." : "Salvar e Adicionar Outra"}
+            </Button>
+          )}
+          <Button
+            className="bg-[#C9A961] hover:bg-[#C9A961]/90 text-[#2A2A2A]"
+            onClick={handleSubmit}
+            disabled={!tipo || !titulo || isPending}
+          >
+            {isPending ? "Salvando..." : isEdit ? "Salvar Entrada" : "Criar Entrada"}
           </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  )
+}
+
+function FileUploadPreview({
+  arquivoUrl,
+  arquivoTipo,
+  arquivoTamanho,
+  pageCount,
+  onRemove,
+}: {
+  arquivoUrl: string
+  arquivoTipo: string
+  arquivoTamanho: number
+  pageCount?: number
+  onRemove: () => void
+}) {
+  const cat = getFileCategory(arquivoTipo, arquivoUrl)
+  const isImage = cat === "image"
+  const sizeStr = formatFileSize(arquivoTamanho)
+  const fileName = arquivoUrl.split("/").pop() || "arquivo"
+
+  const iconMap: Record<string, React.ReactNode> = {
+    pdf: <FileText className="size-8 text-red-500" />,
+    docx: <FileText className="size-8 text-blue-500" />,
+    xlsx: <Table className="size-8 text-green-500" />,
+    csv: <Table className="size-8 text-emerald-500" />,
+    md: <FileCode className="size-8 text-purple-500" />,
+    txt: <FileText className="size-8 text-gray-500" />,
+    rtf: <FileText className="size-8 text-orange-500" />,
+    image: <ImageIcon className="size-8 text-amber-500" />,
+    unknown: <FileText className="size-8 text-gray-400" />,
+  }
+
+  return (
+    <div className="flex items-center gap-3 p-3 rounded-lg border bg-[#F7F3F1]">
+      {isImage ? (
+        <img
+          src={arquivoUrl}
+          alt="Preview"
+          className="size-16 rounded object-cover shrink-0"
+        />
+      ) : (
+        <div className="shrink-0">{iconMap[cat]}</div>
+      )}
+      <div className="flex-1 min-w-0 space-y-0.5">
+        <p className="text-xs font-medium truncate">{fileName}</p>
+        <div className="flex items-center gap-2">
+          <Badge className={`text-[9px] ${getFileCategoryColor(cat)}`}>
+            {getFileCategoryLabel(cat)}
+          </Badge>
+          {sizeStr && <span className="text-[10px] text-[#666666]">{sizeStr}</span>}
+          {pageCount && <span className="text-[10px] text-[#666666]">{pageCount} pag.</span>}
+        </div>
+      </div>
+      <div className="flex items-center gap-1 shrink-0">
+        <a href={arquivoUrl} target="_blank" rel="noopener noreferrer">
+          <Button variant="ghost" size="sm" className="h-7 w-7 p-0">
+            <Eye className="size-3.5" />
+          </Button>
+        </a>
+        <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={onRemove}>
+          <X className="size-3.5" />
+        </Button>
+      </div>
+    </div>
   )
 }

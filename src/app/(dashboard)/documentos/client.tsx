@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useCallback, useRef } from "react"
 import Link from "next/link"
 import { trpc } from "@/lib/trpc"
 import { Button } from "@/components/ui/button"
@@ -32,11 +32,23 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog"
-import { ScrollArea } from "@/components/ui/scroll-area"
 import { Textarea } from "@/components/ui/textarea"
 import { Switch } from "@/components/ui/switch"
 import { DOCUMENT_TYPE_LABELS } from "@/lib/constants"
 import { DOCUMENT_TYPE_GROUPS } from "@/types/documents"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -46,7 +58,8 @@ import {
 } from "@/components/ui/dropdown-menu"
 import {
   Plus, Search, FileText, Download, Trash2, Sparkles, X,
-  MoreHorizontal, Pencil, Copy, Share2, Eye,
+  MoreHorizontal, Pencil, Copy, Share2, Eye, Upload, Loader2,
+  ChevronsUpDown, Check,
 } from "lucide-react"
 
 const TYPE_COLORS: Record<string, string> = {
@@ -84,6 +97,7 @@ export function DocumentsPageClient() {
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null)
 
   // Upload form state
+  const [uploadFile, setUploadFile] = useState<File | null>(null)
   const [uploadTitulo, setUploadTitulo] = useState("")
   const [uploadTipo, setUploadTipo] = useState("")
   const [uploadCaseId, setUploadCaseId] = useState("")
@@ -91,6 +105,11 @@ export function DocumentsPageClient() {
   const [uploadTags, setUploadTags] = useState("")
   const [uploadNotas, setUploadNotas] = useState("")
   const [uploadPortal, setUploadPortal] = useState(false)
+  const [uploading, setUploading] = useState(false)
+  const [isDragging, setIsDragging] = useState(false)
+  const [casePopoverOpen, setCasePopoverOpen] = useState(false)
+  const [projectPopoverOpen, setProjectPopoverOpen] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const utils = trpc.useUtils()
 
@@ -106,19 +125,14 @@ export function DocumentsPageClient() {
     limit: 50,
   })
 
-  const createMutation = trpc.documents.create.useMutation({
-    onSuccess: () => {
-      utils.documents.list.invalidate()
-      setUploadOpen(false)
-      resetUploadForm()
-    },
-  })
+  const createMutation = trpc.documents.create.useMutation()
 
   const deleteMutation = trpc.documents.delete.useMutation({
     onSuccess: () => utils.documents.list.invalidate(),
   })
 
   const resetUploadForm = () => {
+    setUploadFile(null)
     setUploadTitulo("")
     setUploadTipo("")
     setUploadCaseId("")
@@ -126,20 +140,81 @@ export function DocumentsPageClient() {
     setUploadTags("")
     setUploadNotas("")
     setUploadPortal(false)
+    setUploading(false)
   }
 
-  const handleUploadSubmit = () => {
-    if (!uploadTitulo || !uploadTipo) return
+  const handleUploadSubmit = async () => {
+    if (!uploadFile || !uploadTitulo) return
 
-    createMutation.mutate({
-      titulo: uploadTitulo,
-      tipo: uploadTipo,
-      arquivo_url: `/documents/${Date.now()}-${uploadTitulo.replace(/\s+/g, "-").toLowerCase()}`,
-      case_id: uploadCaseId && uploadCaseId !== "none" ? uploadCaseId : null,
-      project_id: uploadProjectId && uploadProjectId !== "none" ? uploadProjectId : null,
-      tags: uploadTags ? uploadTags.split(",").map((t) => t.trim()).filter(Boolean) : [],
-      compartilhado_portal: uploadPortal,
-    })
+    setUploading(true)
+    try {
+      // Step 1: Upload file to storage
+      const formData = new FormData()
+      formData.append("file", uploadFile)
+      formData.append("folder", "documentos")
+
+      const uploadRes = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+      })
+
+      if (!uploadRes.ok) throw new Error("Falha no upload do arquivo")
+
+      const { url } = await uploadRes.json()
+
+      // Step 2: Create document record
+      await createMutation.mutateAsync({
+        titulo: uploadTitulo,
+        tipo: uploadTipo || "OUTRO",
+        arquivo_url: url,
+        case_id: uploadCaseId && uploadCaseId !== "none" ? uploadCaseId : null,
+        project_id: uploadProjectId && uploadProjectId !== "none" ? uploadProjectId : null,
+        tags: uploadTags ? uploadTags.split(",").map((t) => t.trim()).filter(Boolean) : [],
+        compartilhado_portal: uploadPortal,
+      })
+
+      utils.documents.list.invalidate()
+      setUploadOpen(false)
+      resetUploadForm()
+    } catch {
+      // Error handling - mutation error will show
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  const handleFileDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDragging(false)
+    const file = e.dataTransfer.files?.[0]
+    if (file) {
+      setUploadFile(file)
+      if (!uploadTitulo) {
+        setUploadTitulo(file.name.replace(/\.[^/.]+$/, "").replace(/[_-]/g, " "))
+      }
+    }
+  }, [uploadTitulo])
+
+  const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      setUploadFile(file)
+      if (!uploadTitulo) {
+        setUploadTitulo(file.name.replace(/\.[^/.]+$/, "").replace(/[_-]/g, " "))
+      }
+    }
+    if (fileInputRef.current) fileInputRef.current.value = ""
+  }, [uploadTitulo])
+
+  const getCaseLabel = (id: string) => {
+    const c = cases?.find((c) => c.id === id)
+    return c ? `${c.numero_processo} — ${c.cliente?.nome || ""}` : ""
+  }
+
+  const getProjectLabel = (id: string) => {
+    const p = projects?.find((p) => p.id === id)
+    return p ? `${p.codigo} — ${p.titulo}` : ""
   }
 
   const items = data?.items || []
@@ -400,121 +475,280 @@ export function DocumentsPageClient() {
       </Dialog>
 
       {/* Upload Dialog */}
-      <Dialog open={uploadOpen} onOpenChange={setUploadOpen}>
-        <DialogContent className="max-w-lg max-h-[85vh] flex flex-col">
-          <DialogHeader>
+      <Dialog open={uploadOpen} onOpenChange={(open) => {
+        if (!open && !uploading) {
+          resetUploadForm()
+        }
+        if (!uploading) setUploadOpen(open)
+      }}>
+        <DialogContent className="min-w-[650px] max-w-[95vw] max-h-[85vh] flex flex-col p-0 gap-0">
+          {/* FIXED HEADER */}
+          <DialogHeader className="shrink-0 px-6 pt-6 pb-4 border-b">
             <DialogTitle>Upload de Documento</DialogTitle>
           </DialogHeader>
-          <ScrollArea className="flex-1 -mx-6 px-6">
-            <div className="space-y-4 pb-4">
-              {/* Drop zone placeholder */}
-              <div className="border-2 border-dashed rounded-lg p-8 text-center">
-                <FileText className="size-8 text-[#666666]/50 mx-auto" />
-                <p className="text-sm text-[#666666] mt-2">
-                  Arraste ou clique para selecionar arquivo
-                </p>
-                <p className="text-xs text-[#666666] mt-1">
-                  PDF, DOC, DOCX, XLS, XLSX, JPG, PNG (max 50MB)
-                </p>
-              </div>
 
+          {/* SCROLLABLE BODY */}
+          <div className="flex-1 overflow-y-auto min-h-0 px-6 py-4">
+            <div className="space-y-4">
+              {/* Drag-and-drop area */}
+              {!uploadFile ? (
+                <div
+                  onDrop={handleFileDrop}
+                  onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); setIsDragging(true) }}
+                  onDragLeave={(e) => { e.preventDefault(); e.stopPropagation(); setIsDragging(false) }}
+                  onClick={() => fileInputRef.current?.click()}
+                  className={`border-2 border-dashed rounded-lg h-[120px] flex flex-col items-center justify-center gap-2 cursor-pointer transition-colors ${
+                    isDragging
+                      ? "border-[#C9A961] bg-[#C9A961]/5"
+                      : "border-[#CCCCCC] hover:border-[#C9A961]/50"
+                  }`}
+                >
+                  <Upload className={`size-8 ${isDragging ? "text-[#C9A961]" : "text-[#666666]/40"}`} />
+                  <p className="text-sm text-[#666666]">Arraste ou clique para selecionar arquivo</p>
+                  <p className="text-xs text-[#666666]/70">PDF, DOC, DOCX, XLS, XLSX, JPG, PNG (max 50MB)</p>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    className="hidden"
+                    accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png,.txt,.rtf,.csv"
+                    onChange={handleFileSelect}
+                  />
+                </div>
+              ) : (
+                <div className="flex items-center gap-3 p-3 rounded-lg border bg-[#F7F3F1]">
+                  <FileText className="size-6 text-[#17A2B8] shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate">{uploadFile.name}</p>
+                    <p className="text-xs text-[#666666]">{formatFileSize(uploadFile.size)}</p>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 w-7 p-0 shrink-0"
+                    onClick={() => setUploadFile(null)}
+                    disabled={uploading}
+                  >
+                    <X className="size-4 text-[#666666]" />
+                  </Button>
+                </div>
+              )}
+
+              {/* Linha 1: Título */}
               <div className="space-y-1.5">
-                <Label>Título *</Label>
+                <Label className="text-sm font-medium text-[#2A2A2A]">Título *</Label>
                 <Input
                   value={uploadTitulo}
                   onChange={(e) => setUploadTitulo(e.target.value)}
                   placeholder="Título do documento"
+                  className="bg-[#F2F2F2] focus:border-[#C9A961] focus:ring-[#C9A961]"
+                  disabled={uploading}
                 />
               </div>
 
-              <div className="space-y-1.5">
-                <Label>Tipo *</Label>
-                <Select value={uploadTipo} onValueChange={setUploadTipo}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecionar tipo..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Object.entries(DOCUMENT_TYPE_GROUPS).map(([group, types]) => (
-                      <SelectGroup key={group}>
-                        <SelectLabel>{group}</SelectLabel>
-                        {(types as readonly string[]).map((t) => (
-                          <SelectItem key={t} value={t}>
-                            {DOCUMENT_TYPE_LABELS[t] || t}
-                          </SelectItem>
-                        ))}
-                      </SelectGroup>
-                    ))}
-                  </SelectContent>
-                </Select>
+              {/* Linha 2: Tipo + Tags */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5 min-w-[200px]">
+                  <Label className="text-sm font-medium text-[#2A2A2A]">Tipo</Label>
+                  <Select value={uploadTipo} onValueChange={setUploadTipo} disabled={uploading}>
+                    <SelectTrigger className="bg-[#F2F2F2] focus:border-[#C9A961] focus:ring-[#C9A961]">
+                      <SelectValue placeholder="Selecionar tipo..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Object.entries(DOCUMENT_TYPE_GROUPS).map(([group, types]) => (
+                        <SelectGroup key={group}>
+                          <SelectLabel>{group}</SelectLabel>
+                          {(types as readonly string[]).map((t) => (
+                            <SelectItem key={t} value={t}>
+                              {DOCUMENT_TYPE_LABELS[t] || t}
+                            </SelectItem>
+                          ))}
+                        </SelectGroup>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-sm font-medium text-[#2A2A2A]">Tags</Label>
+                  <Input
+                    value={uploadTags}
+                    onChange={(e) => setUploadTags(e.target.value)}
+                    placeholder="contrato, urgente, revisão"
+                    className="bg-[#F2F2F2] focus:border-[#C9A961] focus:ring-[#C9A961]"
+                    disabled={uploading}
+                  />
+                </div>
               </div>
 
-              <div className="space-y-1.5">
-                <Label className="text-xs">Processo</Label>
-                <Select value={uploadCaseId} onValueChange={setUploadCaseId}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Nenhum" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">Nenhum</SelectItem>
-                    {cases?.map((c) => (
-                      <SelectItem key={c.id} value={c.id}>
-                        {c.numero_processo} — {c.cliente?.nome}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+              {/* Linha 3: Processo (combobox) + Projeto (combobox) */}
+              <div className="grid grid-cols-2 gap-4">
+                {/* Processo combobox */}
+                <div className="space-y-1.5 min-w-[250px]">
+                  <Label className="text-sm font-medium text-[#2A2A2A]">Processo</Label>
+                  <Popover open={casePopoverOpen} onOpenChange={setCasePopoverOpen}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        role="combobox"
+                        aria-expanded={casePopoverOpen}
+                        className="w-full justify-between bg-[#F2F2F2] font-normal h-9 text-sm hover:bg-[#F2F2F2] focus:border-[#C9A961] focus:ring-[#C9A961]"
+                        disabled={uploading}
+                      >
+                        <span className="truncate">
+                          {uploadCaseId && uploadCaseId !== "none"
+                            ? getCaseLabel(uploadCaseId)
+                            : "Nenhum"}
+                        </span>
+                        <ChevronsUpDown className="size-3.5 shrink-0 opacity-50 ml-1" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[350px] p-0" align="start">
+                      <Command>
+                        <CommandInput placeholder="Buscar processo..." />
+                        <CommandList>
+                          <CommandEmpty>Nenhum processo encontrado.</CommandEmpty>
+                          <CommandGroup>
+                            <CommandItem
+                              value="none"
+                              onSelect={() => {
+                                setUploadCaseId("none")
+                                setCasePopoverOpen(false)
+                              }}
+                            >
+                              <Check className={`size-3.5 mr-2 ${uploadCaseId === "none" || !uploadCaseId ? "opacity-100" : "opacity-0"}`} />
+                              Nenhum
+                            </CommandItem>
+                            {cases?.map((c) => (
+                              <CommandItem
+                                key={c.id}
+                                value={`${c.numero_processo} ${c.cliente?.nome || ""}`}
+                                onSelect={() => {
+                                  setUploadCaseId(c.id)
+                                  setCasePopoverOpen(false)
+                                }}
+                              >
+                                <Check className={`size-3.5 mr-2 ${uploadCaseId === c.id ? "opacity-100" : "opacity-0"}`} />
+                                <span className="truncate">{c.numero_processo} — {c.cliente?.nome}</span>
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
+                </div>
+
+                {/* Projeto combobox */}
+                <div className="space-y-1.5 min-w-[250px]">
+                  <Label className="text-sm font-medium text-[#2A2A2A]">Projeto</Label>
+                  <Popover open={projectPopoverOpen} onOpenChange={setProjectPopoverOpen}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        role="combobox"
+                        aria-expanded={projectPopoverOpen}
+                        className="w-full justify-between bg-[#F2F2F2] font-normal h-9 text-sm hover:bg-[#F2F2F2] focus:border-[#C9A961] focus:ring-[#C9A961]"
+                        disabled={uploading}
+                      >
+                        <span className="truncate">
+                          {uploadProjectId && uploadProjectId !== "none"
+                            ? getProjectLabel(uploadProjectId)
+                            : "Nenhum"}
+                        </span>
+                        <ChevronsUpDown className="size-3.5 shrink-0 opacity-50 ml-1" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[350px] p-0" align="start">
+                      <Command>
+                        <CommandInput placeholder="Buscar projeto..." />
+                        <CommandList>
+                          <CommandEmpty>Nenhum projeto encontrado.</CommandEmpty>
+                          <CommandGroup>
+                            <CommandItem
+                              value="none"
+                              onSelect={() => {
+                                setUploadProjectId("none")
+                                setProjectPopoverOpen(false)
+                              }}
+                            >
+                              <Check className={`size-3.5 mr-2 ${uploadProjectId === "none" || !uploadProjectId ? "opacity-100" : "opacity-0"}`} />
+                              Nenhum
+                            </CommandItem>
+                            {projects?.map((p) => (
+                              <CommandItem
+                                key={p.id}
+                                value={`${p.codigo} ${p.titulo}`}
+                                onSelect={() => {
+                                  setUploadProjectId(p.id)
+                                  setProjectPopoverOpen(false)
+                                }}
+                              >
+                                <Check className={`size-3.5 mr-2 ${uploadProjectId === p.id ? "opacity-100" : "opacity-0"}`} />
+                                <span className="truncate">{p.codigo} — {p.titulo}</span>
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
+                </div>
               </div>
 
+              {/* Linha 4: Observações */}
               <div className="space-y-1.5">
-                <Label className="text-xs">Projeto</Label>
-                <Select value={uploadProjectId} onValueChange={setUploadProjectId}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Nenhum" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">Nenhum</SelectItem>
-                    {projects?.map((p) => (
-                      <SelectItem key={p.id} value={p.id}>
-                        {p.codigo} — {p.titulo}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-1.5">
-                <Label className="text-xs">Tags (separadas por vírgula)</Label>
-                <Input
-                  value={uploadTags}
-                  onChange={(e) => setUploadTags(e.target.value)}
-                  placeholder="contrato, urgente, revisão"
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <Label className="text-xs">Observações</Label>
+                <Label className="text-sm font-medium text-[#2A2A2A]">Observações</Label>
                 <Textarea
                   value={uploadNotas}
                   onChange={(e) => setUploadNotas(e.target.value)}
-                  rows={2}
+                  placeholder="Observações sobre o documento..."
+                  className="min-h-[80px] bg-[#F2F2F2] focus:border-[#C9A961] focus:ring-[#C9A961]"
+                  disabled={uploading}
                 />
               </div>
 
-              <div className="flex items-center justify-between">
-                <Label className="text-sm font-normal">Compartilhar no portal</Label>
-                <Switch checked={uploadPortal} onCheckedChange={setUploadPortal} />
+              {/* Linha 5: Toggle portal */}
+              <div className="flex items-center gap-3">
+                <Switch
+                  id="portal-toggle"
+                  checked={uploadPortal}
+                  onCheckedChange={setUploadPortal}
+                  disabled={uploading}
+                />
+                <Label htmlFor="portal-toggle" className="text-sm font-normal text-[#2A2A2A] cursor-pointer">
+                  Disponibilizar este documento para o cliente no Portal
+                </Label>
               </div>
             </div>
-          </ScrollArea>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setUploadOpen(false)}>Cancelar</Button>
+          </div>
+
+          {/* FIXED FOOTER */}
+          <div className="shrink-0 px-6 py-4 border-t border-[#E5E5E5] bg-[#F7F3F1] flex items-center justify-end gap-3 rounded-b-lg">
             <Button
-              onClick={handleUploadSubmit}
-              disabled={!uploadTitulo || !uploadTipo || createMutation.isPending}
+              variant="outline"
+              className="border-[#C9A961] text-[#2A2A2A]"
+              onClick={() => { setUploadOpen(false); resetUploadForm() }}
+              disabled={uploading}
             >
-              {createMutation.isPending ? "Salvando..." : "Salvar Documento"}
+              Cancelar
             </Button>
-          </DialogFooter>
+            <Button
+              className="bg-[#C9A961] hover:bg-[#C9A961]/90 text-[#2A2A2A]"
+              onClick={handleUploadSubmit}
+              disabled={!uploadFile || !uploadTitulo || uploading}
+            >
+              {uploading ? (
+                <>
+                  <Loader2 className="size-4 mr-1.5 animate-spin" />
+                  Enviando...
+                </>
+              ) : (
+                <>
+                  <Upload className="size-4 mr-1.5" />
+                  Fazer Upload
+                </>
+              )}
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
     </>

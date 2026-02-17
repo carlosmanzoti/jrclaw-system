@@ -148,12 +148,13 @@ export function ActivityForm({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg max-h-[90vh] flex flex-col">
-        <DialogHeader>
+      <DialogContent className="min-w-[600px] max-w-[700px] max-w-[95vw] max-h-[85vh] flex flex-col p-0 gap-0">
+        {/* FIXED HEADER */}
+        <DialogHeader className="shrink-0 px-6 pt-6 pb-4 border-b">
           <DialogTitle>{isEdit ? "Editar Atividade" : "Registrar Atividade"}</DialogTitle>
         </DialogHeader>
 
-        <ScrollArea className="flex-1 -mx-6 px-6">
+        <div className="flex-1 overflow-y-auto min-h-0 px-6 py-4">
           <div className="space-y-4 pb-4">
             {/* Type */}
             <div className="space-y-1.5">
@@ -355,9 +356,10 @@ export function ActivityForm({
               </div>
             </div>
           </div>
-        </ScrollArea>
+        </div>
 
-        <DialogFooter>
+        {/* FIXED FOOTER */}
+        <DialogFooter className="shrink-0 px-6 py-4 border-t">
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
           <Button onClick={handleSubmit} disabled={!tipo || !descricao || !data || isLoading}>
             {isLoading ? "Salvando..." : isEdit ? "Salvar" : "Registrar"}

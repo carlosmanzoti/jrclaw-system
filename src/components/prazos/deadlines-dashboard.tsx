@@ -470,11 +470,13 @@ function NewDeadlineDialog({ open, onOpenChange }: { open: boolean; onOpenChange
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
-        <DialogHeader>
+      <DialogContent className="min-w-[550px] max-w-lg max-w-[95vw] max-h-[85vh] flex flex-col p-0 gap-0">
+        {/* FIXED HEADER */}
+        <DialogHeader className="shrink-0 px-6 pt-6 pb-4 border-b">
           <DialogTitle>Novo Prazo</DialogTitle>
         </DialogHeader>
-        <div className="space-y-4">
+        {/* SCROLLABLE BODY */}
+        <div className="flex-1 overflow-y-auto min-h-0 px-6 py-4 space-y-4">
           <div className="space-y-2">
             <Label>Processo *</Label>
             <Select value={formData.case_id} onValueChange={(v) => set("case_id", v)}>
@@ -540,7 +542,8 @@ function NewDeadlineDialog({ open, onOpenChange }: { open: boolean; onOpenChange
             </div>
           </div>
         </div>
-        <DialogFooter>
+        {/* FIXED FOOTER */}
+        <DialogFooter className="shrink-0 px-6 py-4 border-t">
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
           <Button
             disabled={!formData.case_id || !formData.tipo || !formData.descricao || !formData.data_limite || !formData.responsavel_id || addDeadline.isPending}

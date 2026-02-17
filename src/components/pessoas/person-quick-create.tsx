@@ -72,16 +72,18 @@ export function PersonQuickCreate({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <form onSubmit={handleSubmit}>
-          <DialogHeader>
+      <DialogContent className="min-w-[500px] max-w-lg max-w-[95vw] max-h-[85vh] flex flex-col p-0 gap-0">
+        <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
+          {/* FIXED HEADER */}
+          <DialogHeader className="shrink-0 px-6 pt-6 pb-4 border-b">
             <DialogTitle>Cadastro Rápido de Pessoa</DialogTitle>
             <DialogDescription>
               Preencha os dados essenciais. Você pode completar o cadastro depois.
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4 py-4">
+          {/* SCROLLABLE BODY */}
+          <div className="flex-1 overflow-y-auto min-h-0 px-6 py-4 space-y-4">
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label>Tipo</Label>
@@ -163,7 +165,8 @@ export function PersonQuickCreate({
             )}
           </div>
 
-          <DialogFooter>
+          {/* FIXED FOOTER */}
+          <DialogFooter className="shrink-0 px-6 py-4 border-t">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancelar
             </Button>

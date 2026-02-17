@@ -212,14 +212,15 @@ export function CalendarEventModal({
   return (
     <>
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col">
-        <DialogHeader>
+      <DialogContent className="min-w-[700px] max-w-[800px] max-w-[95vw] max-h-[85vh] flex flex-col p-0 gap-0">
+        {/* FIXED HEADER */}
+        <DialogHeader className="shrink-0 px-6 pt-6 pb-4 border-b">
           <DialogTitle>
             {isEdit ? "Editar Evento" : "Novo Evento"}
           </DialogTitle>
         </DialogHeader>
 
-        <ScrollArea className="flex-1 min-h-0 -mx-6 px-6">
+        <div className="flex-1 overflow-y-auto min-h-0 px-6 py-4">
           <div className="space-y-4 pb-4">
             {/* Event Type */}
             <div className="space-y-1.5">
@@ -413,9 +414,10 @@ export function CalendarEventModal({
               </div>
             )}
           </div>
-        </ScrollArea>
+        </div>
 
-        <DialogFooter className="gap-2 sm:gap-0 border-t pt-4">
+        {/* FIXED FOOTER */}
+        <DialogFooter className="shrink-0 px-6 py-4 border-t gap-2 sm:gap-0">
           {isEdit && (
             <Button
               variant="ghost"

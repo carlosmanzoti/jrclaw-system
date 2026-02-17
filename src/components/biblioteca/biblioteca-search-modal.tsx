@@ -185,8 +185,9 @@ export function BibliotecaSearchModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-3xl max-h-[85vh] flex flex-col">
-        <DialogHeader>
+      <DialogContent className="min-w-[800px] max-w-[950px] max-w-[95vw] max-h-[85vh] flex flex-col p-0 gap-0">
+        {/* FIXED HEADER */}
+        <DialogHeader className="shrink-0 px-6 pt-6 pb-4 border-b">
           <DialogTitle className="flex items-center gap-2">
             <BookOpen className="size-5" />
             Busca Avancada na Biblioteca
@@ -194,7 +195,7 @@ export function BibliotecaSearchModal({
         </DialogHeader>
 
         {/* Search form */}
-        <div className="space-y-3 shrink-0">
+        <div className="space-y-3 shrink-0 px-6 pt-4">
           {/* Free text search */}
           <div className="relative">
             <Search className="absolute left-3 top-2.5 size-4 text-[#666666]" />
@@ -347,7 +348,7 @@ export function BibliotecaSearchModal({
         </div>
 
         {/* Sort toggle + result count */}
-        <div className="flex items-center justify-between shrink-0 pt-1">
+        <div className="flex items-center justify-between shrink-0 pt-1 px-6">
           <span className="text-xs text-[#666666]">
             {isLoading ? "Buscando..." : `${total} resultado(s) encontrado(s)`}
           </span>
@@ -379,7 +380,7 @@ export function BibliotecaSearchModal({
         </div>
 
         {/* Results */}
-        <ScrollArea className="flex-1 min-h-0">
+        <ScrollArea className="flex-1 min-h-0 px-6">
           <div className="space-y-2 pr-3">
             {isLoading ? (
               <div className="flex items-center justify-center py-12">
@@ -496,7 +497,7 @@ export function BibliotecaSearchModal({
 
         {/* Pagination */}
         {totalPages > 1 && (
-          <div className="flex items-center justify-center gap-2 shrink-0 pt-2 border-t">
+          <div className="flex items-center justify-center gap-2 shrink-0 px-6 py-3 border-t">
             <Button
               variant="outline"
               size="sm"

@@ -448,14 +448,16 @@ export default function TemplatesProjetoPage() {
 
       {/* ─── Create/Edit Dialog ─────────────────────────── */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
+        <DialogContent className="min-w-[800px] max-w-4xl max-w-[95vw] max-h-[85vh] flex flex-col p-0 gap-0">
+          {/* FIXED HEADER */}
+          <DialogHeader className="shrink-0 px-6 pt-6 pb-4 border-b">
             <DialogTitle>
               {editingId ? "Editar Template" : "Novo Template"}
             </DialogTitle>
           </DialogHeader>
 
-          <div className="space-y-6 py-4">
+          {/* SCROLLABLE BODY */}
+          <div className="flex-1 overflow-y-auto min-h-0 px-6 py-4 space-y-6">
             {/* Basic fields */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
@@ -630,7 +632,8 @@ export default function TemplatesProjetoPage() {
             </div>
           </div>
 
-          <DialogFooter>
+          {/* FIXED FOOTER */}
+          <DialogFooter className="shrink-0 px-6 py-4 border-t">
             <Button variant="outline" onClick={handleCloseDialog}>
               Cancelar
             </Button>
