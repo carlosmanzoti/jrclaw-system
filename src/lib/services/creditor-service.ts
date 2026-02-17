@@ -1,5 +1,6 @@
 import { Prisma, PrismaClient } from "@prisma/client";
 import * as XLSX from "xlsx";
+import { normalizeClasse, normalizeMonetaryValue, normalizeCpfCnpj, normalizeStatus, normalizeGuaranteeType, normalizeNatureza, inferClasseFromNatureza, normalizeColumnName } from "@/lib/normalizers";
 
 type DB = PrismaClient | Prisma.TransactionClient;
 
@@ -156,39 +157,55 @@ export function validateImportRows(rows: ImportRow[]): {
 
   rows.forEach((row, i) => {
     const rowNum = i + 2; // header is row 1
-    let hasError = false;
 
+    // ONLY reject rows with truly empty names
     if (!row.nome?.trim()) {
       errors.push({ row: rowNum, field: "nome", message: "Nome é obrigatório", severity: "error" });
-      hasError = true;
+      return; // skip this row entirely
     }
 
+    // Classe: warn but fix if invalid — normalizers already ran, so just ensure a valid value
     if (!row.classe || !validClasses.includes(row.classe)) {
-      errors.push({ row: rowNum, field: "classe", message: `Classe inválida: ${row.classe}`, severity: "error" });
-      hasError = true;
+      const inferred = inferClasseFromNatureza(row.natureza || "QUIROGRAFARIO");
+      errors.push({
+        row: rowNum,
+        field: "classe",
+        message: `Classe "${row.classe || "(vazio)"}" não reconhecida — inferida como ${inferred}`,
+        severity: "warning",
+      });
+      row.classe = inferred;
     }
 
+    // Natureza: warn but default if invalid
     if (!row.natureza || !validNatures.includes(row.natureza)) {
-      errors.push({ row: rowNum, field: "natureza", message: `Natureza inválida: ${row.natureza}`, severity: "error" });
-      hasError = true;
+      errors.push({
+        row: rowNum,
+        field: "natureza",
+        message: `Natureza "${row.natureza || "(vazio)"}" não reconhecida — atribuída como QUIROGRAFARIO`,
+        severity: "warning",
+      });
+      row.natureza = "QUIROGRAFARIO";
     }
 
+    // Valor original: warn if 0 but do NOT reject
     if (!row.valor_original || row.valor_original <= 0) {
-      errors.push({ row: rowNum, field: "valor_original", message: "Valor original deve ser > 0", severity: "error" });
-      hasError = true;
+      errors.push({
+        row: rowNum,
+        field: "valor_original",
+        message: "Valor pendente de apuração",
+        severity: "warning",
+      });
     }
 
-    // Warnings
+    // CPF/CNPJ format warning
     if (row.cpf_cnpj) {
       const digits = row.cpf_cnpj.replace(/\D/g, "");
-      if (digits.length !== 11 && digits.length !== 14) {
+      if (digits.length > 0 && digits.length !== 11 && digits.length !== 14) {
         errors.push({ row: rowNum, field: "cpf_cnpj", message: "CPF/CNPJ com formato inválido", severity: "warning" });
       }
     }
 
-    if (!hasError) {
-      valid.push(row);
-    }
+    valid.push(row);
   });
 
   return { valid, errors };
@@ -197,23 +214,45 @@ export function validateImportRows(rows: ImportRow[]): {
 export function parseExcelFile(buffer: Buffer): ImportRow[] {
   const workbook = XLSX.read(buffer, { type: "buffer" });
   const sheet = workbook.Sheets[workbook.SheetNames[0]];
-  const data = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet);
+  const rawData = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet);
 
-  return data.map((row) => ({
-    nome: String(row["nome"] || row["Nome"] || row["NOME"] || ""),
-    cpf_cnpj: String(row["cpf_cnpj"] || row["CPF/CNPJ"] || row["cpf"] || row["cnpj"] || ""),
-    classe: String(row["classe"] || row["Classe"] || row["CLASSE"] || ""),
-    natureza: String(row["natureza"] || row["Natureza"] || row["NATUREZA"] || "QUIROGRAFARIO"),
-    valor_original: parseFloat(String(row["valor_original"] || row["Valor Original"] || row["valor"] || 0)),
-    valor_atualizado: row["valor_atualizado"] || row["Valor Atualizado"]
-      ? parseFloat(String(row["valor_atualizado"] || row["Valor Atualizado"]))
-      : undefined,
-    tipo_garantia: String(row["tipo_garantia"] || row["Tipo Garantia"] || ""),
-    valor_garantia: row["valor_garantia"] || row["Valor Garantia"]
-      ? parseFloat(String(row["valor_garantia"] || row["Valor Garantia"]))
-      : undefined,
-    observacoes: String(row["observacoes"] || row["Observações"] || ""),
-  }));
+  // Normalize column headers and row values
+  const data = rawData.map((rawRow) => {
+    const row: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(rawRow)) {
+      const normalizedKey = normalizeColumnName(key);
+      row[normalizedKey] = value;
+    }
+    return row;
+  });
+
+  return data.map((row) => {
+    const rawNatureza = row["natureza"];
+    const natureza = normalizeNatureza(rawNatureza as string);
+
+    const rawClasse = row["classe"];
+    let classe = normalizeClasse(rawClasse as string);
+    if (!classe) {
+      classe = inferClasseFromNatureza(natureza);
+    }
+
+    return {
+      nome: row["nome"] ? String(row["nome"]).trim() : "",
+      cpf_cnpj: normalizeCpfCnpj(row["cpf_cnpj"] as string),
+      classe,
+      natureza,
+      valor_original: normalizeMonetaryValue(row["valor_original"]),
+      valor_atualizado: row["valor_atualizado"] != null
+        ? normalizeMonetaryValue(row["valor_atualizado"])
+        : undefined,
+      tipo_garantia: normalizeGuaranteeType(row["tipo_garantia"] as string),
+      valor_garantia: row["valor_garantia"] != null
+        ? normalizeMonetaryValue(row["valor_garantia"])
+        : undefined,
+      observacoes: row["observacoes"] ? String(row["observacoes"]).trim() : "",
+      status: row["status"] ? normalizeStatus(row["status"] as string) : undefined,
+    } as ImportRow;
+  });
 }
 
 export function parseCSVContent(content: string): ImportRow[] {
@@ -221,7 +260,9 @@ export function parseCSVContent(content: string): ImportRow[] {
   const lines = content.split("\n").filter((l) => l.trim());
   if (lines.length < 2) return [];
 
-  const headers = lines[0].split(",").map((h) => h.trim().toLowerCase().replace(/['"]/g, ""));
+  // Normalize column headers
+  const rawHeaders = lines[0].split(",").map((h) => h.trim().replace(/['"]/g, ""));
+  const headers = rawHeaders.map((h) => normalizeColumnName(h));
 
   return lines.slice(1).map((line) => {
     const values = line.split(",").map((v) => v.trim().replace(/['"]/g, ""));
@@ -230,17 +271,31 @@ export function parseCSVContent(content: string): ImportRow[] {
       row[h] = values[i] || "";
     });
 
+    const rawNatureza = row["natureza"];
+    const natureza = normalizeNatureza(rawNatureza);
+
+    const rawClasse = row["classe"];
+    let classe = normalizeClasse(rawClasse);
+    if (!classe) {
+      classe = inferClasseFromNatureza(natureza);
+    }
+
     return {
-      nome: row["nome"] || "",
-      cpf_cnpj: row["cpf_cnpj"] || row["cpf/cnpj"] || "",
-      classe: row["classe"] || "",
-      natureza: row["natureza"] || "QUIROGRAFARIO",
-      valor_original: parseFloat(row["valor_original"] || row["valor"] || "0"),
-      valor_atualizado: row["valor_atualizado"] ? parseFloat(row["valor_atualizado"]) : undefined,
-      tipo_garantia: row["tipo_garantia"] || "",
-      valor_garantia: row["valor_garantia"] ? parseFloat(row["valor_garantia"]) : undefined,
-      observacoes: row["observacoes"] || "",
-    };
+      nome: row["nome"] ? row["nome"].trim() : "",
+      cpf_cnpj: normalizeCpfCnpj(row["cpf_cnpj"]),
+      classe,
+      natureza,
+      valor_original: normalizeMonetaryValue(row["valor_original"]),
+      valor_atualizado: row["valor_atualizado"]
+        ? normalizeMonetaryValue(row["valor_atualizado"])
+        : undefined,
+      tipo_garantia: normalizeGuaranteeType(row["tipo_garantia"]),
+      valor_garantia: row["valor_garantia"]
+        ? normalizeMonetaryValue(row["valor_garantia"])
+        : undefined,
+      observacoes: row["observacoes"] ? row["observacoes"].trim() : "",
+      status: row["status"] ? normalizeStatus(row["status"]) : undefined,
+    } as ImportRow;
   });
 }
 

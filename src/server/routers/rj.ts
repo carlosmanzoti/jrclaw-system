@@ -1704,6 +1704,228 @@ const negotiationsRouter = router({
     }),
 });
 
+// ========== Extraconcursals ==========
+
+const extraconcursalsRouter = router({
+  list: protectedProcedure
+    .input(z.object({ jrc_id: z.string() }))
+    .query(async ({ ctx, input }) => {
+      return ctx.db.extraconcursalCreditor.findMany({
+        where: { jrc_id: input.jrc_id },
+        include: {
+          person: { select: { id: true, nome: true, cpf_cnpj: true } },
+          _count: { select: { eventos: true } },
+        },
+        orderBy: [{ risco_perda_bem: "desc" }, { valor_total: "desc" }],
+      });
+    }),
+
+  getById: protectedProcedure
+    .input(z.object({ id: z.string() }))
+    .query(async ({ ctx, input }) => {
+      const ec = await ctx.db.extraconcursalCreditor.findUnique({
+        where: { id: input.id },
+        include: {
+          person: { select: { id: true, nome: true, cpf_cnpj: true, email: true, celular: true } },
+          eventos: {
+            orderBy: [{ rodada: "desc" }, { data: "desc" }],
+          },
+        },
+      });
+      if (!ec) throw new TRPCError({ code: "NOT_FOUND" });
+      return ec;
+    }),
+
+  create: protectedProcedure
+    .input(z.object({
+      jrc_id: z.string(),
+      nome: z.string().min(1),
+      cpf_cnpj: z.string().optional(),
+      person_id: z.string().optional(),
+      valor_total: z.number(),
+      valor_garantia: z.number(),
+      saldo_devedor: z.number(),
+      tipo_garantia: z.string(),
+      descricao_garantia: z.string(),
+      matricula_registro: z.string().optional(),
+      avaliacao_data: z.date().optional(),
+      avaliacao_valor: z.number().optional(),
+      avaliacao_responsavel: z.string().optional(),
+      situacao_bem: z.string().default("EM_POSSE_DEVEDOR"),
+      localizacao_bem: z.string().optional(),
+      essencial_atividade: z.boolean().default(false),
+      justificativa_essencialidade: z.string().optional(),
+      risco_perda_bem: z.string().default("MEDIO"),
+      impacto_operacional: z.string().default("MEDIO"),
+      data_vencimento_original: z.date().optional(),
+      observacoes: z.string().optional(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      // Get the JRC to auto-set stay period dates
+      const jrc = await ctx.db.judicialRecoveryCase.findUnique({
+        where: { id: input.jrc_id },
+        select: { data_deferimento: true },
+      });
+
+      const dataDeferimento = jrc?.data_deferimento || null;
+      let prazoSuspensaoFim: Date | null = null;
+      if (dataDeferimento) {
+        prazoSuspensaoFim = new Date(dataDeferimento);
+        prazoSuspensaoFim.setDate(prazoSuspensaoFim.getDate() + 180);
+      }
+
+      return ctx.db.extraconcursalCreditor.create({
+        data: {
+          jrc_id: input.jrc_id,
+          nome: input.nome,
+          cpf_cnpj: input.cpf_cnpj,
+          person_id: input.person_id,
+          valor_total: BigInt(Math.round(input.valor_total * 100)),
+          valor_garantia: BigInt(Math.round(input.valor_garantia * 100)),
+          saldo_devedor: BigInt(Math.round(input.saldo_devedor * 100)),
+          tipo_garantia: input.tipo_garantia as never,
+          descricao_garantia: input.descricao_garantia,
+          matricula_registro: input.matricula_registro,
+          avaliacao_data: input.avaliacao_data,
+          avaliacao_valor: input.avaliacao_valor ? BigInt(Math.round(input.avaliacao_valor * 100)) : BigInt(0),
+          avaliacao_responsavel: input.avaliacao_responsavel,
+          situacao_bem: input.situacao_bem as never,
+          localizacao_bem: input.localizacao_bem,
+          essencial_atividade: input.essencial_atividade,
+          justificativa_essencialidade: input.justificativa_essencialidade,
+          data_deferimento_rj: dataDeferimento,
+          prazo_suspensao_fim: prazoSuspensaoFim,
+          suspensao_ativa: prazoSuspensaoFim ? new Date() < prazoSuspensaoFim : true,
+          risco_perda_bem: input.risco_perda_bem as never,
+          impacto_operacional: input.impacto_operacional as never,
+          data_vencimento_original: input.data_vencimento_original,
+          observacoes: input.observacoes,
+        },
+      });
+    }),
+
+  update: protectedProcedure
+    .input(z.object({
+      id: z.string(),
+      nome: z.string().optional(),
+      cpf_cnpj: z.string().optional().nullable(),
+      person_id: z.string().optional().nullable(),
+      valor_total: z.number().optional(),
+      valor_garantia: z.number().optional(),
+      saldo_devedor: z.number().optional(),
+      tipo_garantia: z.string().optional(),
+      descricao_garantia: z.string().optional(),
+      matricula_registro: z.string().optional().nullable(),
+      avaliacao_data: z.date().optional().nullable(),
+      avaliacao_valor: z.number().optional(),
+      avaliacao_responsavel: z.string().optional().nullable(),
+      situacao_bem: z.string().optional(),
+      localizacao_bem: z.string().optional().nullable(),
+      essencial_atividade: z.boolean().optional(),
+      justificativa_essencialidade: z.string().optional().nullable(),
+      suspensao_ativa: z.boolean().optional(),
+      status_negociacao: z.string().optional(),
+      rodada_atual: z.number().optional(),
+      valor_proposto_devedor: z.number().optional().nullable(),
+      valor_pedido_credor: z.number().optional().nullable(),
+      valor_acordado: z.number().optional().nullable(),
+      condicoes_acordo: z.string().optional().nullable(),
+      risco_perda_bem: z.string().optional(),
+      impacto_operacional: z.string().optional(),
+      observacoes: z.string().optional().nullable(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const { id, valor_total, valor_garantia, saldo_devedor, avaliacao_valor, valor_proposto_devedor, valor_pedido_credor, valor_acordado, ...rest } = input;
+
+      const data: Record<string, unknown> = { ...rest };
+      if (valor_total !== undefined) data.valor_total = BigInt(Math.round(valor_total * 100));
+      if (valor_garantia !== undefined) data.valor_garantia = BigInt(Math.round(valor_garantia * 100));
+      if (saldo_devedor !== undefined) data.saldo_devedor = BigInt(Math.round(saldo_devedor * 100));
+      if (avaliacao_valor !== undefined) data.avaliacao_valor = BigInt(Math.round(avaliacao_valor * 100));
+      if (valor_proposto_devedor !== undefined) data.valor_proposto_devedor = valor_proposto_devedor != null ? BigInt(Math.round(valor_proposto_devedor * 100)) : null;
+      if (valor_pedido_credor !== undefined) data.valor_pedido_credor = valor_pedido_credor != null ? BigInt(Math.round(valor_pedido_credor * 100)) : null;
+      if (valor_acordado !== undefined) data.valor_acordado = valor_acordado != null ? BigInt(Math.round(valor_acordado * 100)) : null;
+
+      return ctx.db.extraconcursalCreditor.update({
+        where: { id },
+        data: data as never,
+      });
+    }),
+
+  delete: protectedProcedure
+    .input(z.object({ id: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      return ctx.db.extraconcursalCreditor.delete({ where: { id: input.id } });
+    }),
+
+  // Summary for dashboard
+  summary: protectedProcedure
+    .input(z.object({ jrc_id: z.string() }))
+    .query(async ({ ctx, input }) => {
+      const creditors = await ctx.db.extraconcursalCreditor.findMany({
+        where: { jrc_id: input.jrc_id },
+      });
+
+      let totalCredito = BigInt(0);
+      let totalGarantia = BigInt(0);
+      let emNegociacao = 0;
+      let bensEssenciais = 0;
+      let stayAtivo = 0;
+      let stayEncerrado = 0;
+
+      for (const c of creditors) {
+        totalCredito += c.valor_total;
+        totalGarantia += c.avaliacao_valor;
+        if (c.status_negociacao !== "NAO_INICIADA" && c.status_negociacao !== "ACORDO") emNegociacao++;
+        if (c.essencial_atividade) bensEssenciais++;
+        if (c.suspensao_ativa && c.prazo_suspensao_fim && new Date() < c.prazo_suspensao_fim) stayAtivo++;
+        else stayEncerrado++;
+      }
+
+      const exposicao = totalCredito > totalGarantia ? totalCredito - totalGarantia : BigInt(0);
+
+      return {
+        total: creditors.length,
+        total_credito: totalCredito,
+        total_garantia: totalGarantia,
+        exposicao,
+        em_negociacao: emNegociacao,
+        bens_essenciais: bensEssenciais,
+        stay_ativo: stayAtivo,
+        stay_encerrado: stayEncerrado,
+      };
+    }),
+
+  // Negotiation events
+  events: router({
+    create: protectedProcedure
+      .input(z.object({
+        extraconcursal_creditor_id: z.string(),
+        rodada: z.number(),
+        data: z.date().optional(),
+        tipo: z.string(),
+        descricao: z.string(),
+        valor_proposto: z.number().optional(),
+        responsavel_id: z.string().optional(),
+        documento_id: z.string().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        return ctx.db.extraconcursalNegotiationEvent.create({
+          data: {
+            extraconcursal_creditor_id: input.extraconcursal_creditor_id,
+            rodada: input.rodada,
+            data: input.data || new Date(),
+            tipo: input.tipo as never,
+            descricao: input.descricao,
+            valor_proposto: input.valor_proposto ? BigInt(Math.round(input.valor_proposto * 100)) : null,
+            responsavel_id: input.responsavel_id,
+            documento_id: input.documento_id,
+          },
+        });
+      }),
+  }),
+});
+
 // ========== Main RJ Router ==========
 
 export const rjRouter = router({
@@ -1716,4 +1938,5 @@ export const rjRouter = router({
   voting: votingRouter,
   projections: projectionsRouter,
   negotiations: negotiationsRouter,
+  extraconcursals: extraconcursalsRouter,
 });

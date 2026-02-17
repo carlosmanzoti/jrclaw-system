@@ -20,6 +20,7 @@ import { QCTabSubclasses } from "./qc-tab-subclasses";
 import { QCTabImpugnacoes } from "./qc-tab-impugnacoes";
 import { QCTabVersoes } from "./qc-tab-versoes";
 import { QCTabPagamentos } from "./qc-tab-pagamentos";
+import { QCTabExtraconcursais } from "./qc-tab-extraconcursais";
 
 export function QCLayout() {
   const [selectedJrcId, setSelectedJrcId] = useState<string | null>(null);
@@ -118,6 +119,7 @@ export function QCLayout() {
                   <TabsTrigger value="impugnacoes">Impugnações</TabsTrigger>
                   <TabsTrigger value="versoes">Versões</TabsTrigger>
                   <TabsTrigger value="pagamentos">Pagamentos</TabsTrigger>
+                  <TabsTrigger value="extraconcursais">Extraconcursais</TabsTrigger>
                 </TabsList>
               </div>
 
@@ -139,6 +141,9 @@ export function QCLayout() {
                 </TabsContent>
                 <TabsContent value="pagamentos" className="m-0 h-full">
                   <QCTabPagamentos jrcId={jrcId} />
+                </TabsContent>
+                <TabsContent value="extraconcursais" className="m-0 h-full">
+                  <QCTabExtraconcursais jrcId={jrcId} />
                 </TabsContent>
               </div>
             </Tabs>

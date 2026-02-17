@@ -612,6 +612,7 @@ model Person {
   report_snapshots     ReportSnapshot[]
   rj_creditors         RJCreditor[]             @relation("RJCreditorPerson")
   rj_admin_cases       JudicialRecoveryCase[]   @relation("RJAdminJudicial")
+  extraconcursal_creditors ExtraconcursalCreditor[] @relation("ExtraconcursalPerson")
 
   @@map("persons")
 }
@@ -1321,6 +1322,7 @@ model JudicialRecoveryCase {
   voting_scenarios      VotingScenario[]
   financial_projections FinancialProjection[]
   negotiations          RJNegotiation[]
+  extraconcursais       ExtraconcursalCreditor[]
 
   @@map("judicial_recovery_cases")
 }
@@ -1899,4 +1901,158 @@ model ImportLog {
   @@index([entity_type])
   @@index([created_at])
   @@map("import_logs")
+}
+
+// ===== CREDORES EXTRACONCURSAIS (Art. 49, §3º) =====
+
+enum ExtraconcursalGuaranteeType {
+  ALIENACAO_FIDUCIARIA_IMOVEL
+  ALIENACAO_FIDUCIARIA_MOVEL
+  CESSAO_FIDUCIARIA_RECEBIVEIS
+  CESSAO_FIDUCIARIA_DIREITOS_CREDITORIOS
+  HIPOTECA
+  PENHOR_AGRICOLA
+  PENHOR_MERCANTIL
+  RESERVA_DOMINIO
+  ARRENDAMENTO_MERCANTIL
+  CESSAO_FIDUCIARIA_TITULOS
+  OUTRO
+}
+
+enum BemSituacao {
+  EM_POSSE_DEVEDOR
+  EM_POSSE_CREDOR
+  BUSCA_APREENSAO
+  CONSOLIDADO
+  LEILAO_AGENDADO
+  VENDIDO
+  PERECIDO
+}
+
+enum ExtraconcursalNegStatus {
+  NAO_INICIADA
+  EM_NEGOCIACAO
+  PROPOSTA_ENVIADA
+  CONTRAPROPOSTA
+  ACORDO
+  EXECUCAO_GARANTIA
+  BUSCA_APREENSAO_JUDICIAL
+}
+
+enum RiskLevel {
+  BAIXO
+  MEDIO
+  ALTO
+  CRITICO
+}
+
+enum ImpactLevel {
+  NENHUM
+  BAIXO
+  MEDIO
+  ALTO
+  CRITICO
+}
+
+enum ExtraconcursalEventType {
+  CONTATO_INICIAL
+  PROPOSTA
+  CONTRAPROPOSTA
+  REUNIAO
+  EMAIL
+  TELEFONEMA
+  ACORDO
+  IMPASSE
+  NOTIFICACAO
+  BUSCA_APREENSAO
+  DECISAO_JUDICIAL
+}
+
+model ExtraconcursalCreditor {
+  id                        String                    @id @default(cuid())
+  jrc_id                    String
+  jrc                       JudicialRecoveryCase      @relation(fields: [jrc_id], references: [id], onDelete: Cascade)
+
+  // Optional link to Person
+  person_id                 String?
+  person                    Person?                   @relation("ExtraconcursalPerson", fields: [person_id], references: [id])
+
+  // Creditor identification
+  nome                      String
+  cpf_cnpj                  String?
+
+  // Credit values (BigInt centavos)
+  valor_total               BigInt                    @default(0)
+  valor_garantia            BigInt                    @default(0)
+  saldo_devedor             BigInt                    @default(0)
+
+  // Guarantee (art. 49, §3º)
+  tipo_garantia             ExtraconcursalGuaranteeType
+  descricao_garantia        String                    @db.Text
+  matricula_registro        String?
+  avaliacao_data            DateTime?
+  avaliacao_valor           BigInt                    @default(0)
+  avaliacao_responsavel     String?
+
+  // Situação do Bem
+  situacao_bem              BemSituacao               @default(EM_POSSE_DEVEDOR)
+  localizacao_bem           String?
+
+  // Essencialidade (art. 49, §3º parte final)
+  essencial_atividade       Boolean                   @default(false)
+  justificativa_essencialidade String?                @db.Text
+
+  // Stay period (art. 6º, §§ 4º e 5º)
+  data_deferimento_rj       DateTime?
+  prazo_suspensao_fim       DateTime?
+  suspensao_ativa           Boolean                   @default(true)
+
+  // Negociação
+  status_negociacao         ExtraconcursalNegStatus   @default(NAO_INICIADA)
+  rodada_atual              Int                       @default(1)
+
+  // Valores de negociação (BigInt centavos)
+  valor_proposto_devedor    BigInt?
+  valor_pedido_credor       BigInt?
+  valor_acordado            BigInt?
+  condicoes_acordo          String?                   @db.Text
+
+  // Risco
+  risco_perda_bem           RiskLevel                 @default(MEDIO)
+  impacto_operacional       ImpactLevel               @default(MEDIO)
+
+  // Datas
+  data_vencimento_original  DateTime?
+  data_notificacao_credor   DateTime?
+
+  observacoes               String?                   @db.Text
+  created_at                DateTime                  @default(now())
+  updated_at                DateTime                  @updatedAt
+
+  // Relations
+  eventos                   ExtraconcursalNegotiationEvent[]
+
+  @@index([jrc_id])
+  @@index([tipo_garantia])
+  @@index([status_negociacao])
+  @@map("extraconcursal_creditors")
+}
+
+model ExtraconcursalNegotiationEvent {
+  id                        String                    @id @default(cuid())
+  extraconcursal_creditor_id String
+  creditor                  ExtraconcursalCreditor    @relation(fields: [extraconcursal_creditor_id], references: [id], onDelete: Cascade)
+
+  rodada                    Int                       @default(1)
+  data                      DateTime                  @default(now())
+  tipo                      ExtraconcursalEventType
+  descricao                 String                    @db.Text
+  valor_proposto            BigInt?
+  responsavel_id            String?
+  documento_id              String?
+
+  created_at                DateTime                  @default(now())
+
+  @@index([extraconcursal_creditor_id])
+  @@map("extraconcursal_negotiation_events")
 }
