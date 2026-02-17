@@ -117,6 +117,10 @@ const navModules = [
     title: "Reestruturação",
     url: "/reestruturacao",
     icon: ArrowRightLeft,
+    items: [
+      { title: "Negociações", url: "/reestruturacao" },
+      { title: "Dashboard Estratégico", url: "/reestruturacao/estrategico" },
+    ],
   },
   {
     title: "Monitoramento",

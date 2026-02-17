@@ -545,6 +545,7 @@ model User {
   chat_messages        ChatMessage[]
   ai_usage_logs        AIUsageLog[]           @relation("AIUsageLogs")
   library_search_logs  LibrarySearchLog[]     @relation("LibrarySearchLogs")
+  strat_neg_responsavel StratNegotiation[] @relation("StratNegResponsavel")
 
   @@map("users")
 }
@@ -613,6 +614,7 @@ model Person {
   rj_creditors         RJCreditor[]             @relation("RJCreditorPerson")
   rj_admin_cases       JudicialRecoveryCase[]   @relation("RJAdminJudicial")
   extraconcursal_creditors ExtraconcursalCreditor[] @relation("ExtraconcursalPerson")
+  strat_negotiations StratNegotiation[]    @relation("StratNegPerson")
 
   @@map("persons")
 }
@@ -676,6 +678,7 @@ model Case {
   financial_releases  FinancialRelease[]
   chat_messages       ChatMessage[]       @relation("ChatMessageCase")
   judicialRecoveryCase JudicialRecoveryCase?
+  strat_negotiations  StratNegotiation[]    @relation("StratNegCase")
 
   @@map("cases")
 }
@@ -1323,6 +1326,7 @@ model JudicialRecoveryCase {
   financial_projections FinancialProjection[]
   negotiations          RJNegotiation[]
   extraconcursais       ExtraconcursalCreditor[]
+  strat_negotiations  StratNegotiation[]
 
   @@map("judicial_recovery_cases")
 }
@@ -1388,6 +1392,7 @@ model RJCreditor {
   impugnacoes           CreditorChallenge[]
   parcelas_pgto         PaymentInstallment[]
   negotiation_creditors NegotiationCreditor[]
+  strat_negotiations  StratNegotiation[]
 
   @@index([jrc_id])
   @@index([classe])
@@ -2055,4 +2060,369 @@ model ExtraconcursalNegotiationEvent {
 
   @@index([extraconcursal_creditor_id])
   @@map("extraconcursal_negotiation_events")
+}
+
+// ============================================================
+// SUPER MÓDULO DE NEGOCIAÇÃO ESTRATÉGICA
+// Harvard, Voss, Camp, Karrass, Game Theory
+// ============================================================
+
+enum StratNegType {
+  INDIVIDUAL
+  COLETIVA_CLASSE
+  COLETIVA_COMITE
+  EXTRAJUDICIAL
+}
+
+enum StratNegPhase {
+  PREPARACAO
+  ENGAJAMENTO
+  BARGANHA
+  COMPROMISSO
+  ENCERRADA
+}
+
+enum StratNegStatus {
+  NAO_INICIADA
+  EM_ANDAMENTO
+  PROPOSTA_ENVIADA
+  CONTRAPROPOSTA
+  IMPASSE
+  ACORDO
+  FRACASSADA
+}
+
+enum StratNegPriority {
+  CRITICA
+  ALTA
+  MEDIA
+  BAIXA
+}
+
+enum TKIProfile {
+  COMPETITIVO
+  COLABORATIVO
+  COMPROMISSO
+  EVITATIVO
+  ACOMODATIVO
+}
+
+enum VossNegotiatorType {
+  ANALISTA
+  ACOMODADOR
+  ASSERTIVO
+}
+
+enum GameType {
+  SOMA_ZERO
+  SOMA_POSITIVA
+  DILEMA_PRISIONEIRO
+}
+
+enum GameEquilibrium {
+  REESTRUTURACAO
+  LIQUIDACAO
+  HOLDOUT
+}
+
+enum GameCoalition {
+  FAVORAVEL
+  NEUTRO
+  OPOSICAO
+  LIDER_OPOSICAO
+}
+
+enum RoundStatus {
+  ABERTA
+  ENCERRADA_ACORDO
+  ENCERRADA_IMPASSE
+  ENCERRADA_ADIADA
+}
+
+enum StratEventType {
+  REUNIAO
+  TELEFONEMA
+  EMAIL
+  PROPOSTA
+  CONTRAPROPOSTA
+  ACORDO
+  IMPASSE
+  NOTIFICACAO
+  DECISAO_JUDICIAL
+  ASSEMBLEIA
+  MEDIACAO
+  ANALISE_IA
+}
+
+enum EventChannel {
+  PRESENCIAL
+  VIDEO
+  TELEFONE
+  EMAIL_CANAL
+  WHATSAPP
+  CARTA
+  OFICIO
+}
+
+enum Sentiment {
+  POSITIVO
+  NEUTRO
+  NEGATIVO
+  HOSTIL
+}
+
+enum ProposalOrigin {
+  DEVEDOR
+  CREDOR
+  MEDIADOR
+}
+
+enum ProposalStatus {
+  RASCUNHO
+  ENVIADA
+  RECEBIDA
+  ACEITA
+  REJEITADA
+  CONTRAPROPOSTA_STATUS
+}
+
+enum ConcessionDirection {
+  DADA
+  RECEBIDA
+}
+
+// ========== STRATEGIC NEGOTIATION ==========
+
+model StratNegotiation {
+  id                    String            @id @default(cuid())
+  case_id               String?
+  jrc_id                String?
+  creditor_id           String?
+  person_id             String?
+
+  titulo                String
+  codigo                String            @unique
+  tipo                  StratNegType      @default(INDIVIDUAL)
+  fase                  StratNegPhase     @default(PREPARACAO)
+  status                StratNegStatus    @default(NAO_INICIADA)
+  prioridade            StratNegPriority  @default(MEDIA)
+
+  valor_credito         BigInt            @default(0)
+  valor_meta_acordo     BigInt?
+  valor_proposta_atual  BigInt?
+  valor_pedido_credor   BigInt?
+  valor_acordado        BigInt?
+  haircut_percentual    Float?
+
+  interesses_devedor    Json?
+  interesses_credor     Json?
+  batna_devedor         Json?
+  batna_credor          Json?
+  zopa_min              BigInt?
+  zopa_max              BigInt?
+  opcoes_criativas      Json?
+  criterios_legitimidade Json?
+
+  tki_perfil_credor     TKIProfile?
+  tki_assertividade     Int?
+  tki_cooperatividade   Int?
+  tki_estrategia_recomendada String?
+
+  voss_empatia_tatica   Json?
+  voss_acusation_audit  Json?
+  voss_calibrated_questions Json?
+  voss_black_swans      Json?
+  voss_tipo_negociador  VossNegotiatorType?
+
+  camp_missao           String?           @db.Text
+  camp_budget_tempo     Int?
+  camp_budget_energia   Int?
+  camp_budget_dinheiro  Int?
+  camp_budget_emocao    Int?
+  camp_decisores        Json?
+
+  karrass_poder_score   Json?
+
+  game_tipo_jogo        GameType?
+  game_equilibrio       GameEquilibrium?
+  game_shapley_value    Float?
+  game_poder_voto       Float?
+  game_risco_holdout    RiskLevel?
+  game_coalicao         GameCoalition?
+
+  data_inicio           DateTime?
+  data_limite           DateTime?
+  data_acordo           DateTime?
+  data_proxima_acao     DateTime?
+  proxima_acao          String?
+
+  responsavel_id        String?
+  observacoes           String?           @db.Text
+
+  created_at            DateTime          @default(now())
+  updated_at            DateTime          @updatedAt
+
+  case_                 Case?             @relation("StratNegCase", fields: [case_id], references: [id])
+  jrc                   JudicialRecoveryCase? @relation(fields: [jrc_id], references: [id])
+  rj_creditor           RJCreditor?       @relation(fields: [creditor_id], references: [id])
+  person                Person?           @relation("StratNegPerson", fields: [person_id], references: [id])
+  responsavel           User?             @relation("StratNegResponsavel", fields: [responsavel_id], references: [id])
+
+  eventos               StratNegEvent[]
+  rodadas               StratNegRound[]
+  concessoes            StratNegConcession[]
+  propostas             StratNegProposal[]
+  one_sheets            StratNegOneSheet[]
+
+  @@index([case_id])
+  @@index([jrc_id])
+  @@index([fase])
+  @@index([status])
+  @@map("strat_negotiations")
+}
+
+// ========== NEGOTIATION ROUND ==========
+
+model StratNegRound {
+  id                    String       @id @default(cuid())
+  negotiation_id        String
+  numero                Int
+  titulo                String?
+  status                RoundStatus  @default(ABERTA)
+  data_inicio           DateTime
+  data_fim              DateTime?
+
+  valor_proposto_devedor BigInt?
+  valor_pedido_credor    BigInt?
+  resultado              String?     @db.Text
+
+  ackerman_target       BigInt?
+  ackerman_seq          Json?
+  ackerman_passo        Int?
+
+  observacoes           String?      @db.Text
+  created_at            DateTime     @default(now())
+
+  negotiation           StratNegotiation @relation(fields: [negotiation_id], references: [id], onDelete: Cascade)
+  eventos               StratNegEvent[]
+
+  @@index([negotiation_id])
+  @@map("strat_neg_rounds")
+}
+
+// ========== NEGOTIATION EVENT ==========
+
+model StratNegEvent {
+  id                String          @id @default(cuid())
+  negotiation_id    String
+  round_id          String?
+
+  data              DateTime
+  tipo              StratEventType
+  canal             EventChannel?
+
+  descricao         String          @db.Text
+  participantes     Json?
+  valor_mencionado  BigInt?
+
+  tecnicas_usadas   Json?
+  sentimento        Sentiment?
+  insights          String?         @db.Text
+
+  documento_id      String?
+  responsavel_id    String?
+  created_at        DateTime        @default(now())
+
+  negotiation       StratNegotiation @relation(fields: [negotiation_id], references: [id], onDelete: Cascade)
+  round             StratNegRound?  @relation(fields: [round_id], references: [id])
+
+  @@index([negotiation_id])
+  @@index([round_id])
+  @@map("strat_neg_events")
+}
+
+// ========== PROPOSAL ==========
+
+model StratNegProposal {
+  id                    String         @id @default(cuid())
+  negotiation_id        String
+  tipo                  ProposalOrigin
+  numero                Int
+  data                  DateTime
+
+  valor_principal       BigInt
+  haircut_pct           Float?
+  taxa_juros            Float?
+  carencia_meses        Int?
+  prazo_pagamento_meses Int?
+  parcelas              Int?
+
+  debt_equity_swap      Boolean        @default(false)
+  equity_pct            Float?
+  warrants              Boolean        @default(false)
+  pik_toggle            Boolean        @default(false)
+  contingent_value      Boolean        @default(false)
+  condicoes_especiais   String?        @db.Text
+
+  npv_devedor           BigInt?
+  npv_credor            BigInt?
+  taxa_desconto         Float?
+  recovery_rate         Float?
+
+  status                ProposalStatus @default(RASCUNHO)
+  justificativa         String?        @db.Text
+  documento_id          String?
+
+  created_at            DateTime       @default(now())
+
+  negotiation           StratNegotiation @relation(fields: [negotiation_id], references: [id], onDelete: Cascade)
+
+  @@index([negotiation_id])
+  @@map("strat_neg_proposals")
+}
+
+// ========== CONCESSION (Karrass) ==========
+
+model StratNegConcession {
+  id                String              @id @default(cuid())
+  negotiation_id    String
+  data              DateTime
+  direcao           ConcessionDirection
+  descricao         String              @db.Text
+  valor_impacto     BigInt?
+  justificativa     String              @db.Text
+  contrapartida     String?             @db.Text
+
+  created_at        DateTime            @default(now())
+
+  negotiation       StratNegotiation    @relation(fields: [negotiation_id], references: [id], onDelete: Cascade)
+
+  @@index([negotiation_id])
+  @@map("strat_neg_concessions")
+}
+
+// ========== ONE-SHEET (Voss) ==========
+
+model StratNegOneSheet {
+  id                   String           @id @default(cuid())
+  negotiation_id       String
+
+  objetivo_especifico  String           @db.Text
+  resumo_situacao      String           @db.Text
+  labels_preparados    Json
+  accusation_audit     Json
+  calibrated_questions Json
+  ofertas_nao_monetarias Json?
+  black_swans_investigar Json?
+
+  reuniao_data         DateTime?
+  reuniao_local        String?
+  preparado_por        String?
+
+  created_at           DateTime         @default(now())
+
+  negotiation          StratNegotiation @relation(fields: [negotiation_id], references: [id], onDelete: Cascade)
+
+  @@index([negotiation_id])
+  @@map("strat_neg_one_sheets")
 }
