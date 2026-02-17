@@ -48,9 +48,17 @@ export function PRJLayout() {
         <div className="max-w-md space-y-4 text-center">
           <h2 className="text-xl font-semibold">Nenhum caso de Recuperação Judicial</h2>
           <p className="text-sm text-muted-foreground">
-            Para utilizar o módulo de Aprovação do PRJ, primeiro crie um caso de
-            Recuperação Judicial no Quadro de Credores.
+            Processos do tipo &quot;Recuperação Judicial&quot; aparecem automaticamente.
+            Crie um na tela de Processos para começar.
           </p>
+          <div className="flex justify-center gap-3 pt-2">
+            <a href="/processos" className="inline-flex items-center rounded-md border px-4 py-2 text-sm font-medium hover:bg-muted">
+              Ir para Processos
+            </a>
+            <a href="/recuperacao-judicial" className="inline-flex items-center rounded-md bg-[#C9A961] px-4 py-2 text-sm font-medium text-[#2A2A2A] hover:bg-[#B8984F]">
+              Dashboard RJ
+            </a>
+          </div>
         </div>
       </div>
     );

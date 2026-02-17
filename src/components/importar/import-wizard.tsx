@@ -65,6 +65,7 @@ export function ImportWizard() {
   // Fetch context data for config step
   const needsCases = step >= 3 && (entityType === "DEADLINE" || entityType === "CASE_MOVEMENT" || entityType === "CASE")
   const needsUsers = step >= 3 && (entityType === "CASE" || entityType === "DEADLINE")
+  const needsJrcs = entityType === "RJ_CREDITOR"
   const casesQuery = trpc.cases.list.useQuery(
     { limit: 100 },
     { enabled: needsCases }
@@ -73,6 +74,9 @@ export function ImportWizard() {
     undefined,
     { enabled: needsUsers }
   )
+  const jrcsQuery = trpc.rj.cases.list.useQuery(undefined, {
+    enabled: needsJrcs,
+  })
 
   const handleAnalysisComplete = useCallback(
     (data: {
@@ -255,7 +259,13 @@ export function ImportWizard() {
               onTemplateNameChange={setTemplateName}
               cases={casesQuery.data?.items || []}
               users={usersQuery.data || []}
-              jrcs={[]}
+              jrcs={(jrcsQuery.data ?? []).map((j) => ({
+                id: j.id,
+                case_: {
+                  numero_processo: j.case_?.numero_processo ?? null,
+                  cliente: { nome: j.case_?.cliente?.nome ?? "" },
+                },
+              }))}
             />
           )}
 

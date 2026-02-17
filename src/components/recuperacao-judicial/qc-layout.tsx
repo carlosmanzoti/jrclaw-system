@@ -52,9 +52,17 @@ export function QCLayout() {
         <div className="max-w-md space-y-4 text-center">
           <h2 className="text-xl font-semibold">Nenhum caso de Recuperação Judicial</h2>
           <p className="text-sm text-muted-foreground">
-            Para utilizar o Quadro de Credores, primeiro crie um processo do tipo
-            &quot;Recuperação Judicial&quot; e vincule-o a um caso RJ.
+            Processos do tipo &quot;Recuperação Judicial&quot; aparecem automaticamente.
+            Crie um na tela de Processos para começar.
           </p>
+          <div className="flex justify-center gap-3 pt-2">
+            <a href="/processos" className="inline-flex items-center rounded-md border px-4 py-2 text-sm font-medium hover:bg-muted">
+              Ir para Processos
+            </a>
+            <a href="/importar" className="inline-flex items-center rounded-md bg-[#C9A961] px-4 py-2 text-sm font-medium text-[#2A2A2A] hover:bg-[#B8984F]">
+              Importar Credores
+            </a>
+          </div>
         </div>
       </div>
     );

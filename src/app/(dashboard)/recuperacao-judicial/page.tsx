@@ -1,10 +1,27 @@
 "use client"
 
+import { useState } from "react"
 import Link from "next/link"
-import { ShieldAlert, Users, BarChart3, Handshake, ArrowRight, Loader2 } from "lucide-react"
+import { ShieldAlert, Users, BarChart3, Handshake, ArrowRight, Loader2, Plus, Scale, Upload } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { Label } from "@/components/ui/label"
 import { trpc } from "@/lib/trpc"
 import { JR_STATUS_LABELS, JR_STATUS_COLORS } from "@/lib/rj-constants"
 
@@ -19,7 +36,27 @@ function formatDate(d: string | Date | null | undefined): string {
 }
 
 export default function RecuperacaoJudicialPage() {
+  const utils = trpc.useUtils()
   const { data: cases, isLoading } = trpc.rj.cases.list.useQuery()
+
+  // Vincular dialog state
+  const [showVincular, setShowVincular] = useState(false)
+  const [selectedCaseId, setSelectedCaseId] = useState("")
+  const [statusRj, setStatusRj] = useState("PROCESSAMENTO")
+
+  const createJrc = trpc.rj.cases.create.useMutation({
+    onSuccess: () => {
+      utils.rj.cases.list.invalidate()
+      setShowVincular(false)
+      setSelectedCaseId("")
+      setStatusRj("PROCESSAMENTO")
+    },
+  })
+
+  // Available RJ cases (Cases with tipo RECUPERACAO_JUDICIAL without a JRC)
+  const { data: availableCases } = trpc.rj.cases.availableCases.useQuery(undefined, {
+    enabled: showVincular,
+  })
 
   if (isLoading) {
     return (
@@ -35,15 +72,47 @@ export default function RecuperacaoJudicialPage() {
   const totalCredores = rjCases.reduce((s, c) => s + c.total_credores, 0)
   const totalCredito = rjCases.reduce((s, c) => s + Number(c.total_credito), 0)
 
+  const handleVincular = () => {
+    if (!selectedCaseId) return
+    createJrc.mutate({
+      case_id: selectedCaseId,
+      status_rj: statusRj,
+    })
+  }
+
   return (
     <div className="h-full overflow-y-auto">
       <div className="p-4 md:p-6 space-y-6">
         {/* Header */}
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight font-heading">Recuperação Judicial</h1>
-          <p className="text-[#666666]">
-            Gestão de processos de recuperação judicial, credores e negociações.
-          </p>
+        <div className="flex items-start justify-between">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight font-heading">Recuperação Judicial</h1>
+            <p className="text-[#666666]">
+              Gestão de processos de recuperação judicial, credores e negociações.
+            </p>
+          </div>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              asChild
+            >
+              <Link href="/importar">
+                <Upload className="size-3.5 mr-1.5" />
+                Importar Credores
+              </Link>
+            </Button>
+            <Button
+              size="sm"
+              className="bg-[#C9A961] text-[#2A2A2A] hover:bg-[#B8984F]"
+              asChild
+            >
+              <Link href="/processos?tipo=RECUPERACAO_JUDICIAL">
+                <Plus className="size-3.5 mr-1.5" />
+                Novo Processo de RJ
+              </Link>
+            </Button>
+          </div>
         </div>
 
         {/* KPI Cards */}
@@ -102,10 +171,27 @@ export default function RecuperacaoJudicialPage() {
             <CardContent className="flex flex-col items-center justify-center py-12">
               <ShieldAlert className="size-12 text-[#666666]/30" />
               <h3 className="mt-4 font-semibold">Nenhum caso de Recuperação Judicial</h3>
-              <p className="mt-1 text-sm text-[#666666] text-center max-w-md">
-                Para utilizar este módulo, primeiro crie um processo do tipo &quot;Recuperação Judicial&quot;
-                na tela de Processos e depois vincule-o a um caso RJ.
+              <p className="mt-2 text-sm text-[#666666] text-center max-w-md">
+                Processos do tipo &quot;Recuperação Judicial&quot; aparecem automaticamente aqui.
+                Crie um novo processo ou importe credores para começar.
               </p>
+              <div className="mt-4 flex gap-3">
+                <Button variant="outline" asChild>
+                  <Link href="/processos">
+                    <Scale className="size-4 mr-2" />
+                    Ir para Processos
+                  </Link>
+                </Button>
+                <Button
+                  className="bg-[#C9A961] text-[#2A2A2A] hover:bg-[#B8984F]"
+                  asChild
+                >
+                  <Link href="/importar">
+                    <Upload className="size-4 mr-2" />
+                    Importar Credores
+                  </Link>
+                </Button>
+              </div>
             </CardContent>
           </Card>
         ) : (
@@ -198,6 +284,14 @@ export default function RecuperacaoJudicialPage() {
                           Negociações
                         </Link>
                       </Button>
+                      {jrc.case_?.id && (
+                        <Button variant="ghost" size="sm" asChild className="shrink-0">
+                          <Link href={`/processos/${jrc.case_.id}`}>
+                            <Scale className="size-3.5 mr-1.5" />
+                            Processo
+                          </Link>
+                        </Button>
+                      )}
                     </div>
                   </CardContent>
                 </Card>
@@ -252,6 +346,68 @@ export default function RecuperacaoJudicialPage() {
           </Link>
         </div>
       </div>
+
+      {/* Vincular Processo Dialog */}
+      <Dialog open={showVincular} onOpenChange={setShowVincular}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Vincular Processo de RJ</DialogTitle>
+            <DialogDescription>
+              Selecione um processo existente do tipo &quot;Recuperação Judicial&quot; para vincular ao módulo de RJ.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label>Processo *</Label>
+              <Select value={selectedCaseId} onValueChange={setSelectedCaseId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione o processo" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableCases?.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>
+                      {c.numero_processo || "Sem número"} — {c.cliente?.nome || ""}
+                    </SelectItem>
+                  ))}
+                  {availableCases?.length === 0 && (
+                    <div className="px-2 py-4 text-center text-sm text-muted-foreground">
+                      Todos os processos de RJ já estão vinculados.
+                    </div>
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Fase da RJ</Label>
+              <Select value={statusRj} onValueChange={setStatusRj}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.entries(JR_STATUS_LABELS).map(([key, label]) => (
+                    <SelectItem key={key} value={key}>{label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowVincular(false)}>
+              Cancelar
+            </Button>
+            <Button
+              className="bg-[#C9A961] text-[#2A2A2A] hover:bg-[#B8984F]"
+              onClick={handleVincular}
+              disabled={!selectedCaseId || createJrc.isPending}
+            >
+              {createJrc.isPending ? (
+                <Loader2 className="size-4 mr-2 animate-spin" />
+              ) : null}
+              Vincular
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

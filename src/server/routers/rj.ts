@@ -42,6 +42,27 @@ import {
 
 const casesRouter = router({
   list: protectedProcedure.query(async ({ ctx }) => {
+    // Auto-sync: find Cases with tipo RECUPERACAO_JUDICIAL that don't have a JudicialRecoveryCase yet
+    const rjCasesWithoutJrc = await ctx.db.case.findMany({
+      where: {
+        tipo: "RECUPERACAO_JUDICIAL",
+        judicialRecoveryCase: null,
+      },
+      select: { id: true },
+    });
+
+    // Auto-create JudicialRecoveryCase for each
+    if (rjCasesWithoutJrc.length > 0) {
+      for (const c of rjCasesWithoutJrc) {
+        await ctx.db.judicialRecoveryCase.create({
+          data: {
+            case_id: c.id,
+            status_rj: "PROCESSAMENTO" as never,
+          },
+        });
+      }
+    }
+
     return ctx.db.judicialRecoveryCase.findMany({
       include: {
         case_: {
@@ -58,6 +79,28 @@ const casesRouter = router({
           },
         },
         administrador_judicial: { select: { id: true, nome: true } },
+      },
+      orderBy: { created_at: "desc" },
+    });
+  }),
+
+  // List Cases with tipo RECUPERACAO_JUDICIAL that can be linked (for the "Vincular" modal)
+  availableCases: protectedProcedure.query(async ({ ctx }) => {
+    return ctx.db.case.findMany({
+      where: {
+        tipo: "RECUPERACAO_JUDICIAL",
+        judicialRecoveryCase: null,
+      },
+      select: {
+        id: true,
+        numero_processo: true,
+        status: true,
+        vara: true,
+        comarca: true,
+        uf: true,
+        valor_causa: true,
+        cliente: { select: { id: true, nome: true } },
+        juiz: { select: { id: true, nome: true } },
       },
       orderBy: { created_at: "desc" },
     });
