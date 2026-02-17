@@ -100,9 +100,9 @@ export function ProjectsList() {
   return (
     <>
       {/* KPIs */}
-      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 w-full">
         {kpiCards.map((kpi) => (
-          <Card key={kpi.title} className="shadow-sm">
+          <Card key={kpi.title} className="shadow-sm min-w-0 overflow-hidden">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium text-[#666666]">{kpi.title}</CardTitle>
               <div className={`rounded-lg p-2 ${kpi.bg}`}>
@@ -203,20 +203,20 @@ export function ProjectsList() {
 
       {/* Views */}
       {view === "lista" && (
-        <div className="rounded-lg border bg-white overflow-x-auto max-h-[calc(100vh-20rem)] overflow-y-auto">
-          <Table>
+        <div className="rounded-lg border bg-white max-h-[calc(100vh-20rem)] overflow-y-auto overflow-x-auto w-full max-w-full">
+          <Table className="w-full">
             <TableHeader className="sticky top-0 z-10 bg-white">
               <TableRow>
-                <TableHead className="w-[130px]">Código</TableHead>
-                <TableHead className="min-w-[250px]">Título</TableHead>
-                <TableHead className="min-w-[200px]">Cliente</TableHead>
-                <TableHead className="hidden md:table-cell min-w-[180px]">Categoria</TableHead>
-                <TableHead className="hidden md:table-cell min-w-[140px]">Status</TableHead>
-                <TableHead className="hidden lg:table-cell min-w-[90px]">Prioridade</TableHead>
-                <TableHead className="hidden lg:table-cell min-w-[100px]">Progresso</TableHead>
-                <TableHead className="hidden xl:table-cell min-w-[180px]">Responsável</TableHead>
-                <TableHead className="hidden xl:table-cell text-right min-w-[150px]">Valor</TableHead>
-                <TableHead className="w-[50px]" />
+                <TableHead className="whitespace-nowrap">Código</TableHead>
+                <TableHead>Título</TableHead>
+                <TableHead>Cliente</TableHead>
+                <TableHead className="hidden md:table-cell whitespace-nowrap">Categoria</TableHead>
+                <TableHead className="hidden md:table-cell whitespace-nowrap">Status</TableHead>
+                <TableHead className="hidden lg:table-cell whitespace-nowrap">Prioridade</TableHead>
+                <TableHead className="hidden lg:table-cell whitespace-nowrap">Progresso</TableHead>
+                <TableHead className="hidden xl:table-cell whitespace-nowrap">Responsável</TableHead>
+                <TableHead className="hidden xl:table-cell text-right whitespace-nowrap">Valor</TableHead>
+                <TableHead className="w-[40px]" />
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -236,8 +236,8 @@ export function ProjectsList() {
                   return (
                     <TableRow key={p.id} className="cursor-pointer" onClick={() => router.push(`/projetos/${p.id}`)}>
                       <TableCell className="font-mono text-sm">{p.codigo}</TableCell>
-                      <TableCell className="min-w-[250px] max-w-[350px] truncate font-medium" title={p.titulo}>{p.titulo}</TableCell>
-                      <TableCell className="min-w-[200px] max-w-[250px] truncate" title={p.cliente.nome}>{p.cliente.nome}</TableCell>
+                      <TableCell className="max-w-[200px] truncate font-medium" title={p.titulo}>{p.titulo}</TableCell>
+                      <TableCell className="max-w-[160px] truncate" title={p.cliente.nome}>{p.cliente.nome}</TableCell>
                       <TableCell className="hidden md:table-cell">
                         <Badge variant="secondary" className="text-xs">
                           {PROJECT_CATEGORY_LABELS[p.categoria] || p.categoria}

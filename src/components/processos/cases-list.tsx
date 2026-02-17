@@ -194,7 +194,7 @@ export function CasesList() {
                         {CASE_TYPE_LABELS[caso.tipo] || caso.tipo}
                       </Badge>
                     </TableCell>
-                    <TableCell className="min-w-[200px] max-w-[250px] truncate" title={caso.cliente.nome}>{caso.cliente.nome}</TableCell>
+                    <TableCell className="max-w-[200px] truncate" title={caso.cliente.nome}>{caso.cliente.nome}</TableCell>
                     <TableCell className="hidden md:table-cell">
                       <Badge variant="secondary" className={STATUS_COLORS[caso.status] || ""}>
                         {CASE_STATUS_LABELS[caso.status]}

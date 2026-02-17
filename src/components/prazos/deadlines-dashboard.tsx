@@ -339,7 +339,7 @@ function DeadlineRow({ deadline: d }: { deadline: any }) {
       </TableCell>
 
       {/* Description */}
-      <TableCell className="min-w-[200px] max-w-[300px] truncate text-sm" title={d.descricao}>{d.descricao}</TableCell>
+      <TableCell className="max-w-[250px] truncate text-sm" title={d.descricao}>{d.descricao}</TableCell>
 
       {/* Date */}
       <TableCell>
