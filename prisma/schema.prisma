@@ -362,6 +362,151 @@ enum LibraryEntryType {
 }
 
 // ============================================================
+// JUDICIAL RECOVERY (RJ) ENUMS
+// ============================================================
+
+enum JRStatus {
+  PROCESSAMENTO
+  VERIFICACAO_CREDITOS
+  AGC_PENDENTE
+  PLANO_APROVADO
+  CUMPRIMENTO
+  ENCERRADA
+  CONVOLADA_FALENCIA
+}
+
+enum CreditClass {
+  CLASSE_I_TRABALHISTA
+  CLASSE_II_GARANTIA_REAL
+  CLASSE_III_QUIROGRAFARIO
+  CLASSE_IV_ME_EPP
+}
+
+enum CreditNature {
+  TRABALHISTA
+  ACIDENTARIO
+  HIPOTECA
+  PENHOR
+  ALIENACAO_FIDUCIARIA_IMOVEL
+  ALIENACAO_FIDUCIARIA_MOVEL
+  CESSAO_FIDUCIARIA_RECEBIVEIS
+  ANTICRESE
+  QUIROGRAFARIO
+  PRIVILEGIO_ESPECIAL
+  PRIVILEGIO_GERAL
+  SUBORDINADO
+  ME_EPP
+}
+
+enum GuaranteeType {
+  HIPOTECA
+  PENHOR
+  ALIENACAO_FIDUCIARIA
+  CESSAO_FIDUCIARIA
+  ANTICRESE
+  NONE
+}
+
+enum RJCreditStatus {
+  HABILITADO
+  HABILITACAO_RETARDATARIA
+  IMPUGNADO
+  DIVERGENCIA
+  EXCLUIDO
+  EXTRACONCURSAL
+}
+
+enum VoteDirection {
+  FAVOR
+  CONTRA
+  ABSTENCAO
+  AUSENTE
+}
+
+enum IndexationType {
+  TR
+  IPCA
+  IGP_M
+  CDI
+  SELIC
+  INPC
+  SEM_CORRECAO
+}
+
+enum CreditorSource {
+  MANUAL
+  IMPORT_CSV
+  IMPORT_EXCEL
+  IMPORT_PJE
+  HABILITACAO
+}
+
+enum SubclassValidation {
+  RASCUNHO
+  PENDENTE_VALIDACAO
+  VALIDADA
+  REJEITADA
+  REQUER_AJUSTE
+}
+
+enum CramDownRisk {
+  BAIXO
+  MEDIO
+  ALTO
+  CRITICO
+}
+
+enum TableVersionType {
+  INICIAL
+  AJ_VERIFICACAO
+  POS_HABILITACOES
+  CONSOLIDADO_AGC
+  RETIFICACAO
+  HOMOLOGADO
+}
+
+enum ChallengeType {
+  HABILITACAO
+  HABILITACAO_RETARDATARIA
+  IMPUGNACAO_CREDOR
+  IMPUGNACAO_MP
+  IMPUGNACAO_DEVEDOR
+  DIVERGENCIA
+}
+
+enum ChallengeResolution {
+  DEFERIDA
+  DEFERIDA_PARCIAL
+  INDEFERIDA
+  DESISTENCIA
+  ACORDO
+  PENDENTE
+}
+
+enum CreditorDocType {
+  CONTRATO
+  NOTA_FISCAL
+  DUPLICATA
+  CCB
+  CPR
+  SENTENCA_TRABALHISTA
+  CERTIDAO_CREDITO
+  COMPROVANTE_GARANTIA
+  HABILITACAO_PETICAO
+  IMPUGNACAO_PETICAO
+  PROCURACAO
+  OUTROS
+}
+
+enum InstallmentStatus {
+  PENDENTE
+  VENCIDO
+  PAGO
+  PAGO_PARCIAL
+  INADIMPLIDO
+}
+
+// ============================================================
 // MODELS
 // ============================================================
 
@@ -465,6 +610,8 @@ model Person {
   activities           Activity[]
   financial_releases   FinancialRelease[]
   report_snapshots     ReportSnapshot[]
+  rj_creditors         RJCreditor[]             @relation("RJCreditorPerson")
+  rj_admin_cases       JudicialRecoveryCase[]   @relation("RJAdminJudicial")
 
   @@map("persons")
 }
@@ -527,6 +674,7 @@ model Case {
   library_refs        LibraryEntry[]      @relation("LibraryCaseRef")
   financial_releases  FinancialRelease[]
   chat_messages       ChatMessage[]       @relation("ChatMessageCase")
+  judicialRecoveryCase JudicialRecoveryCase?
 
   @@map("cases")
 }
@@ -1124,4 +1272,570 @@ model LibrarySearchLog {
   @@index([user_id])
   @@index([created_at])
   @@map("library_search_logs")
+}
+
+// ============================================================
+// JUDICIAL RECOVERY (RJ) MODULE MODELS
+// ============================================================
+
+model JudicialRecoveryCase {
+  id                    String    @id @default(cuid())
+  case_id               String    @unique
+  case_                 Case      @relation(fields: [case_id], references: [id], onDelete: Cascade)
+
+  // RJ-specific data
+  status_rj             JRStatus  @default(PROCESSAMENTO)
+  data_pedido           DateTime?
+  data_deferimento      DateTime?
+  data_agc              DateTime?
+  data_aprovacao_plano  DateTime?
+  data_homologacao      DateTime?
+  data_encerramento     DateTime?
+
+  // Administrador Judicial
+  administrador_judicial_id String?
+  administrador_judicial    Person?  @relation("RJAdminJudicial", fields: [administrador_judicial_id], references: [id])
+
+  // Totals (cached, recalculated)
+  total_credores        Int       @default(0)
+  total_credito         BigInt    @default(0)
+  total_classe_i        BigInt    @default(0)
+  total_classe_ii       BigInt    @default(0)
+  total_classe_iii      BigInt    @default(0)
+  total_classe_iv       BigInt    @default(0)
+
+  // Plan info
+  plano_versao          Int       @default(0)
+  plano_aprovado        Boolean   @default(false)
+
+  observacoes           String?   @db.Text
+
+  created_at            DateTime  @default(now())
+  updated_at            DateTime  @updatedAt
+
+  // Relations
+  credores              RJCreditor[]
+  subclasses            CreditorSubclass[]
+  versoes               CreditorTableVersion[]
+  impugnacoes           CreditorChallenge[]
+  voting_scenarios      VotingScenario[]
+  financial_projections FinancialProjection[]
+  negotiations          RJNegotiation[]
+
+  @@map("judicial_recovery_cases")
+}
+
+model RJCreditor {
+  id                    String          @id @default(cuid())
+  jrc_id                String
+  jrc                   JudicialRecoveryCase @relation(fields: [jrc_id], references: [id], onDelete: Cascade)
+
+  // Identification
+  nome                  String
+  cpf_cnpj              String?
+  pessoa_fisica         Boolean         @default(false)
+
+  // Optional link to Person
+  person_id             String?
+  person                Person?         @relation("RJCreditorPerson", fields: [person_id], references: [id])
+
+  // Classification
+  classe                CreditClass
+  natureza              CreditNature
+  status                RJCreditStatus  @default(HABILITADO)
+  fonte                 CreditorSource  @default(MANUAL)
+
+  // Values (all stored as BigInt centavos for precision)
+  valor_original        BigInt          @default(0)
+  valor_atualizado      BigInt          @default(0)
+  valor_garantia        BigInt          @default(0)
+  valor_quirografario   BigInt          @default(0)
+  valor_trabalhista_150sm BigInt        @default(0)
+  valor_trabalhista_excedente BigInt    @default(0)
+
+  // Guarantee details
+  tipo_garantia         GuaranteeType   @default(NONE)
+  descricao_garantia    String?         @db.Text
+  matricula_imovel      String?
+  valor_avaliacao_garantia BigInt       @default(0)
+
+  // Payment terms from plan
+  desagio_percentual    Float?
+  carencia_meses        Int?
+  parcelas              Int?
+  indexador             IndexationType?
+  juros_percentual      Float?
+
+  // Voting
+  voto                  VoteDirection?
+  presente_agc          Boolean         @default(false)
+
+  // Subclass
+  subclass_id           String?
+  subclass              CreditorSubclass? @relation(fields: [subclass_id], references: [id])
+
+  // Metadata
+  observacoes           String?         @db.Text
+  ordem                 Int             @default(0)
+
+  created_at            DateTime        @default(now())
+  updated_at            DateTime        @updatedAt
+
+  // Relations
+  documentos            CreditorDocument[]
+  impugnacoes           CreditorChallenge[]
+  parcelas_pgto         PaymentInstallment[]
+  negotiation_creditors NegotiationCreditor[]
+
+  @@index([jrc_id])
+  @@index([classe])
+  @@index([status])
+  @@index([subclass_id])
+  @@map("rj_creditors")
+}
+
+model CreditorSubclass {
+  id                    String              @id @default(cuid())
+  jrc_id                String
+  jrc                   JudicialRecoveryCase @relation(fields: [jrc_id], references: [id], onDelete: Cascade)
+
+  nome                  String
+  descricao             String?             @db.Text
+  classe_base           CreditClass
+
+  // STJ REsp 1.634.844/SP validation
+  criterios_objetivos   Json?
+  justificativa_interesse_homogeneo String? @db.Text
+  protecao_direitos     String?             @db.Text
+
+  // Payment conditions for this subclass
+  desagio_percentual    Float?
+  carencia_meses        Int?
+  parcelas              Int?
+  indexador             IndexationType?
+  juros_percentual      Float?
+
+  // Validation status
+  validacao             SubclassValidation  @default(RASCUNHO)
+  validacao_notas       String?             @db.Text
+  risco_cram_down       CramDownRisk?
+
+  // Stats (cached)
+  total_credores        Int                 @default(0)
+  total_valor           BigInt              @default(0)
+
+  ordem                 Int                 @default(0)
+  cor                   String?
+
+  created_at            DateTime            @default(now())
+  updated_at            DateTime            @updatedAt
+
+  // Relations
+  credores              RJCreditor[]
+
+  @@index([jrc_id])
+  @@index([classe_base])
+  @@map("creditor_subclasses")
+}
+
+model CreditorTableVersion {
+  id                    String              @id @default(cuid())
+  jrc_id                String
+  jrc                   JudicialRecoveryCase @relation(fields: [jrc_id], references: [id], onDelete: Cascade)
+
+  versao                Int
+  tipo                  TableVersionType
+  titulo                String
+  descricao             String?             @db.Text
+
+  // Snapshot data
+  snapshot_data         Json
+  summary_data          Json?
+
+  // Metadata
+  publicada             Boolean             @default(false)
+  data_publicacao       DateTime?
+
+  created_at            DateTime            @default(now())
+  created_by_id         String?
+
+  @@index([jrc_id])
+  @@map("creditor_table_versions")
+}
+
+model CreditorChallenge {
+  id                    String              @id @default(cuid())
+  jrc_id                String
+  jrc                   JudicialRecoveryCase @relation(fields: [jrc_id], references: [id], onDelete: Cascade)
+
+  creditor_id           String?
+  creditor              RJCreditor?         @relation(fields: [creditor_id], references: [id])
+
+  tipo                  ChallengeType
+  requerente_nome       String
+  requerente_cpf_cnpj   String?
+
+  // Values
+  valor_pretendido      BigInt              @default(0)
+  classe_pretendida     CreditClass?
+
+  // Resolution
+  resolucao             ChallengeResolution @default(PENDENTE)
+  valor_reconhecido     BigInt?
+  classe_reconhecida    CreditClass?
+
+  // Process info
+  numero_processo       String?
+  data_protocolo        DateTime?
+  data_resolucao        DateTime?
+  fundamentacao         String?             @db.Text
+  decisao               String?             @db.Text
+
+  created_at            DateTime            @default(now())
+  updated_at            DateTime            @updatedAt
+
+  @@index([jrc_id])
+  @@index([creditor_id])
+  @@map("creditor_challenges")
+}
+
+model CreditorDocument {
+  id                    String              @id @default(cuid())
+  creditor_id           String
+  creditor              RJCreditor          @relation(fields: [creditor_id], references: [id], onDelete: Cascade)
+
+  tipo                  CreditorDocType
+  titulo                String
+  arquivo_url           String?
+  observacoes           String?
+
+  uploaded_at           DateTime            @default(now())
+
+  @@index([creditor_id])
+  @@map("creditor_documents")
+}
+
+model PaymentInstallment {
+  id                    String              @id @default(cuid())
+  creditor_id           String
+  creditor              RJCreditor          @relation(fields: [creditor_id], references: [id], onDelete: Cascade)
+
+  numero                Int
+  data_vencimento       DateTime
+  valor_principal       BigInt              @default(0)
+  valor_juros           BigInt              @default(0)
+  valor_correcao        BigInt              @default(0)
+  valor_total           BigInt              @default(0)
+  valor_pago            BigInt              @default(0)
+
+  status                InstallmentStatus   @default(PENDENTE)
+  data_pagamento        DateTime?
+
+  created_at            DateTime            @default(now())
+
+  @@index([creditor_id])
+  @@map("payment_installments")
+}
+
+// ============================================================
+// PRJ APPROVAL MODULE MODELS
+// ============================================================
+
+enum ScenarioType {
+  BASE
+  OTIMISTA
+  PESSIMISTA
+  CRAM_DOWN
+  CUSTOM
+}
+
+enum ProjectionStatus {
+  RASCUNHO
+  EM_ANALISE
+  APROVADO
+  REJEITADO
+}
+
+model VotingScenario {
+  id                    String              @id @default(cuid())
+  jrc_id                String
+  jrc                   JudicialRecoveryCase @relation(fields: [jrc_id], references: [id], onDelete: Cascade)
+
+  nome                  String
+  tipo                  ScenarioType        @default(BASE)
+  descricao             String?             @db.Text
+
+  // Scenario data: overrides per creditor { creditor_id: { voto, presente_agc } }
+  overrides             Json?
+
+  // Computed results (cached)
+  resultado             Json?
+  aprovado              Boolean?
+  cram_down_viavel      Boolean?
+
+  ativo                 Boolean             @default(true)
+
+  created_at            DateTime            @default(now())
+  updated_at            DateTime            @updatedAt
+  created_by_id         String?
+
+  @@index([jrc_id])
+  @@map("voting_scenarios")
+}
+
+model FinancialProjection {
+  id                    String              @id @default(cuid())
+  jrc_id                String
+  jrc                   JudicialRecoveryCase @relation(fields: [jrc_id], references: [id], onDelete: Cascade)
+
+  nome                  String
+  tipo                  ScenarioType        @default(BASE)
+  status                ProjectionStatus    @default(RASCUNHO)
+
+  // Input parameters
+  anos_projecao         Int                 @default(5)
+  receita_ano_base      BigInt              @default(0)
+  taxa_crescimento      Float               @default(0)    // % annual
+  margem_ebitda         Float               @default(0)    // %
+  capex_percentual      Float               @default(0)    // % of revenue
+  capital_giro_pct      Float               @default(0)    // % of revenue
+  taxa_desconto         Float               @default(12)   // % annual (WACC)
+  aliquota_ir           Float               @default(34)   // IRPJ + CSLL
+
+  // Stress test parameters
+  stress_receita        Float?              // % variation
+  stress_margem         Float?              // % variation
+  stress_juros          Float?              // % variation
+
+  // Computed results (cached as JSON)
+  resultado_dre         Json?
+  resultado_fluxo_caixa Json?
+  resultado_dscr        Json?
+  resultado_sensibilidade Json?
+
+  observacoes           String?             @db.Text
+
+  created_at            DateTime            @default(now())
+  updated_at            DateTime            @updatedAt
+  created_by_id         String?
+
+  @@index([jrc_id])
+  @@map("financial_projections")
+}
+
+// ============================================================
+// NEGOTIATION MODULE — Enums
+// ============================================================
+
+enum NegotiationPhase {
+  MAPEAMENTO
+  CONTATO_INICIAL
+  PROPOSTA_ENVIADA
+  CONTRAPROPOSTA
+  MEDIACAO
+  ACORDO_VERBAL
+  FORMALIZACAO
+  HOMOLOGACAO
+  CONCLUIDA
+  IMPASSE
+}
+
+enum NegotiationPriority {
+  CRITICA
+  ALTA
+  MEDIA
+  BAIXA
+}
+
+enum CreditorNegotiationStatus {
+  NAO_CONTATADO
+  EM_CONTATO
+  PROPOSTA_RECEBIDA
+  CONTRAPROPOSTA_ENVIADA
+  EM_MEDIACAO
+  ACORDO_PARCIAL
+  ACORDO_TOTAL
+  RECUSOU
+  PARCEIRO
+  DESISTIU
+}
+
+enum NegActivityType {
+  CONTATO_TELEFONICO
+  EMAIL_ENVIADO
+  EMAIL_RECEBIDO
+  REUNIAO_PRESENCIAL
+  REUNIAO_VIRTUAL
+  PROPOSTA_ENVIADA
+  CONTRAPROPOSTA_RECEBIDA
+  ACORDO_VERBAL
+  ACORDO_FORMALIZADO
+  DOCUMENTO_ENVIADO
+  DOCUMENTO_RECEBIDO
+  MEDIACAO_SESSAO
+  OBSERVACAO
+}
+
+enum NegTemplateType {
+  PROPOSTA_INICIAL
+  CONTRAPROPOSTA
+  CONVITE_PARCEIRO
+  CONVITE_MEDIACAO
+  TERMO_ACORDO
+  NOTIFICACAO
+  LEMBRETE
+}
+
+enum CommunicationChannel {
+  EMAIL
+  WHATSAPP
+  TELEFONE
+  CARTA
+  REUNIAO_PRESENCIAL
+  REUNIAO_VIRTUAL
+  SISTEMA
+}
+
+// ============================================================
+// NEGOTIATION MODULE — Models
+// ============================================================
+
+model RJNegotiation {
+  id                    String              @id @default(cuid())
+  jrc_id                String
+  jrc                   JudicialRecoveryCase @relation(fields: [jrc_id], references: [id], onDelete: Cascade)
+
+  // Identification
+  titulo                String
+  descricao             String?             @db.Text
+  fase                  NegotiationPhase    @default(MAPEAMENTO)
+  prioridade            NegotiationPriority @default(MEDIA)
+
+  // Dates
+  data_inicio           DateTime            @default(now())
+  data_limite           DateTime?
+  data_conclusao        DateTime?
+
+  // Proposal values
+  valor_total_original  BigInt              @default(0)
+  valor_proposta_atual  BigInt              @default(0)
+  desagio_proposto      Float?              // % discount
+  carencia_proposta     Int?                // months
+  parcelas_propostas    Int?
+  juros_proposto        Float?              // % annual
+
+  // Counters (cached)
+  total_credores        Int                 @default(0)
+  credores_acordados    Int                 @default(0)
+  valor_acordado        BigInt              @default(0)
+
+  // Partner program
+  programa_parceiro     Boolean             @default(false)
+  beneficio_parceiro    String?             @db.Text
+
+  // Mediation
+  mediacao_ativa        Boolean             @default(false)
+  mediador_nome         String?
+  mediador_contato      String?
+  proxima_sessao        DateTime?
+
+  observacoes           String?             @db.Text
+
+  created_at            DateTime            @default(now())
+  updated_at            DateTime            @updatedAt
+  created_by_id         String?
+
+  // Relations
+  credores              NegotiationCreditor[]
+  atividades            NegotiationActivity[]
+
+  @@index([jrc_id])
+  @@index([fase])
+  @@map("rj_negotiations")
+}
+
+model NegotiationCreditor {
+  id                    String                    @id @default(cuid())
+  negotiation_id        String
+  negotiation           RJNegotiation             @relation(fields: [negotiation_id], references: [id], onDelete: Cascade)
+
+  creditor_id           String
+  creditor              RJCreditor                @relation(fields: [creditor_id], references: [id], onDelete: Cascade)
+
+  // Status in this negotiation
+  status                CreditorNegotiationStatus @default(NAO_CONTATADO)
+  is_parceiro           Boolean                   @default(false)
+
+  // Individual proposal
+  valor_original        BigInt                    @default(0)
+  valor_proposto        BigInt                    @default(0)
+  valor_contraproposta  BigInt?
+  valor_acordado        BigInt?
+  desagio_individual    Float?
+  carencia_individual   Int?
+  parcelas_individual   Int?
+  juros_individual      Float?
+
+  // Contact info
+  ultimo_contato        DateTime?
+  proximo_contato       DateTime?
+  canal_preferido       CommunicationChannel?
+  contato_nome          String?
+  contato_email         String?
+  contato_telefone      String?
+
+  observacoes           String?                   @db.Text
+
+  created_at            DateTime                  @default(now())
+  updated_at            DateTime                  @updatedAt
+
+  @@unique([negotiation_id, creditor_id])
+  @@index([negotiation_id])
+  @@index([creditor_id])
+  @@index([status])
+  @@map("negotiation_creditors")
+}
+
+model NegotiationActivity {
+  id                    String              @id @default(cuid())
+  negotiation_id        String
+  negotiation           RJNegotiation       @relation(fields: [negotiation_id], references: [id], onDelete: Cascade)
+
+  tipo                  NegActivityType
+  canal                 CommunicationChannel?
+  descricao             String              @db.Text
+  resultado             String?             @db.Text
+
+  // Optional link to specific creditor
+  creditor_id           String?
+  creditor_nome         String?
+
+  // Attachments (JSON array of { nome, url })
+  anexos                Json?
+
+  data_atividade        DateTime            @default(now())
+  created_by_id         String?
+
+  created_at            DateTime            @default(now())
+
+  @@index([negotiation_id])
+  @@index([data_atividade])
+  @@map("negotiation_activities")
+}
+
+model NegotiationTemplate {
+  id                    String              @id @default(cuid())
+  tipo                  NegTemplateType
+  titulo                String
+  assunto               String?
+  conteudo              String              @db.Text
+  variaveis             Json?               // available template variables
+  canal                 CommunicationChannel?
+  ativo                 Boolean             @default(true)
+
+  created_at            DateTime            @default(now())
+  updated_at            DateTime            @updatedAt
+  created_by_id         String?
+
+  @@map("negotiation_templates")
 }

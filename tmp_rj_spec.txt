@@ -1,0 +1,1046 @@
+Leia o CLAUDE.md e o estado atual. Crie o módulo de Recuperação Judicial — Quadro de Credores em /dashboard/recuperacao-judicial/quadro-credores.
+Este módulo gerencia o quadro geral de credores conforme Lei 11.101/2005, incluindo importação, classificação, subclassificação (com validação STJ), habilitações, impugnações, divergências e exportação. É o módulo-base sobre o qual os módulos 5.2 (Aprovação PRJ) e 5.3 (Negociações) operam.
+
+═══════════════════════════════════════════════════════
+PARTE A — SCHEMA DO BANCO DE DADOS
+═══════════════════════════════════════════════════════
+
+1) TABELAS PRISMA
+Adicionar ao schema.prisma as seguintes tabelas. Todas vinculadas ao caseId (processo de RJ):
+prisma// ───── PROCESSO DE RJ ─────
+model JudicialRecoveryCase {
+  id                    String   @id @default(cuid())
+  caseId                String   @unique // FK para Case existente
+  case                  Case     @relation(fields: [caseId], references: [id])
+
+  // Dados específicos RJ
+  courtName             String   // Vara
+  judgeName             String?  // Juiz
+  administratorName     String   // Administrador Judicial
+  administratorCpfCnpj  String?
+  filingDate            DateTime // Data do pedido
+  grantDate             DateTime? // Data do deferimento
+  stayExpirationDate    DateTime? // Vencimento do stay period
+  planDeadline          DateTime? // Prazo para apresentação do plano
+  agcDate               DateTime? // Data da AGC
+  planApprovalDate      DateTime? // Data de aprovação do plano
+  status                JRStatus @default(PROCESSAMENTO)
+
+  // Totais consolidados (recalculados automaticamente)
+  totalDebt             BigInt   @default(0) // Em centavos
+  totalCreditors        Int      @default(0)
+
+  // Relações
+  creditors             Creditor[]
+  subclasses            CreditorSubclass[]
+  creditorTableVersions CreditorTableVersion[]
+  financialProjections  FinancialProjection[]
+  negotiations          Negotiation[]
+  votingScenarios       VotingScenario[]
+
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@index([status])
+}
+
+enum JRStatus {
+  PROCESSAMENTO        // Pedido deferido, em processamento
+  VERIFICACAO_CREDITOS // Fase de verificação de créditos
+  AGC_PENDENTE         // Aguardando AGC
+  PLANO_APROVADO       // Plano aprovado
+  CUMPRIMENTO          // Em cumprimento do plano
+  ENCERRADA            // RJ encerrada com sucesso
+  CONVOLADA_FALENCIA   // Convolada em falência
+}
+
+// ───── CREDOR ─────
+model Creditor {
+  id                    String   @id @default(cuid())
+  jrCaseId              String
+  jrCase                JudicialRecoveryCase @relation(fields: [jrCaseId], references: [id], onDelete: Cascade)
+
+  // Identificação
+  name                  String
+  cpfCnpj               String?
+  email                 String?
+  phone                 String?
+  lawyerName            String?
+  lawyerOab             String?
+
+  // Classificação — Art. 41 Lei 11.101/2005
+  creditClass           CreditClass
+  creditNature          CreditNature
+  originalAmount        BigInt   // Valor original em centavos
+  updatedAmount         BigInt   // Valor atualizado em centavos
+  currency              String   @default("BRL")
+
+  // Garantias (Classe II)
+  guaranteeType         GuaranteeType?
+  guaranteeDescription  String?
+  guaranteeAssetValue   BigInt?  // Valor do bem gravado em centavos
+  isFiduciaryAssignment Boolean  @default(false) // Cessão fiduciária — Art. 49 §3º
+
+  // Subclasse (opcional)
+  subclassId            String?
+  subclass              CreditorSubclass? @relation(fields: [subclassId], references: [id])
+
+  // Status do crédito
+  creditStatus          CreditStatus @default(HABILITADO)
+  habitationDate        DateTime?
+  challengeDeadline     DateTime?
+
+  // Dados de votação
+  votingPower           BigInt?  // Poder de voto em centavos (pode diferir do valor)
+  hasVotingRight        Boolean  @default(true)
+  voteDirection         VoteDirection? // null = não votou ainda
+
+  // Dados de pagamento (pós-aprovação)
+  paymentTermMonths     Int?     // Prazo em meses
+  gracePeriodMonths     Int?     // Carência em meses
+  haircut               Int?     // Deságio em basis points (5000 = 50%)
+  interestRate          Int?     // Taxa de juros em basis points (100 = 1%)
+  indexationType        IndexationType?
+  paymentStartDate      DateTime?
+
+  // Metadados
+  source                CreditorSource @default(MANUAL)
+  notes                 String?
+  isPartnerCreditor     Boolean  @default(false)
+  partnerCreditorTier   String?  // Tier do programa de credor parceiro
+
+  // Relações
+  challenges            CreditorChallenge[]
+  documents             CreditorDocument[]
+  negotiations          NegotiationCreditor[]
+  paymentSchedule       PaymentInstallment[]
+
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@unique([jrCaseId, cpfCnpj])
+  @@index([jrCaseId, creditClass])
+  @@index([jrCaseId, creditStatus])
+  @@index([jrCaseId, subclassId])
+}
+
+enum CreditClass {
+  CLASSE_I_TRABALHISTA    // Trabalhistas e acidentários
+  CLASSE_II_GARANTIA_REAL // Garantia real
+  CLASSE_III_QUIROGRAFARIO // Quirografários, privilégio especial/geral, subordinados
+  CLASSE_IV_ME_EPP        // Microempresas e EPPs
+}
+
+enum CreditNature {
+  // Classe I
+  TRABALHISTA
+  ACIDENTARIO
+  // Classe II
+  HIPOTECA
+  PENHOR
+  ALIENACAO_FIDUCIARIA_IMOVEL
+  ALIENACAO_FIDUCIARIA_MOVEL
+  CESSAO_FIDUCIARIA_RECEBIVEIS  // Art. 49 §3º — pode estar excluído da RJ
+  ANTICRESE
+  // Classe III
+  QUIROGRAFARIO
+  PRIVILEGIO_ESPECIAL
+  PRIVILEGIO_GERAL
+  SUBORDINADO
+  // Classe IV
+  ME_EPP
+}
+
+enum GuaranteeType {
+  HIPOTECA
+  PENHOR
+  ALIENACAO_FIDUCIARIA
+  CESSAO_FIDUCIARIA
+  ANTICRESE
+  NONE
+}
+
+enum CreditStatus {
+  HABILITADO               // Incluído no QGC
+  HABILITACAO_RETARDATARIA // Habilitação retardatária (Art. 10 §§1º-6º)
+  IMPUGNADO                // Com impugnação pendente
+  DIVERGENCIA              // Divergência entre AJ e credor
+  EXCLUIDO                 // Excluído do QGC
+  EXTRACONCURSAL           // Crédito extraconcursal (Art. 49 §3º e §4º)
+}
+
+enum VoteDirection {
+  FAVOR         // A favor do plano
+  CONTRA        // Contra o plano
+  ABSTENCAO     // Abstenção
+  AUSENTE       // Ausente na AGC
+}
+
+enum IndexationType {
+  TR             // Taxa Referencial — mais comum (33.3% dos planos)
+  IPCA           // IPCA
+  IGP_M          // IGP-M
+  CDI            // CDI
+  SELIC          // Selic
+  INPC           // INPC
+  SEM_CORRECAO   // Sem correção monetária
+}
+
+enum CreditorSource {
+  MANUAL
+  IMPORT_CSV
+  IMPORT_EXCEL
+  IMPORT_PJE
+  HABILITACAO
+}
+
+// ───── SUBCLASSES ─────
+// Framework baseado no REsp 1.634.844/SP (STJ)
+model CreditorSubclass {
+  id                    String   @id @default(cuid())
+  jrCaseId              String
+  jrCase                JudicialRecoveryCase @relation(fields: [jrCaseId], references: [id], onDelete: Cascade)
+
+  // Identificação
+  name                  String   // Ex: "Fornecedores Estratégicos", "Credores Financeiros"
+  description           String?
+  parentClass           CreditClass // Classe-mãe (II ou III tipicamente)
+
+  // Critérios objetivos — REsp 1.634.844/SP, Requisito 1
+  objectiveCriteria     Json     // Array de critérios objetivos documentados
+  // Formato: [{ type: 'NATUREZA_CREDITO'|'VALOR'|'GARANTIA'|'CONDICAO_CREDOR'|'RELACAO_COMERCIAL',
+  //             description: string, parameter: string, threshold?: number }]
+
+  // Justificativa de interesses homogêneos — REsp 1.634.844/SP, Requisito 2
+  homogeneousInterestsJustification String
+
+  // Declaração de não anulação de direitos — REsp 1.634.844/SP, Requisito 3
+  noRightsAnnulationDeclaration     String
+
+  // Condições de pagamento para esta subclasse
+  proposedHaircut       Int?     // Deságio em basis points
+  proposedTermMonths    Int?     // Prazo em meses
+  proposedGracePeriod   Int?     // Carência em meses
+  proposedInterestRate  Int?     // Taxa em basis points
+  proposedIndexation    IndexationType?
+
+  // Validação jurídica
+  validationStatus      SubclassValidation @default(RASCUNHO)
+  validationNotes       String?  // Notas do validador jurídico
+  cramDownRiskLevel     CramDownRisk @default(BAIXO) // Risco de inviabilizar cram down
+
+  // Totais (recalculados)
+  totalCreditors        Int      @default(0)
+  totalAmount           BigInt   @default(0)
+
+  // Relações
+  creditors             Creditor[]
+
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@unique([jrCaseId, name])
+  @@index([jrCaseId, parentClass])
+}
+
+enum SubclassValidation {
+  RASCUNHO
+  PENDENTE_VALIDACAO
+  VALIDADA
+  REJEITADA
+  REQUER_AJUSTE
+}
+
+enum CramDownRisk {
+  BAIXO              // Subclasse não gera risco ao cram down
+  MEDIO              // Possível impedimento se classe rejeitar
+  ALTO               // Provável impedimento ao cram down (Art. 58 §2º)
+  CRITICO            // Incompatível com cram down
+}
+
+// ───── VERSÕES DO QUADRO DE CREDORES ─────
+model CreditorTableVersion {
+  id                    String   @id @default(cuid())
+  jrCaseId              String
+  jrCase                JudicialRecoveryCase @relation(fields: [jrCaseId], references: [id], onDelete: Cascade)
+
+  versionNumber         Int
+  versionType           TableVersionType
+  description           String?
+  snapshot              Json     // Snapshot completo do quadro nesta versão
+  totalDebt             BigInt
+  totalCreditors        Int
+  publishedAt           DateTime?
+  publishedBy           String?
+
+  createdAt             DateTime @default(now())
+
+  @@unique([jrCaseId, versionNumber])
+  @@index([jrCaseId])
+}
+
+enum TableVersionType {
+  INICIAL              // Relação Art. 51, III (lista inicial do devedor)
+  AJ_VERIFICACAO       // Após verificação pelo AJ (Art. 7º §2º)
+  POS_HABILITACOES     // Após habilitações e impugnações
+  CONSOLIDADO_AGC      // Consolidado para votação na AGC (Art. 15)
+  RETIFICACAO          // Retificação judicial
+  HOMOLOGADO           // Homologado pelo juiz
+}
+
+// ───── IMPUGNAÇÕES E HABILITAÇÕES ─────
+model CreditorChallenge {
+  id                    String   @id @default(cuid())
+  creditorId            String
+  creditor              Creditor @relation(fields: [creditorId], references: [id], onDelete: Cascade)
+
+  challengeType         ChallengeType
+  requestedAmount       BigInt?  // Valor pretendido (em centavos)
+  requestedClass        CreditClass?
+  reason                String
+  filingDate            DateTime
+  deadline              DateTime?
+  resolution            ChallengeResolution?
+  resolutionDate        DateTime?
+  resolutionAmount      BigInt?
+  resolutionNotes       String?
+  processNumber         String?  // Nº do incidente processual
+
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@index([creditorId])
+}
+
+enum ChallengeType {
+  HABILITACAO             // Habilitação de crédito (Art. 7º §1º)
+  HABILITACAO_RETARDATARIA // Habilitação retardatária (Art. 10)
+  IMPUGNACAO_CREDOR       // Impugnação por credor (Art. 8º)
+  IMPUGNACAO_MP           // Impugnação pelo MP
+  IMPUGNACAO_DEVEDOR      // Impugnação pelo devedor
+  DIVERGENCIA             // Divergência (Art. 8º)
+}
+
+enum ChallengeResolution {
+  DEFERIDA
+  DEFERIDA_PARCIAL
+  INDEFERIDA
+  DESISTENCIA
+  ACORDO
+  PENDENTE
+}
+
+// ───── DOCUMENTOS DO CREDOR ─────
+model CreditorDocument {
+  id                    String   @id @default(cuid())
+  creditorId            String
+  creditor              Creditor @relation(fields: [creditorId], references: [id], onDelete: Cascade)
+
+  documentType          CreditorDocType
+  fileName              String
+  fileUrl               String
+  fileSize              Int?
+  description           String?
+  uploadedAt            DateTime @default(now())
+
+  @@index([creditorId])
+}
+
+enum CreditorDocType {
+  CONTRATO
+  NOTA_FISCAL
+  DUPLICATA
+  CCB                  // Cédula de Crédito Bancário
+  CPR                  // Cédula de Produto Rural
+  SENTENCA_TRABALHISTA
+  CERTIDAO_CREDITO
+  COMPROVANTE_GARANTIA
+  HABILITACAO_PETICAO
+  IMPUGNACAO_PETICAO
+  PROCURACAO
+  OUTROS
+}
+
+// ───── PARCELAS DE PAGAMENTO ─────
+model PaymentInstallment {
+  id                    String   @id @default(cuid())
+  creditorId            String
+  creditor              Creditor @relation(fields: [creditorId], references: [id], onDelete: Cascade)
+
+  installmentNumber     Int
+  dueDate               DateTime
+  principalAmount       BigInt   // Em centavos
+  interestAmount        BigInt   @default(0)
+  indexationAmount      BigInt   @default(0)
+  totalAmount           BigInt   // Em centavos
+  paidAmount            BigInt   @default(0)
+  paidDate              DateTime?
+  status                InstallmentStatus @default(PENDENTE)
+
+  @@unique([creditorId, installmentNumber])
+  @@index([creditorId, status])
+  @@index([dueDate])
+}
+
+enum InstallmentStatus {
+  PENDENTE
+  VENCIDO
+  PAGO
+  PAGO_PARCIAL
+  INADIMPLIDO
+}
+
+═══════════════════════════════════════════════════════
+PARTE B — SERVICES (src/lib/services/)
+═══════════════════════════════════════════════════════
+
+2) CREDITOR SERVICE (creditor-service.ts)
+typescript// Serviço principal de gerenciamento de credores
+// REGRA CARDINAL: Todos os valores monetários são armazenados como BigInt em centavos
+// Nunca usar number nativo para valores monetários
+
+interface CreditorFilters {
+  creditClass?: CreditClass;
+  creditStatus?: CreditStatus;
+  subclassId?: string;
+  search?: string; // Busca por nome, CPF/CNPJ
+  isPartnerCreditor?: boolean;
+  minAmount?: bigint;
+  maxAmount?: bigint;
+}
+
+interface CreditorSummary {
+  totalCreditors: number;
+  totalDebt: bigint; // centavos
+  byClass: {
+    class: CreditClass;
+    count: number;
+    totalAmount: bigint;
+    percentage: number; // do total
+  }[];
+  byStatus: {
+    status: CreditStatus;
+    count: number;
+  }[];
+  bySubclass: {
+    subclassId: string;
+    subclassName: string;
+    parentClass: CreditClass;
+    count: number;
+    totalAmount: bigint;
+  }[];
+}
+
+export class CreditorService {
+  // CRUD
+  async createCreditor(jrCaseId: string, data: CreateCreditorInput): Promise<Creditor>;
+  async updateCreditor(id: string, data: UpdateCreditorInput): Promise<Creditor>;
+  async deleteCreditor(id: string): Promise<void>;
+  async getCreditor(id: string): Promise<Creditor & { challenges: CreditorChallenge[]; documents: CreditorDocument[] }>;
+
+  // Listagem com filtros
+  async listCreditors(jrCaseId: string, filters: CreditorFilters, pagination: PaginationInput): Promise<PaginatedResult<Creditor>>;
+
+  // Resumo/Dashboard
+  async getCreditorSummary(jrCaseId: string): Promise<CreditorSummary>;
+
+  // Importação em massa
+  async importFromCSV(jrCaseId: string, file: File): Promise<ImportResult>;
+  async importFromExcel(jrCaseId: string, file: File): Promise<ImportResult>;
+  // Formato esperado CSV: nome,cpf_cnpj,classe,natureza,valor_original,valor_atualizado,garantia_tipo,garantia_valor
+
+  // Exportação
+  async exportToExcel(jrCaseId: string, filters?: CreditorFilters): Promise<Buffer>;
+  async exportToPDF(jrCaseId: string, filters?: CreditorFilters): Promise<Buffer>;
+
+  // Recalcular totais
+  async recalculateTotals(jrCaseId: string): Promise<void>;
+
+  // Versioning
+  async createTableVersion(jrCaseId: string, type: TableVersionType, description: string): Promise<CreditorTableVersion>;
+  async getTableVersion(versionId: string): Promise<CreditorTableVersion>;
+  async listTableVersions(jrCaseId: string): Promise<CreditorTableVersion[]>;
+  async compareVersions(versionId1: string, versionId2: string): Promise<VersionDiff>;
+
+  // Validação de classe
+  async validateCreditorClass(creditor: Creditor): Promise<ValidationResult>;
+  // Regras:
+  // - Classe I: limite de 150 salários mínimos (Art. 83 §4º CTN c/c Art. 41 §2º)
+  // - Classe II: crédito até limite do bem gravado; excedente vai para Classe III
+  // - Cessão fiduciária de recebíveis (Art. 49 §3º): marcar como EXTRACONCURSAL
+  // - Classe IV: verificar se credor é ME/EPP (CNPJ + enquadramento)
+}
+
+3) SUBCLASS SERVICE (subclass-service.ts)
+typescript// Serviço de gerenciamento de subclasses
+// Implementa validação conforme REsp 1.634.844/SP (STJ)
+
+interface SubclassValidationResult {
+  isValid: boolean;
+  errors: SubclassValidationError[];
+  warnings: SubclassValidationWarning[];
+  cramDownRisk: CramDownRisk;
+  cramDownRiskExplanation: string;
+}
+
+interface SubclassValidationError {
+  code: string;
+  field: string;
+  message: string;
+  legalBasis: string; // Fundamentação legal
+}
+
+interface SubclassValidationWarning {
+  code: string;
+  message: string;
+  recommendation: string;
+}
+
+export class SubclassService {
+  // CRUD
+  async createSubclass(jrCaseId: string, data: CreateSubclassInput): Promise<CreditorSubclass>;
+  async updateSubclass(id: string, data: UpdateSubclassInput): Promise<CreditorSubclass>;
+  async deleteSubclass(id: string): Promise<void>;
+  async listSubclasses(jrCaseId: string): Promise<CreditorSubclass[]>;
+
+  // Atribuição de credores a subclasses
+  async assignCreditorToSubclass(creditorId: string, subclassId: string): Promise<void>;
+  async removeCreditorFromSubclass(creditorId: string): Promise<void>;
+  async bulkAssignToSubclass(creditorIds: string[], subclassId: string): Promise<void>;
+
+  // ═══ VALIDAÇÃO STJ (REsp 1.634.844/SP) ═══
+  async validateSubclass(id: string): Promise<SubclassValidationResult>;
+  // Implementar as 3 verificações cumulativas:
+
+  // REQUISITO 1 — Critérios objetivos
+  // Verificar que objectiveCriteria contém pelo menos 1 critério com:
+  // - type: deve ser NATUREZA_CREDITO, VALOR, GARANTIA, CONDICAO_CREDOR ou RELACAO_COMERCIAL
+  // - description: não pode ser genérica ("credores que eu quiser")
+  // - parameter: deve ser verificável objetivamente
+  // ERRO se: critérios vagos, potestatividade (depende da vontade exclusiva do devedor)
+  // ERRO se: condiciona parceria à aprovação do plano (TJ-SP AI 2118997-68.2024.8.26.0000)
+
+  // REQUISITO 2 — Interesses homogêneos
+  // Verificar que homogeneousInterestsJustification:
+  // - Descreve características comuns dos credores da subclasse
+  // - Demonstra que os credores têm situação jurídica/econômica similar
+  // ERRO se: justificativa genérica ou ausente
+
+  // REQUISITO 3 — Vedação de anulação de direitos
+  // Verificar que noRightsAnnulationDeclaration:
+  // - Confirma que credores fora da subclasse mantêm direitos reais
+  // - O haircut da subclasse menos favorecida não é confiscatório (>90% = alerta)
+  // ERRO se: subclasse minoritária recebe tratamento que equivale a eliminação do crédito
+
+  // ═══ ANÁLISE DE RISCO CRAM DOWN (Art. 58 §2º) ═══
+  async analyzeCramDownRisk(jrCaseId: string): Promise<CramDownRiskAnalysis>;
+  // Art. 58 §2º proíbe tratamento diferenciado entre credores da classe que rejeitou
+  // Se existem subclasses com tratamento diferente na mesma classe:
+  // - BAIXO: diferença de haircut < 10pp entre subclasses
+  // - MÉDIO: diferença de haircut 10-30pp
+  // - ALTO: diferença de haircut > 30pp
+  // - CRÍTICO: subclasse com haircut >90% enquanto outra <50%
+  // O sistema deve ALERTAR o usuário sobre esse risco ao criar subclasses
+
+  // ═══ VEDAÇÕES EXPRESSAS (TJ-SP) ═══
+  // O service deve rejeitar automaticamente:
+  // 1. "Gerrymandering creditório" — subclasses que manipulam quórum de votação
+  //    Detectar: se mover credores para subclasse mudaria resultado de votação
+  // 2. Condição potestativa — devedor escolhe livremente quem entra
+  //    Detectar: critério baseado apenas em decisão unilateral do devedor
+  // 3. Condicionar parceria à aprovação do plano
+  //    Detectar: critério que menciona voto/aprovação como condição
+  // 4. Negociações individuais sem critérios objetivos
+  //    Detectar: subclasse com 1 único credor sem justificativa
+}
+
+4) PAYMENT CALCULATOR SERVICE (payment-calculator-service.ts)
+typescript// Serviço de cálculos financeiros
+// USA Decimal.js para TODOS os cálculos — NUNCA number nativo
+// Armazena resultados como BigInt (centavos) no banco
+
+import Decimal from 'decimal.js';
+
+// Configuração global obrigatória
+Decimal.set({
+  precision: 20,
+  rounding: Decimal.ROUND_HALF_UP, // Padrão financeiro brasileiro
+  toExpNeg: -9,
+  toExpPos: 20,
+});
+
+interface PaymentScheduleInput {
+  originalAmount: bigint;       // centavos
+  haircut: number;              // basis points (5000 = 50%)
+  termMonths: number;
+  gracePeriodMonths: number;
+  interestRate: number;         // basis points anuais (100 = 1%)
+  indexation: IndexationType;
+  startDate: Date;
+  amortizationType: 'SAC' | 'PRICE' | 'BULLET' | 'CUSTOM';
+}
+
+interface PaymentScheduleOutput {
+  installments: {
+    number: number;
+    dueDate: Date;
+    principal: bigint;
+    interest: bigint;
+    indexation: bigint;
+    total: bigint;
+    outstandingBalance: bigint;
+  }[];
+  summary: {
+    totalPaid: bigint;
+    totalInterest: bigint;
+    totalIndexation: bigint;
+    effectiveHaircut: number;     // Deságio efetivo em valor presente
+    npv: bigint;                  // NPV descontado à Selic
+    recoveryRate: number;         // Centavos por real recuperados
+    irr: number;                  // TIR em basis points
+  };
+}
+
+export class PaymentCalculatorService {
+  // Gerar cronograma de pagamento para um credor
+  async generatePaymentSchedule(input: PaymentScheduleInput): Promise<PaymentScheduleOutput>;
+
+  // Gerar cronograma para toda uma subclasse
+  async generateSubclassSchedule(subclassId: string): Promise<PaymentScheduleOutput[]>;
+
+  // Gerar cronograma consolidado por classe
+  async generateClassSchedule(jrCaseId: string, creditClass: CreditClass): Promise<ConsolidatedSchedule>;
+
+  // ═══ NPV — Valor Presente Líquido ═══
+  // Calcular NPV dos pagamentos descontados à taxa especificada
+  // Taxas comuns: Selic (14.25%), CDI (14.15%), IPCA+spread
+  async calculateNPV(
+    cashflows: { date: Date; amount: bigint }[],
+    discountRate: number, // basis points anuais
+    referenceDate: Date
+  ): Promise<bigint>;
+
+  // ═══ COMPARAÇÃO RJ vs. FALÊNCIA ═══
+  // Análise waterfall comparativa
+  async compareRJvsBankruptcy(jrCaseId: string): Promise<{
+    rjScenario: {
+      byClass: { class: CreditClass; totalReceived: bigint; npv: bigint; recoveryRate: number }[];
+      totalRecovered: bigint;
+      timelineYears: number;
+    };
+    bankruptcyScenario: {
+      estimatedAssetValue: bigint;
+      liquidationCosts: bigint; // Tipicamente 20-30% do valor
+      byClass: { class: CreditClass; estimatedRecovery: bigint; recoveryRate: number }[];
+      totalRecovered: bigint;
+      estimatedTimelineYears: number; // 10+ anos tipicamente
+    };
+    advantage: 'RJ' | 'FALENCIA';
+    advantageAmount: bigint;
+  }>;
+
+  // ═══ CAPACIDADE DE PAGAMENTO ═══
+  // EBITDA Ajustado → (-) Impostos → (-) CAPEX manutenção → (-/+) ΔNCG → FCF
+  async calculatePaymentCapacity(projectionId: string): Promise<{
+    freeCAshFlow: bigint;
+    dscr: number; // Debt Service Coverage Ratio (meta: >1.2x)
+    maxAnnualPayment: bigint; // 70-80% do FCF
+    isViable: boolean;
+  }>;
+
+  // ═══ IMPACTO TRIBUTÁRIO DO DESÁGIO ═══
+  // Art. 50-A: PIS/Cofins excluídos, mas IRPJ+CSLL incidem a 34%
+  async calculateHaircutTaxImpact(
+    totalHaircut: bigint,
+    accumulatedTaxLoss: bigint // Prejuízo fiscal acumulado
+  ): Promise<{
+    grossTaxLiability: bigint;   // 34% sobre o deságio
+    offsetByTaxLoss: bigint;     // Compensado com prejuízo fiscal
+    netTaxLiability: bigint;     // Tributo efetivamente devido
+    effectiveHaircut: bigint;    // Deságio líquido após tributos
+  }>;
+}
+
+═══════════════════════════════════════════════════════
+PARTE C — LAYOUT E COMPONENTES DA PÁGINA
+═══════════════════════════════════════════════════════
+
+5) LAYOUT DA PÁGINA (/dashboard/recuperacao-judicial/quadro-credores)
+Layout com sidebar esquerda + área principal com tabs.
+┌─────────────────────────────────────────────────────────────────────┐
+│  Header: "Quadro de Credores" + [Caso: Grupo B&F Agro] + Ações    │
+├──────────────┬──────────────────────────────────────────────────────┤
+│              │  [Resumo] [Lista] [Subclasses] [Impugnações]        │
+│  SIDEBAR     │  [Versões] [Pagamentos]                              │
+│  Resumo do   ├──────────────────────────────────────────────────────┤
+│  Caso        │                                                      │
+│              │  CONTEÚDO DA TAB ATIVA                                │
+│  Stats       │                                                      │
+│  rápidos     │  (ver detalhamento abaixo)                           │
+│              │                                                      │
+│  Filtros     │                                                      │
+│              │                                                      │
+│  Ações       │                                                      │
+│  rápidas     │                                                      │
+│              │                                                      │
+├──────────────┴──────────────────────────────────────────────────────┤
+│  Status bar: "1.247 credores | R$ 892.4M | Última versão: #5"      │
+└─────────────────────────────────────────────────────────────────────┘
+Header
+
+Título "Quadro de Credores" com ícone Users (lucide-react)
+Select do caso de RJ vinculado (se o usuário tiver múltiplos casos)
+Botões de ação: "Importar" (Upload), "Exportar" (Download), "Nova Versão" (GitBranch), "Relatório AJ" (FileText)
+Badge de status do caso (PROCESSAMENTO, VERIFICAÇÃO, etc.) com cor correspondente
+
+Sidebar (w-[320px])
+Card "Resumo do Caso":
+
+Nome do caso, vara, juiz, AJ
+Data pedido, deferimento, prazo plano
+Status com badge colorido
+Barra de progresso do timeline (pedido → deferimento → verificação → AGC → aprovação)
+
+Card "Totais":
+
+Total de credores (número grande)
+Dívida total (formatado R$ com separadores)
+4 mini-cards para cada classe com count + valor + % do total:
+
+Classe I: ícone HardHat, cor blue
+Classe II: ícone Shield, cor amber
+Classe III: ícone FileText, cor slate
+Classe IV: ícone Building2, cor emerald
+
+
+
+Filtros (collapsible):
+
+Select "Classe" (Todas, I, II, III, IV)
+Select "Status" (Todos, Habilitado, Impugnado, etc.)
+Select "Subclasse" (Todas, listar subclasses existentes)
+Toggle "Apenas credores parceiros"
+Range de valor (min/max)
+Botão "Limpar filtros"
+
+Ações Rápidas:
+
+"Adicionar Credor" (abre modal)
+"Criar Subclasse" (abre modal — ver seção 8)
+"Validar Quadro" (executa validações)
+"Comparar com versão anterior"
+
+
+6) TAB "RESUMO" (Dashboard visual)
+Dashboard com visualizações do quadro de credores. Usar Recharts para gráficos.
+Linha 1 — KPIs (4 cards):
+
+Total Credores | Dívida Total | Haircut Médio Ponderado | Taxa Recuperação NPV
+
+Linha 2 — Gráficos lado a lado:
+
+Donut chart: Distribuição por classe (valores) — Recharts PieChart com innerRadius
+Bar chart horizontal: Top 10 maiores credores com nome + valor + classe (cor-coded)
+
+Linha 3 — Gráficos lado a lado:
+
+Stacked bar chart: Distribuição por subclasse dentro de cada classe
+Waterfall chart: Composição da dívida (original → juros → correção → haircut → valor plano)
+
+Linha 4 — Tabela resumo:
+
+Tabela consolidada por classe com: Classe | Nº Credores | Valor Original | Valor Atualizado | Haircut Proposto | Valor Plano | NPV | Prazo Médio
+Linha de total no footer
+
+Linha 5 — Comparativo RJ vs. Falência:
+
+Dois waterfall charts lado a lado (ver seção 4 do service)
+Card com "Vantagem da RJ: R$ X.XXX.XXX" em destaque verde
+
+
+7) TAB "LISTA" (Tabela editável de credores)
+Usar TanStack Table v8 com virtualização para performance.
+Colunas da tabela:
+ColunaTipoLarguraOrdenávelEditávelCheckbox (seleção)checkbox40pxnão—#número sequencial50pxsimnãoNome/Razão Socialtexto250pxsimnãoCPF/CNPJtexto formatado150pxsimnãoClassebadge colorido100pxsimsim (select)Naturezatexto140pxsimsim (select)Subclassebadge160pxsimsim (select)Valor Originalmoeda (R$)140pxsimsim (input)Valor Atualizadomoeda (R$)140pxsimsim (input)Haircut%80pxsimsim (input)Valor Planomoeda (calculado)140pxsimnãoPrazo (meses)número80pxsimsimCarêncianúmero80pxsimsimJuros (% a.a.)%80pxsimsimIndexaçãoselect80pxsimsimStatusbadge120pxsimsim (select)Credor Parceirotoggle80px—simAçõesbotões100pxnão—
+Funcionalidades da tabela:
+
+Edição inline: click em célula editável → campo de edição aparece → Enter para salvar, Esc para cancelar
+Seleção em massa: checkbox no header seleciona todos → barra de ações em massa aparece no topo
+Ações em massa: "Mover para subclasse", "Alterar classe", "Definir condições de pagamento", "Exportar selecionados"
+Ações por linha: menu dropdown com Editar (abre modal), Documentos, Habilitações, Impugnações, Histórico, Excluir
+Busca: campo de texto no topo da tabela com busca em nome + CPF/CNPJ
+Sticky header: header da tabela fixo durante scroll
+Sticky primeira coluna: nome do credor visível durante scroll horizontal
+Totais no footer: linha fixa com soma dos valores
+Virtualização: @tanstack/react-virtual para 1000+ credores
+Drag & drop: reordenar credores dentro da mesma classe (para prioridade visual)
+
+Modal "Editar Credor" (Sheet lateral):
+Formulário completo com todas as informações do credor, organizado em seções:
+
+Seção "Identificação" (nome, CPF/CNPJ, email, telefone, advogado)
+Seção "Classificação" (classe, natureza, subclasse)
+Seção "Valores" (original, atualizado, moeda)
+Seção "Garantia" (tipo, descrição, valor do bem, é cessão fiduciária?)
+Seção "Condições de Pagamento" (haircut, prazo, carência, juros, indexação)
+Seção "Programa Credor Parceiro" (toggle + tier + condições especiais)
+Seção "Documentos" (upload + lista de docs vinculados)
+Seção "Notas" (campo de texto livre)
+
+
+8) TAB "SUBCLASSES" (Criação e gestão conforme STJ)
+Visão geral das subclasses
+Grid de cards, um por subclasse existente:
+┌─────────────────────────────────────────────┐
+│ 🏷️ Fornecedores Estratégicos               │
+│ Classe III — Quirografários                  │
+│                                              │
+│ Credores: 47    |  Total: R$ 23.8M          │
+│ Haircut: 30%    |  Prazo: 5 anos            │
+│                                              │
+│ ✅ Validada STJ  |  ⚠️ Risco Cram Down: Médio│
+│                                              │
+│ [Ver Credores] [Editar] [Validar]           │
+└─────────────────────────────────────────────┘
+Modal "Criar/Editar Subclasse" (Dialog grande ou página)
+Este modal é CRÍTICO — implementa os 3 requisitos do REsp 1.634.844/SP:
+Seção 1 — Identificação:
+
+Campo "Nome da Subclasse" (obrigatório)
+Select "Classe-mãe" (Classe II ou Classe III — Classe I e IV raramente subclassificam)
+Campo "Descrição" (textarea)
+
+Seção 2 — Critérios Objetivos (Requisito 1 STJ):
+Banner informativo azul: "O STJ exige critérios objetivos, impessoais e verificáveis para diferenciação de credores (REsp 1.634.844/SP). Critérios vagos ou potestativos serão rejeitados."
+Array dinâmico de critérios (botão "Adicionar Critério"):
+Para cada critério:
+
+Select "Tipo de Critério":
+
+NATUREZA_CREDITO → "Natureza do crédito" (ex: "fornecedores de insumos agrícolas")
+VALOR → "Faixa de valor" (ex: "créditos até R$ 100.000")
+GARANTIA → "Tipo de garantia" (ex: "credores com alienação fiduciária de imóvel")
+CONDICAO_CREDOR → "Condição do credor" (ex: "instituições financeiras reguladas pelo BACEN")
+RELACAO_COMERCIAL → "Relação comercial com o devedor" (ex: "fornecedores que mantiveram fornecimento pós-pedido")
+
+
+Campo "Descrição detalhada" (obrigatório)
+Campo "Parâmetro verificável" (obrigatório)
+Campo "Limiar quantitativo" (opcional — ex: valor, percentual)
+
+Alerta vermelho aparece se:
+
+Nenhum critério adicionado
+Critério usa linguagem potestativa ("a critério do devedor", "conforme decisão do recuperando")
+Critério condiciona à aprovação do plano
+
+Seção 3 — Interesses Homogêneos (Requisito 2 STJ):
+Banner informativo: "Demonstre que os credores desta subclasse compartilham interesses e características similares."
+
+Textarea "Justificativa de Interesses Homogêneos" (obrigatório, mínimo 100 caracteres)
+Sugestões contextuais baseadas no tipo de critério selecionado:
+
+Se NATUREZA_CREDITO: "Os fornecedores de [X] compartilham o interesse em manter a relação comercial continuada..."
+Se VALOR: "Credores de pequeno valor têm interesse homogêneo em pagamento célere..."
+Se CONDICAO_CREDOR: "Instituições financeiras compartilham expertise e capacidade de..."
+
+
+
+Seção 4 — Proteção de Direitos (Requisito 3 STJ):
+Banner informativo: "A criação de subclasses NÃO pode resultar na eliminação virtual de direitos de credores minoritários."
+
+Textarea "Declaração de não anulação de direitos" (obrigatório)
+Validação automática: se haircut proposto > 90%, warning amarelo
+Validação automática: se prazo > 15 anos com juros < Selic, warning amarelo
+Cálculo automático do "valor presente da recuperação" para demonstrar que credores fora da subclasse ainda recuperam valor significativo
+
+Seção 5 — Condições de Pagamento:
+
+Input "Deságio" (%) — com slider 0-100%
+Input "Prazo" (meses) — com slider 12-180
+Input "Carência" (meses) — com slider 0-36
+Input "Taxa de juros" (% a.a.)
+Select "Indexação" (TR, IPCA, CDI, etc.)
+Select "Tipo de amortização" (SAC, Price, Bullet, Custom)
+
+Seção 6 — Preview e Validação:
+
+Botão "Validar conforme STJ" — executa SubclassService.validateSubclass()
+Card de resultado com ícones: ✅ Aprovado / ⚠️ Alerta / ❌ Rejeitado para cada requisito
+Se há warnings: lista detalhada com fundamentação legal e recomendação
+Card "Risco Cram Down" com nível (Baixo/Médio/Alto/Crítico) e explicação
+
+Seção 7 — Seleção de Credores:
+
+Tabela filtrada mostrando apenas credores da classe-mãe
+Checkbox para selecionar credores que pertencem a esta subclasse
+Botão "Selecionar por critério" — aplica automaticamente os critérios objetivos definidos
+Resumo: "47 credores selecionados | R$ 23.8M | 26% da Classe III"
+
+
+9) TAB "IMPUGNAÇÕES"
+Tabela de habilitações e impugnações com status tracking:
+ColunaDescriçãoCredorNome + CPF/CNPJTipoBadge (Habilitação, Impugnação Credor, Impugnação MP, etc.)Valor PretendidoR$ formatadoClasse PretendidaBadgeData ProtocoloDataPrazoData com indicador de vencimentoStatusBadge (Pendente, Deferida, Indeferida, etc.)IncidenteLink para nº do processoAçõesVer detalhes, Vincular ao credor
+Acima da tabela:
+
+KPIs: Total habilitações | Total impugnações | Pendentes | Impacto no quadro (R$)
+Botão "Nova Habilitação" e "Nova Impugnação"
+
+
+10) TAB "VERSÕES"
+Timeline visual de versões do quadro de credores:
+┌──────────────────────────────────────────────────┐
+│  📋 Versão #5 — Consolidado AGC                  │
+│  Publicada em 15/01/2025 por Jean Rodrigo Cioffi │
+│  1.247 credores | R$ 892.4M                      │
+│  [Visualizar] [Comparar com v4] [Exportar PDF]   │
+├──────────────────────────────────────────────────┤
+│  📋 Versão #4 — Pós-habilitações                 │
+│  Publicada em 03/12/2024                          │
+│  1.198 credores | R$ 856.1M                      │
+│  [Visualizar] [Comparar] [Exportar]              │
+├──────────────────────────────────────────────────┤
+│  ... versões anteriores ...                       │
+└──────────────────────────────────────────────────┘
+Modal "Comparar Versões": side-by-side diff mostrando credores adicionados (verde), removidos (vermelho), valores alterados (amarelo), classes alteradas (orange). Resumo no topo: "+49 credores, +R$ 36.3M, 12 reclassificações".
+
+11) TAB "PAGAMENTOS" (visão consolidada)
+Gráfico principal (Recharts): Stacked area chart mostrando projeção de pagamentos por classe ao longo do tempo (eixo X: meses, eixo Y: R$).
+Tabela consolidada por período:
+AnoClasse IClasse IIClasse IIIClasse IVTotalFCF DisponívelDSCR2025R$ 2.1MR$ 0R$ 0R$ 0.3MR$ 2.4MR$ 5.8M2.4x2026R$ 1.8MR$ 4.2MR$ 3.1MR$ 0.6MR$ 9.7MR$ 12.1M1.2x........................
+Card de alerta: Se DSCR < 1.2x em qualquer período, card vermelho: "⚠️ Capacidade de pagamento insuficiente em [período] — DSCR: 0.9x"
+
+═══════════════════════════════════════════════════════
+PARTE D — IMPORTAÇÃO / EXPORTAÇÃO
+═══════════════════════════════════════════════════════
+
+12) IMPORTAÇÃO DE CREDORES
+Modal de Importação (Dialog):
+Step 1 — Upload:
+
+Drag-and-drop zone para arquivo CSV ou Excel
+Templates para download: "Baixar template CSV" / "Baixar template Excel"
+O template Excel deve ter: cabeçalhos em português, validação por dropdown nas colunas Classe e Natureza, formatação monetária na coluna de valores, exemplos na linha 2
+
+Step 2 — Mapeamento:
+
+Tabela mostrando colunas do arquivo → campo do sistema
+Auto-detect de colunas comuns (nome, cpf, cnpj, valor, classe)
+Selects para mapear colunas não reconhecidas
+Preview das primeiras 5 linhas
+
+Step 3 — Validação:
+
+Executar validação em todas as linhas
+Lista de erros/warnings: "Linha 47: CPF inválido", "Linha 123: classe não reconhecida"
+Estatísticas: "892 válidos | 15 com warnings | 3 com erros"
+Opção: "Ignorar linhas com erro" ou "Corrigir antes de importar"
+
+Step 4 — Confirmação:
+
+Resumo: "Serão importados 892 credores totalizando R$ 445.2M"
+Breakdown por classe
+Botão "Importar" com loading
+
+Exportação Excel (ExcelJS)
+Gerar arquivo .xlsx com formatação profissional:
+
+Aba "Quadro Geral": todos os credores com todas as colunas
+Aba "Por Classe": uma seção por classe com subtotais
+Aba "Por Subclasse": credores agrupados por subclasse
+Aba "Resumo": tabela resumo + gráficos (ExcelJS suporta chart embedding básico)
+Formatação: cabeçalhos azul escuro com texto branco, linhas alternadas, valores monetários formatados, bordas finas
+Fórmulas de soma nos totais (não valores hardcoded)
+Filtros automáticos em todas as colunas
+
+Exportação PDF (Puppeteer server-side)
+Relatório PDF tipo "Relatório do Administrador Judicial":
+
+Capa com título, caso, vara, data
+Índice
+Resumo executivo com KPIs e gráficos
+Quadro geral por classe (tabela completa)
+Seção de subclasses com justificativas
+Seção de habilitações e impugnações pendentes
+Assinatura do AJ
+
+
+═══════════════════════════════════════════════════════
+PARTE E — API ROUTES
+═══════════════════════════════════════════════════════
+
+13) API ROUTES (src/app/api/recuperacao-judicial/)
+POST   /api/recuperacao-judicial/cases                    → Criar caso de RJ
+GET    /api/recuperacao-judicial/cases                    → Listar casos
+GET    /api/recuperacao-judicial/cases/[id]               → Detalhes do caso
+PUT    /api/recuperacao-judicial/cases/[id]               → Atualizar caso
+
+POST   /api/recuperacao-judicial/cases/[id]/creditors     → Criar credor
+GET    /api/recuperacao-judicial/cases/[id]/creditors     → Listar credores (com filtros)
+GET    /api/recuperacao-judicial/cases/[id]/creditors/summary → Resumo/dashboard
+PUT    /api/recuperacao-judicial/creditors/[id]           → Atualizar credor
+DELETE /api/recuperacao-judicial/creditors/[id]           → Remover credor
+POST   /api/recuperacao-judicial/cases/[id]/creditors/import → Importar CSV/Excel
+GET    /api/recuperacao-judicial/cases/[id]/creditors/export → Exportar Excel/PDF
+
+POST   /api/recuperacao-judicial/cases/[id]/subclasses    → Criar subclasse
+GET    /api/recuperacao-judicial/cases/[id]/subclasses    → Listar subclasses
+PUT    /api/recuperacao-judicial/subclasses/[id]          → Atualizar subclasse
+DELETE /api/recuperacao-judicial/subclasses/[id]          → Remover subclasse
+POST   /api/recuperacao-judicial/subclasses/[id]/validate → Validar STJ
+POST   /api/recuperacao-judicial/subclasses/[id]/assign   → Atribuir credores
+POST   /api/recuperacao-judicial/cases/[id]/cram-down-risk → Análise risco cram down
+
+POST   /api/recuperacao-judicial/cases/[id]/versions      → Criar versão do quadro
+GET    /api/recuperacao-judicial/cases/[id]/versions      → Listar versões
+GET    /api/recuperacao-judicial/versions/[id]            → Ver versão
+GET    /api/recuperacao-judicial/versions/compare         → Comparar versões (?v1=X&v2=Y)
+
+POST   /api/recuperacao-judicial/creditors/[id]/challenges → Criar habilitação/impugnação
+GET    /api/recuperacao-judicial/creditors/[id]/challenges → Listar
+PUT    /api/recuperacao-judicial/challenges/[id]          → Atualizar
+
+POST   /api/recuperacao-judicial/creditors/[id]/documents → Upload documento
+GET    /api/recuperacao-judicial/creditors/[id]/documents → Listar documentos
+
+POST   /api/recuperacao-judicial/calculate/payment-schedule → Calcular cronograma
+POST   /api/recuperacao-judicial/calculate/npv            → Calcular NPV
+POST   /api/recuperacao-judicial/calculate/rj-vs-bankruptcy → Comparar RJ vs falência
+POST   /api/recuperacao-judicial/calculate/tax-impact     → Impacto tributário do deságio
+
+═══════════════════════════════════════════════════════
+PARTE F — SIDEBAR DO DASHBOARD
+═══════════════════════════════════════════════════════
+
+14) INTEGRAÇÃO NO SIDEBAR PRINCIPAL
+Adicionar seção "Recuperação Judicial" no sidebar do dashboard, abaixo das seções existentes:
+tsx// Seção RJ no sidebar
+{
+  title: "Recuperação Judicial",
+  icon: Scale, // lucide-react
+  children: [
+    { label: "Quadro de Credores", href: "/dashboard/recuperacao-judicial/quadro-credores", icon: Users },
+    { label: "Aprovação PRJ", href: "/dashboard/recuperacao-judicial/aprovacao-prj", icon: Vote },
+    { label: "Negociações", href: "/dashboard/recuperacao-judicial/negociacoes", icon: Handshake },
+  ]
+}
+Badge no item "Quadro de Credores": mostrar nº de impugnações pendentes.
+Badge no item "Negociações": mostrar nº de propostas pendentes de resposta.
+
+═══════════════════════════════════════════════════════
+PARTE G — VERIFICAÇÃO
+═══════════════════════════════════════════════════════
+
+15) VERIFICAÇÃO FINAL
+Após implementação, verificar:
+
+Schema: npx prisma migrate dev executa sem erro
+Importação CSV: criar CSV com 20 credores de teste → importar → validar dados
+Subclasses STJ: criar subclasse sem critérios objetivos → deve exibir erro de validação
+Subclasses STJ: criar subclasse com critério potestativo → deve alertar
+Cram Down Risk: criar 2 subclasses na Classe III com haircuts de 30% e 80% → deve alertar risco Alto
+Cálculos: NPV de R$ 100.000 com haircut 50%, 10 anos, TR+1% a.a., descontado à Selic 14.25% → resultado deve ser ~R$ 5-8k (centavos por real muito baixo)
+Tabela: com 500+ credores a tabela deve rolar suavemente (virtualização)
+Scroll: todos os painéis devem seguir COMANDO-SCROLL-GLOBAL.md
+Export Excel: gerar Excel → abrir no Excel/Sheets → formatação intacta, fórmulas funcionam
+Versioning: criar versão → editar credores → criar nova versão → comparar → diff correto

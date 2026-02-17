@@ -104,12 +104,12 @@ const navModules = [
   },
   {
     title: "Recuperação Judicial",
-    url: "/recuperacao",
+    url: "/recuperacao-judicial",
     icon: ShieldAlert,
     items: [
-      { title: "Visão Geral", url: "/recuperacao" },
-      { title: "Credores", url: "/recuperacao/credores" },
-      { title: "Negociações", url: "/recuperacao/negociacoes" },
+      { title: "Quadro de Credores", url: "/recuperacao-judicial/quadro-credores" },
+      { title: "Aprovação PRJ", url: "/recuperacao-judicial/aprovacao-prj" },
+      { title: "Negociações", url: "/recuperacao-judicial/negociacoes" },
     ],
   },
   {

@@ -43,7 +43,9 @@
       "Bash(/tmp/dialog_summary.txt:*)",
       "Bash(npx supabase:*)",
       "Bash(supabase --version:*)",
-      "Bash(export SUPABASE_ACCESS_TOKEN:*)"
+      "Bash(export SUPABASE_ACCESS_TOKEN:*)",
+      "Bash(/tmp/accent_findings.txt:*)",
+      "Bash(python3:*)"
     ]
   }
 }
