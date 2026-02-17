@@ -215,7 +215,7 @@ export function BibliotecaForm({ open, onOpenChange, entryId, prefill }: Bibliot
 
       const data = await res.json()
       if (!data.url) {
-        throw new Error("Servidor nao retornou URL do arquivo")
+        throw new Error("Servidor não retornou URL do arquivo")
       }
 
       setArquivoUrl(data.url)

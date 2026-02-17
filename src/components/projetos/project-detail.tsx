@@ -143,7 +143,7 @@ export function ProjectDetail({ projectId }: ProjectDetailProps) {
           <DialogHeader>
             <DialogTitle>Concluir Projeto</DialogTitle>
             <DialogDescription>
-              Tem certeza que deseja marcar este projeto como concluido?
+              Tem certeza que deseja marcar este projeto como concluído?
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -159,7 +159,7 @@ export function ProjectDetail({ projectId }: ProjectDetailProps) {
           <DialogHeader>
             <DialogTitle>Cancelar Projeto</DialogTitle>
             <DialogDescription>
-              Tem certeza? Esta acao nao pode ser desfeita.
+              Tem certeza? Esta ação não pode ser desfeita.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -176,7 +176,7 @@ export function ProjectDetail({ projectId }: ProjectDetailProps) {
             <TabsTrigger value="tarefas">Tarefas</TabsTrigger>
             <TabsTrigger value="marcos">Marcos</TabsTrigger>
             <TabsTrigger value="financeiro">Financeiro</TabsTrigger>
-            <TabsTrigger value="comunicacoes">Comunicacoes</TabsTrigger>
+            <TabsTrigger value="comunicacoes">Comunicações</TabsTrigger>
             <TabsTrigger value="processos">Processos</TabsTrigger>
             <TabsTrigger value="equipe">Equipe</TabsTrigger>
             <TabsTrigger value="notas">Notas</TabsTrigger>
@@ -240,7 +240,7 @@ export function ProjectDetail({ projectId }: ProjectDetailProps) {
 
           {project.descricao && (
             <Card>
-              <CardHeader><CardTitle className="text-sm">Descricao</CardTitle></CardHeader>
+              <CardHeader><CardTitle className="text-sm">Descrição</CardTitle></CardHeader>
               <CardContent><p className="text-sm whitespace-pre-wrap">{project.descricao}</p></CardContent>
             </Card>
           )}
@@ -449,8 +449,8 @@ function TasksTab({ project, users, projectId }: { project: any; users: Array<{ 
         <Card>
           <CardContent className="pt-4 space-y-3">
             <div className="grid grid-cols-2 gap-3">
-              <div><Label>Titulo da Fase *</Label><Input value={newPhaseTitulo} onChange={(e) => setNewPhaseTitulo(e.target.value)} placeholder="Ex: Analise inicial" /></div>
-              <div><Label>Descricao</Label><Input value={newPhaseDescricao} onChange={(e) => setNewPhaseDescricao(e.target.value)} placeholder="Descricao breve..." /></div>
+              <div><Label>Título da Fase *</Label><Input value={newPhaseTitulo} onChange={(e) => setNewPhaseTitulo(e.target.value)} placeholder="Ex: Análise inicial" /></div>
+              <div><Label>Descrição</Label><Input value={newPhaseDescricao} onChange={(e) => setNewPhaseDescricao(e.target.value)} placeholder="Descrição breve..." /></div>
             </div>
             <div className="flex justify-end gap-2">
               <Button variant="outline" size="sm" onClick={() => setShowNewPhase(false)}>Cancelar</Button>
@@ -469,7 +469,7 @@ function TasksTab({ project, users, projectId }: { project: any; users: Array<{ 
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Excluir Tarefa</DialogTitle>
-            <DialogDescription>Tem certeza? Esta acao nao pode ser desfeita.</DialogDescription>
+            <DialogDescription>Tem certeza? Esta ação não pode ser desfeita.</DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDeleteTaskId(null)}>Cancelar</Button>
@@ -624,15 +624,15 @@ function NewTaskDialog({ open, onOpenChange, projectId, phaseId, phases, users, 
       <DialogContent className="max-w-lg">
         <DialogHeader><DialogTitle>Nova Tarefa</DialogTitle></DialogHeader>
         <div className="space-y-4">
-          <div><Label>Titulo *</Label><Input value={titulo} onChange={(e) => setTitulo(e.target.value)} placeholder="Titulo da tarefa..." /></div>
-          <div><Label>Descricao</Label><Textarea value={descricao} onChange={(e) => setDescricao(e.target.value)} rows={2} /></div>
+          <div><Label>Título *</Label><Input value={titulo} onChange={(e) => setTitulo(e.target.value)} placeholder="Título da tarefa..." /></div>
+          <div><Label>Descrição</Label><Textarea value={descricao} onChange={(e) => setDescricao(e.target.value)} rows={2} /></div>
           <div className="grid grid-cols-2 gap-3">
             <div><Label>Tipo</Label><Select value={tipo} onValueChange={setTipo}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{Object.entries(PROJECT_TASK_TYPE_LABELS).map(([v, l]) => <SelectItem key={v} value={v}>{l}</SelectItem>)}</SelectContent></Select></div>
             <div><Label>Prioridade</Label><Select value={prioridade} onValueChange={setPrioridade}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{Object.entries(PRIORITY_LABELS).map(([v, l]) => <SelectItem key={v} value={v}>{l}</SelectItem>)}</SelectContent></Select></div>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div><Label>Etapa</Label><Select value={selectedPhaseId} onValueChange={setSelectedPhaseId}><SelectTrigger><SelectValue placeholder="Avulsa" /></SelectTrigger><SelectContent><SelectItem value="__none__">Avulsa (sem etapa)</SelectItem>{phases.map((p) => <SelectItem key={p.id} value={p.id}>{p.titulo}</SelectItem>)}</SelectContent></Select></div>
-            <div><Label>Responsavel</Label><Select value={responsavelId} onValueChange={setResponsavelId}><SelectTrigger><SelectValue placeholder="Selecionar..." /></SelectTrigger><SelectContent>{users.map((u) => <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>)}</SelectContent></Select></div>
+            <div><Label>Responsável</Label><Select value={responsavelId} onValueChange={setResponsavelId}><SelectTrigger><SelectValue placeholder="Selecionar..." /></SelectTrigger><SelectContent>{users.map((u) => <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>)}</SelectContent></Select></div>
           </div>
           <div><Label>Prazo</Label><Input type="date" value={dataLimite} onChange={(e) => setDataLimite(e.target.value)} /></div>
           <div className="flex justify-end gap-2">
@@ -682,7 +682,7 @@ function MilestonesTab({ project, projectId }: { project: any; projectId: string
               <div><Label>Titulo *</Label><Input value={newTitulo} onChange={(e) => setNewTitulo(e.target.value)} placeholder="Ex: Alvara expedido" /></div>
               <div><Label>Data Prevista</Label><Input type="date" value={newData} onChange={(e) => setNewData(e.target.value)} /></div>
             </div>
-            <div><Label>Descricao</Label><Textarea value={newDescricao} onChange={(e) => setNewDescricao(e.target.value)} rows={2} /></div>
+            <div><Label>Descrição</Label><Textarea value={newDescricao} onChange={(e) => setNewDescricao(e.target.value)} rows={2} /></div>
             <div className="flex items-center gap-6">
               <div className="w-[200px]"><Label>Impacto</Label><Select value={newImpacto} onValueChange={setNewImpacto}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{Object.entries(MILESTONE_IMPACT_LABELS).map(([v, l]) => <SelectItem key={v} value={v}>{l}</SelectItem>)}</SelectContent></Select></div>
               <div className="flex items-center gap-2 pt-5"><Checkbox id="notificar" checked={newNotificar} onCheckedChange={(v) => setNewNotificar(!!v)} /><Label htmlFor="notificar" className="cursor-pointer">Notificar cliente ao alcancar</Label></div>
@@ -776,7 +776,7 @@ function MilestoneCard({ m, onAchieve, onDelete }: { m: MilestoneItem; onAchieve
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Excluir Marco</DialogTitle>
-            <DialogDescription>Tem certeza? Esta acao nao pode ser desfeita.</DialogDescription>
+            <DialogDescription>Tem certeza? Esta ação não pode ser desfeita.</DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowDeleteConfirm(false)}>Cancelar</Button>
@@ -919,7 +919,7 @@ function FinanceiroTab({ project, projectId }: { project: any; projectId: string
           {showNewExpense && (
             <div className="p-3 bg-muted/30 rounded-lg mb-4 space-y-3">
               <div className="grid grid-cols-3 gap-3">
-                <div><Label>Descricao *</Label><Input value={expDesc} onChange={(e) => setExpDesc(e.target.value)} placeholder="Descricao..." /></div>
+                <div><Label>Descrição *</Label><Input value={expDesc} onChange={(e) => setExpDesc(e.target.value)} placeholder="Descrição..." /></div>
                 <div><Label>Valor (R$) *</Label><Input type="number" step="0.01" value={expValor} onChange={(e) => setExpValor(e.target.value)} /></div>
                 <div><Label>Data</Label><Input type="date" value={expData} onChange={(e) => setExpData(e.target.value)} /></div>
               </div>
@@ -938,7 +938,7 @@ function FinanceiroTab({ project, projectId }: { project: any; projectId: string
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Descricao</TableHead>
+                    <TableHead>Descrição</TableHead>
                     <TableHead>Categoria</TableHead>
                     <TableHead>Data</TableHead>
                     <TableHead className="text-right">Valor</TableHead>
@@ -1023,7 +1023,7 @@ function ComunicacoesTab({ project, projectId }: { project: any; projectId: stri
         <DialogContent>
           <DialogHeader><DialogTitle>{showModal ? modalTitles[showModal] : ""}</DialogTitle></DialogHeader>
           <div className="space-y-4">
-            <div><Label>Descricao / Assunto *</Label><Textarea value={desc} onChange={(e) => setDesc(e.target.value)} rows={3} placeholder={showModal === "email" ? "Destinatario, assunto, resumo..." : showModal === "reuniao" ? "Participantes, pauta..." : "Contato, assunto..."} /></div>
+            <div><Label>Descrição / Assunto *</Label><Textarea value={desc} onChange={(e) => setDesc(e.target.value)} rows={3} placeholder={showModal === "email" ? "Destinatário, assunto, resumo..." : showModal === "reuniao" ? "Participantes, pauta..." : "Contato, assunto..."} /></div>
             <div><Label>Resultado</Label><Textarea value={resultado} onChange={(e) => setResultado(e.target.value)} rows={2} placeholder="Resultado / conclusoes..." /></div>
             {showModal === "telefonema" && <div className="w-[150px]"><Label>Duracao (min)</Label><Input type="number" value={duracao} onChange={(e) => setDuracao(e.target.value)} /></div>}
             <div className="flex justify-end gap-2">

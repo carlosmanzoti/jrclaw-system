@@ -496,7 +496,7 @@ export default function TemplatesProjetoPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="descricao">Descricao</Label>
+              <Label htmlFor="descricao">Descrição</Label>
               <Textarea
                 id="descricao"
                 value={form.descricao}
@@ -588,7 +588,7 @@ export default function TemplatesProjetoPage() {
                           />
                         </div>
                         <div className="space-y-1">
-                          <Label className="text-xs">Descricao</Label>
+                          <Label className="text-xs">Descrição</Label>
                           <Input
                             value={milestone.descricao || ""}
                             onChange={(e) =>
@@ -598,7 +598,7 @@ export default function TemplatesProjetoPage() {
                                 e.target.value
                               )
                             }
-                            placeholder="Descricao opcional"
+                            placeholder="Descrição opcional"
                           />
                         </div>
                         <div className="space-y-1">
@@ -654,10 +654,10 @@ export default function TemplatesProjetoPage() {
       >
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Confirmar exclusao</DialogTitle>
+            <DialogTitle>Confirmar exclusão</DialogTitle>
           </DialogHeader>
           <p className="text-sm text-[#666666]">
-            Tem certeza que deseja excluir este template? Esta acao nao pode ser
+            Tem certeza que deseja excluir este template? Esta ação não pode ser
             desfeita.
           </p>
           <DialogFooter>
@@ -767,17 +767,17 @@ function PhaseEditor({
                 onChange={(e) =>
                   onUpdatePhase(index, "titulo", e.target.value)
                 }
-                placeholder="Ex: Analise do credito"
+                placeholder="Ex: Análise do crédito"
               />
             </div>
             <div className="space-y-1">
-              <Label className="text-xs">Descricao</Label>
+              <Label className="text-xs">Descrição</Label>
               <Input
                 value={phase.descricao || ""}
                 onChange={(e) =>
                   onUpdatePhase(index, "descricao", e.target.value)
                 }
-                placeholder="Descricao opcional"
+                placeholder="Descrição opcional"
               />
             </div>
           </div>
@@ -786,7 +786,7 @@ function PhaseEditor({
           <div className="pl-6 space-y-2">
             <div className="flex items-center justify-between">
               <Label className="text-xs font-semibold text-[#666666] uppercase tracking-wide">
-                Tarefas Padrao
+                Tarefas Padrão
               </Label>
               <Button
                 variant="ghost"
@@ -844,7 +844,7 @@ function PhaseEditor({
                   </Select>
                 </div>
                 <div className="space-y-1">
-                  <Label className="text-xs">Descricao</Label>
+                  <Label className="text-xs">Descrição</Label>
                   <Input
                     value={task.descricao || ""}
                     onChange={(e) =>
@@ -855,7 +855,7 @@ function PhaseEditor({
                         e.target.value
                       )
                     }
-                    placeholder="Descricao opcional"
+                    placeholder="Descrição opcional"
                     className="h-8 text-sm"
                   />
                 </div>

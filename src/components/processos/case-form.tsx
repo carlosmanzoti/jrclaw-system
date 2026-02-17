@@ -237,7 +237,7 @@ export function CaseForm() {
             </div>
 
             <div className="space-y-2">
-              <Label>Advogado Responsavel *</Label>
+              <Label>Advogado Responsável *</Label>
               <Select
                 value={watch("advogado_responsavel_id")}
                 onValueChange={(v) => setValue("advogado_responsavel_id", v, { shouldValidate: true })}

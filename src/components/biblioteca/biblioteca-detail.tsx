@@ -104,7 +104,7 @@ export function BibliotecaDetail({ entryId }: BibliotecaDetailProps) {
   if (!entry) {
     return (
       <div className="p-6">
-        <p className="text-sm text-muted-foreground">Entrada nao encontrada.</p>
+        <p className="text-sm text-muted-foreground">Entrada não encontrada.</p>
         <Link href="/biblioteca">
           <Button variant="ghost" size="sm" className="mt-2">
             <ArrowLeft className="size-3 mr-1" /> Voltar

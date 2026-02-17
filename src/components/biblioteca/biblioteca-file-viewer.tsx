@@ -264,7 +264,7 @@ export function BibliotecaFileViewer({ entry, open, onOpenChange }: BibliotecaFi
 
     return (
       <div className="flex-1 flex items-center justify-center text-sm text-muted-foreground">
-        Este tipo de arquivo nao pode ser visualizado diretamente.
+        Este tipo de arquivo não pode ser visualizado diretamente.
         {hasFile && (
           <a
             href={entry.arquivo_url!}
@@ -472,7 +472,7 @@ export function BibliotecaFileViewer({ entry, open, onOpenChange }: BibliotecaFi
           ) : cat === "pdf" ? (
             <span className="text-xs text-muted-foreground">Use Ctrl+F para buscar no PDF</span>
           ) : (
-            <span className="text-xs text-muted-foreground">Busca nao disponivel para este tipo</span>
+            <span className="text-xs text-muted-foreground">Busca não disponível para este tipo</span>
           )}
           {searchQuery && searchable && (
             <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => setSearchQuery("")}>

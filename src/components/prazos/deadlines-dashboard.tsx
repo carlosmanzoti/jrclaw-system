@@ -69,10 +69,10 @@ function getInitials(name: string): string {
 
 function daysLabel(days: number): string {
   if (days === 0) return "HOJE"
-  if (days === 1) return "Amanha"
+  if (days === 1) return "Amanhã"
   if (days > 0) return `${days} dias`
-  if (days === -1) return "VENCIDO ha 1 dia"
-  return `VENCIDO ha ${Math.abs(days)} dias`
+  if (days === -1) return "VENCIDO há 1 dia"
+  return `VENCIDO há ${Math.abs(days)} dias`
 }
 
 export function DeadlinesDashboard() {
@@ -124,7 +124,7 @@ export function DeadlinesDashboard() {
           text="text-white"
         />
         <KpiCard
-          label="Amanha"
+          label="Amanhã"
           value={stats?.tomorrow ?? 0}
           bg="bg-[#DC3545]/90"
           text="text-white"
@@ -136,7 +136,7 @@ export function DeadlinesDashboard() {
           text="text-white"
         />
         <KpiCard
-          label="Proximos 30 dias"
+          label="Próximos 30 dias"
           value={stats?.next30 ?? 0}
           bg="bg-[#28A745]"
           text="text-white"
@@ -192,7 +192,7 @@ export function DeadlinesDashboard() {
               <List className="size-3.5" />Lista
             </TabsTrigger>
             <TabsTrigger value="calendario" className="gap-1.5">
-              <CalendarIcon className="size-3.5" />Calendario
+              <CalendarIcon className="size-3.5" />Calendário
             </TabsTrigger>
           </TabsList>
 
@@ -218,7 +218,7 @@ export function DeadlinesDashboard() {
               </SelectContent>
             </Select>
             <Select value={responsavelFilter} onValueChange={setResponsavelFilter}>
-              <SelectTrigger className="w-[180px] bg-white"><SelectValue placeholder="Responsavel" /></SelectTrigger>
+              <SelectTrigger className="w-[180px] bg-white"><SelectValue placeholder="Responsável" /></SelectTrigger>
               <SelectContent>
                 {users?.map((u) => <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>)}
               </SelectContent>
@@ -239,9 +239,9 @@ export function DeadlinesDashboard() {
                   <TableHead className="w-[4px] p-0" />
                   <TableHead>Tipo</TableHead>
                   <TableHead>Processo / Cliente</TableHead>
-                  <TableHead>Descricao</TableHead>
+                  <TableHead>Descrição</TableHead>
                   <TableHead>Data Limite</TableHead>
-                  <TableHead>Responsavel</TableHead>
+                  <TableHead>Responsável</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Dias</TableHead>
                   <TableHead className="w-[100px]" />
@@ -339,7 +339,7 @@ function DeadlineRow({ deadline: d }: { deadline: any }) {
       </TableCell>
 
       {/* Description */}
-      <TableCell className="max-w-[250px] truncate text-sm">{d.descricao}</TableCell>
+      <TableCell className="min-w-[200px] max-w-[300px] truncate text-sm" title={d.descricao}>{d.descricao}</TableCell>
 
       {/* Date */}
       <TableCell>
@@ -484,7 +484,7 @@ function NewDeadlineDialog({ open, onOpenChange }: { open: boolean; onOpenChange
               <SelectContent>
                 {cases?.map((c) => (
                   <SelectItem key={c.id} value={c.id}>
-                    {formatCNJ(c.numero_processo) || "Sem numero"} — {c.cliente.nome}
+                    {formatCNJ(c.numero_processo) || "Sem número"} — {c.cliente.nome}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -504,7 +504,7 @@ function NewDeadlineDialog({ open, onOpenChange }: { open: boolean; onOpenChange
               </Select>
             </div>
             <div className="space-y-2">
-              <Label>Responsavel *</Label>
+              <Label>Responsável *</Label>
               <Select value={formData.responsavel_id} onValueChange={(v) => set("responsavel_id", v)}>
                 <SelectTrigger><SelectValue placeholder="Selecionar" /></SelectTrigger>
                 <SelectContent>
@@ -515,7 +515,7 @@ function NewDeadlineDialog({ open, onOpenChange }: { open: boolean; onOpenChange
           </div>
 
           <div className="space-y-2">
-            <Label>Descricao *</Label>
+            <Label>Descrição *</Label>
             <Input value={formData.descricao} onChange={(e) => set("descricao", e.target.value)} placeholder="Descreva o prazo..." />
           </div>
 
@@ -525,7 +525,7 @@ function NewDeadlineDialog({ open, onOpenChange }: { open: boolean; onOpenChange
               <Input type="date" value={formData.data_limite} onChange={(e) => set("data_limite", e.target.value)} />
             </div>
             <div className="space-y-2">
-              <Label>Ou dias uteis a partir de hoje</Label>
+              <Label>Ou dias úteis a partir de hoje</Label>
               <Input
                 type="number" min={1} placeholder="Ex: 15"
                 value={formData.dias_uteis}
@@ -538,7 +538,7 @@ function NewDeadlineDialog({ open, onOpenChange }: { open: boolean; onOpenChange
                   }
                 }}
               />
-              <p className="text-[10px] text-[#666666]">Estimativa em dias corridos (o servidor calcula dias uteis).</p>
+              <p className="text-[10px] text-[#666666]">Estimativa em dias corridos (o servidor calcula dias úteis).</p>
             </div>
           </div>
         </div>

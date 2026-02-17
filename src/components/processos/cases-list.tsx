@@ -91,7 +91,7 @@ export function CasesList() {
           </p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={() => alert("Exportacao em desenvolvimento")}>
+          <Button variant="outline" onClick={() => alert("Exportação em desenvolvimento")}>
             <Download className="mr-2 size-4" />
             Exportar
           </Button>
@@ -194,7 +194,7 @@ export function CasesList() {
                         {CASE_TYPE_LABELS[caso.tipo] || caso.tipo}
                       </Badge>
                     </TableCell>
-                    <TableCell className="max-w-[200px] truncate">{caso.cliente.nome}</TableCell>
+                    <TableCell className="min-w-[200px] max-w-[250px] truncate" title={caso.cliente.nome}>{caso.cliente.nome}</TableCell>
                     <TableCell className="hidden md:table-cell">
                       <Badge variant="secondary" className={STATUS_COLORS[caso.status] || ""}>
                         {CASE_STATUS_LABELS[caso.status]}
@@ -258,14 +258,14 @@ export function CasesList() {
             <DialogTitle>Excluir Processo</DialogTitle>
           </DialogHeader>
           <p className="text-sm text-[#666666]">
-            Tem certeza? Esta acao nao pode ser desfeita.
+            Tem certeza? Esta ação não pode ser desfeita.
           </p>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDeleteOpen(false)}>Cancelar</Button>
             <Button
               variant="destructive"
               onClick={() => {
-                alert("Exclusao em desenvolvimento")
+                alert("Exclusão em desenvolvimento")
                 setDeleteOpen(false)
                 setDeleteTargetId(null)
               }}

@@ -113,7 +113,7 @@ export function ProjectForm() {
               </div>
 
               <div>
-                <Label htmlFor="descricao">Descricao / Escopo</Label>
+                <Label htmlFor="descricao">Descrição / Escopo</Label>
                 <Textarea id="descricao" {...register("descricao")} rows={3} placeholder="Descreva o objetivo e escopo do projeto..." />
               </div>
 
@@ -123,7 +123,7 @@ export function ProjectForm() {
                   <Input id="valor_envolvido" type="number" step="0.01" {...register("valor_envolvido")} placeholder="0,00" />
                 </div>
                 <div>
-                  <Label htmlFor="valor_honorarios">Honorarios (R$)</Label>
+                  <Label htmlFor="valor_honorarios">Honorários (R$)</Label>
                   <Input id="valor_honorarios" type="number" step="0.01" {...register("valor_honorarios")} placeholder="0,00" />
                 </div>
               </div>
@@ -152,7 +152,7 @@ export function ProjectForm() {
 
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
-                  <Label>Advogado Responsavel *</Label>
+                  <Label>Advogado Responsável *</Label>
                   <Select value={watch("advogado_responsavel_id")} onValueChange={(v) => setValue("advogado_responsavel_id", v)}>
                     <SelectTrigger><SelectValue placeholder="Selecionar..." /></SelectTrigger>
                     <SelectContent>
@@ -161,7 +161,7 @@ export function ProjectForm() {
                       ))}
                     </SelectContent>
                   </Select>
-                  {errors.advogado_responsavel_id && <p className="text-xs text-[#DC3545] mt-1">Responsavel obrigatorio</p>}
+                  {errors.advogado_responsavel_id && <p className="text-xs text-[#DC3545] mt-1">Responsável obrigatório</p>}
                 </div>
                 <div className="flex items-end gap-3 pb-1">
                   <Switch

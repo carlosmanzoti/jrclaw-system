@@ -80,7 +80,7 @@ export default function DeadlinesCalendar({ deadlines }: { deadlines: any[] }) {
                 <p className="text-xs text-[#666666]">{selected.case_?.cliente?.nome}</p>
               </div>
               <div>
-                <p className="text-xs text-[#666666]">Descricao</p>
+                <p className="text-xs text-[#666666]">Descrição</p>
                 <p className="text-sm">{selected.descricao}</p>
               </div>
               <div className="grid grid-cols-2 gap-4">
@@ -94,7 +94,7 @@ export default function DeadlinesCalendar({ deadlines }: { deadlines: any[] }) {
                 </div>
               </div>
               <div>
-                <p className="text-xs text-[#666666]">Responsavel</p>
+                <p className="text-xs text-[#666666]">Responsável</p>
                 <p className="text-sm">{selected.responsavel?.name}</p>
               </div>
             </div>

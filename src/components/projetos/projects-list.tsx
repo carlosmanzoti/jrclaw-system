@@ -92,8 +92,8 @@ export function ProjectsList() {
 
   const kpiCards = [
     { title: "Projetos Ativos", value: stats?.ativos ?? 0, icon: Briefcase, color: "text-[#17A2B8]", bg: "bg-[#17A2B8]/10" },
-    { title: "Aguardando Acao", value: stats?.aguardando ?? 0, icon: Clock, color: "text-[#C9A961]", bg: "bg-[#C9A961]/10" },
-    { title: "Concluidos no Mes", value: stats?.concluidosMes ?? 0, icon: CheckCircle2, color: "text-[#28A745]", bg: "bg-[#28A745]/10" },
+    { title: "Aguardando Ação", value: stats?.aguardando ?? 0, icon: Clock, color: "text-[#C9A961]", bg: "bg-[#C9A961]/10" },
+    { title: "Concluídos no Mês", value: stats?.concluidosMes ?? 0, icon: CheckCircle2, color: "text-[#28A745]", bg: "bg-[#28A745]/10" },
     { title: "Valor Total", value: formatCurrency(stats?.valorTotal), icon: DollarSign, color: "text-primary", bg: "bg-primary/5", isText: true },
   ]
 
@@ -110,7 +110,7 @@ export function ProjectsList() {
               </div>
             </CardHeader>
             <CardContent>
-              <div className={`text-2xl font-bold ${kpi.color}`}>
+              <div className={`${kpi.isText ? "text-lg" : "text-2xl"} font-bold ${kpi.color} truncate`} title={String(kpi.value)}>
                 {kpi.isText ? kpi.value : String(kpi.value)}
               </div>
             </CardContent>
@@ -155,7 +155,7 @@ export function ProjectsList() {
           <div className="relative flex-1">
             <Search className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-[#666666]" />
             <Input
-              placeholder="Buscar por titulo, codigo ou cliente..."
+              placeholder="Buscar por título, código ou cliente..."
               value={search}
               onChange={(e) => handleSearch(e.target.value)}
               className="pl-9"
@@ -189,7 +189,7 @@ export function ProjectsList() {
               </SelectContent>
             </Select>
             <Select value={advogadoFilter} onValueChange={setAdvogadoFilter}>
-              <SelectTrigger className="w-[180px] bg-white"><SelectValue placeholder="Responsavel" /></SelectTrigger>
+              <SelectTrigger className="w-[180px] bg-white"><SelectValue placeholder="Responsável" /></SelectTrigger>
               <SelectContent>
                 {users?.map((u) => <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>)}
               </SelectContent>
@@ -207,15 +207,15 @@ export function ProjectsList() {
           <Table>
             <TableHeader className="sticky top-0 z-10 bg-white">
               <TableRow>
-                <TableHead className="w-[120px]">Codigo</TableHead>
-                <TableHead>Titulo</TableHead>
-                <TableHead>Cliente</TableHead>
-                <TableHead className="hidden md:table-cell">Categoria</TableHead>
-                <TableHead className="hidden md:table-cell">Status</TableHead>
-                <TableHead className="hidden lg:table-cell">Prioridade</TableHead>
-                <TableHead className="hidden lg:table-cell">Progresso</TableHead>
-                <TableHead className="hidden xl:table-cell">Responsavel</TableHead>
-                <TableHead className="hidden xl:table-cell text-right">Valor</TableHead>
+                <TableHead className="w-[130px]">Código</TableHead>
+                <TableHead className="min-w-[250px]">Título</TableHead>
+                <TableHead className="min-w-[200px]">Cliente</TableHead>
+                <TableHead className="hidden md:table-cell min-w-[180px]">Categoria</TableHead>
+                <TableHead className="hidden md:table-cell min-w-[140px]">Status</TableHead>
+                <TableHead className="hidden lg:table-cell min-w-[90px]">Prioridade</TableHead>
+                <TableHead className="hidden lg:table-cell min-w-[100px]">Progresso</TableHead>
+                <TableHead className="hidden xl:table-cell min-w-[180px]">Responsável</TableHead>
+                <TableHead className="hidden xl:table-cell text-right min-w-[150px]">Valor</TableHead>
                 <TableHead className="w-[50px]" />
               </TableRow>
             </TableHeader>
@@ -236,8 +236,8 @@ export function ProjectsList() {
                   return (
                     <TableRow key={p.id} className="cursor-pointer" onClick={() => router.push(`/projetos/${p.id}`)}>
                       <TableCell className="font-mono text-sm">{p.codigo}</TableCell>
-                      <TableCell className="max-w-[250px] truncate font-medium">{p.titulo}</TableCell>
-                      <TableCell className="max-w-[180px] truncate">{p.cliente.nome}</TableCell>
+                      <TableCell className="min-w-[250px] max-w-[350px] truncate font-medium" title={p.titulo}>{p.titulo}</TableCell>
+                      <TableCell className="min-w-[200px] max-w-[250px] truncate" title={p.cliente.nome}>{p.cliente.nome}</TableCell>
                       <TableCell className="hidden md:table-cell">
                         <Badge variant="secondary" className="text-xs">
                           {PROJECT_CATEGORY_LABELS[p.categoria] || p.categoria}
@@ -362,7 +362,7 @@ export function ProjectsList() {
           <DialogHeader>
             <DialogTitle>Excluir Projeto</DialogTitle>
             <DialogDescription>
-              Tem certeza? Esta acao nao pode ser desfeita.
+              Tem certeza? Esta ação não pode ser desfeita.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>

@@ -170,7 +170,7 @@ export default async function DashboardPage() {
     {
       title: "Projetos Ativos",
       value: String(projetosAtivos),
-      description: projetosComAcao.length > 0 ? `${projetosComAcao.length} com acao pendente` : "Todos em dia",
+      description: projetosComAcao.length > 0 ? `${projetosComAcao.length} com ação pendente` : "Todos em dia",
       icon: FolderKanban,
       borderColor: "border-t-[#C9A961]",
     },
@@ -251,7 +251,7 @@ export default async function DashboardPage() {
               <CardHeader className="flex flex-row items-center justify-between">
                 <div className="flex items-center gap-2">
                   <AlertTriangle className="size-4 text-[#C9A961]" />
-                  <CardTitle className="text-base">Projetos com Acao Pendente</CardTitle>
+                  <CardTitle className="text-base">Projetos com Ação Pendente</CardTitle>
                 </div>
                 <Link href="/projetos" className="text-xs text-primary hover:underline flex items-center gap-1">
                   Ver todos <ChevronRight className="size-3" />
@@ -347,14 +347,14 @@ export default async function DashboardPage() {
         {/* Upcoming Deadlines */}
         <Card className="shadow-[0_2px_8px_rgba(0,0,0,0.08)]">
           <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="text-base">Proximos Prazos</CardTitle>
+            <CardTitle className="text-base">Próximos Prazos</CardTitle>
             <Link href="/prazos" className="text-xs text-primary hover:underline flex items-center gap-1">
               Ver todos <ChevronRight className="size-3" />
             </Link>
           </CardHeader>
           <CardContent>
             {upcomingDeadlines.length === 0 ? (
-              <p className="text-sm text-[#666666] text-center py-4">Nenhum prazo proximo.</p>
+              <p className="text-sm text-[#666666] text-center py-4">Nenhum prazo próximo.</p>
             ) : (
               <div className="space-y-3">
                 {upcomingDeadlines.map((d) => (

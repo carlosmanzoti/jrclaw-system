@@ -115,7 +115,7 @@ export function CaseDetail({ caseId }: { caseId: string }) {
           <div>
             <div className="flex items-center gap-2 flex-wrap">
               <h1 className="text-2xl font-bold tracking-tight font-mono">
-                {formatCNJ(caso.numero_processo) || "Sem numero"}
+                {formatCNJ(caso.numero_processo) || "Sem número"}
               </h1>
               <Badge variant="secondary" className={TYPE_COLORS[caso.tipo] || ""}>
                 {CASE_TYPE_LABELS[caso.tipo] || caso.tipo}
@@ -199,7 +199,7 @@ export function CaseDetail({ caseId }: { caseId: string }) {
             <PlaceholderTab
               icon={Landmark}
               title="Quadro de Credores"
-              description="O modulo de credores sera implementado no modulo de Recuperacao Judicial."
+              description="O módulo de credores será implementado no módulo de Recuperação Judicial."
             />
           </TabsContent>
         )}
@@ -208,8 +208,8 @@ export function CaseDetail({ caseId }: { caseId: string }) {
           <TabsContent value="negociacoes" className="mt-6 overflow-y-auto max-h-[calc(100vh-16rem)]">
             <PlaceholderTab
               icon={Handshake}
-              title="Negociacoes"
-              description="O modulo de negociacoes sera implementado no modulo de Recuperacao Judicial."
+              title="Negociações"
+              description="O módulo de negociações será implementado no módulo de Recuperação Judicial."
             />
           </TabsContent>
         )}
@@ -221,7 +221,7 @@ export function CaseDetail({ caseId }: { caseId: string }) {
           <DialogHeader>
             <DialogTitle>Excluir Processo</DialogTitle>
             <DialogDescription>
-              Tem certeza? Esta acao nao pode ser desfeita.
+              Tem certeza? Esta ação não pode ser desfeita.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -229,7 +229,7 @@ export function CaseDetail({ caseId }: { caseId: string }) {
             <Button
               variant="destructive"
               onClick={() => {
-                alert("Exclusao em desenvolvimento")
+                alert("Exclusão em desenvolvimento")
                 setDeleteOpen(false)
               }}
             >
@@ -245,7 +245,7 @@ export function CaseDetail({ caseId }: { caseId: string }) {
           <DialogHeader>
             <DialogTitle>Arquivar Processo</DialogTitle>
             <DialogDescription>
-              O processo sera marcado como arquivado. Voce podera reativa-lo posteriormente.
+              O processo será marcado como arquivado. Você poderá reativá-lo posteriormente.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -289,7 +289,7 @@ function ResumoTab({ caso }: { caso: CaseData }) {
         </Card>
         <Card>
           <CardContent className="pt-4 pb-4">
-            <p className="text-xs text-[#666666]">Advogado Responsavel</p>
+            <p className="text-xs text-[#666666]">Advogado Responsável</p>
             <p className="text-sm font-medium">{caso.advogado_responsavel.name}</p>
           </CardContent>
         </Card>
@@ -324,7 +324,7 @@ function ResumoTab({ caso }: { caso: CaseData }) {
         {/* Next Deadlines */}
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-[#666666]">Proximos Prazos</CardTitle>
+            <CardTitle className="text-sm font-medium text-[#666666]">Próximos Prazos</CardTitle>
           </CardHeader>
           <CardContent>
             {pendingDeadlines.length === 0 ? (
@@ -598,7 +598,7 @@ function MovimentacoesTab({ caso, caseId, utils }: { caso: CaseData; caseId: str
               </div>
             </div>
             <div className="space-y-2">
-              <Label>Descricao *</Label>
+              <Label>Descrição *</Label>
               <Textarea
                 value={movData.descricao}
                 onChange={(e) => setMovData({ ...movData, descricao: e.target.value })}
@@ -679,8 +679,8 @@ function PrazosTab({
             <TableRow>
               <TableHead>Prazo</TableHead>
               <TableHead>Tipo</TableHead>
-              <TableHead>Descricao</TableHead>
-              <TableHead>Responsavel</TableHead>
+              <TableHead>Descrição</TableHead>
+              <TableHead>Responsável</TableHead>
               <TableHead>Status</TableHead>
               <TableHead className="w-[100px]" />
             </TableRow>
@@ -776,7 +776,7 @@ function PrazosTab({
               </div>
             </div>
             <div className="space-y-2">
-              <Label>Descricao *</Label>
+              <Label>Descrição *</Label>
               <Input
                 value={prazoData.descricao}
                 onChange={(e) => setPrazoData({ ...prazoData, descricao: e.target.value })}
@@ -784,7 +784,7 @@ function PrazosTab({
               />
             </div>
             <div className="space-y-2">
-              <Label>Responsavel *</Label>
+              <Label>Responsável *</Label>
               <Select value={prazoData.responsavel_id} onValueChange={(v) => setPrazoData({ ...prazoData, responsavel_id: v })}>
                 <SelectTrigger><SelectValue placeholder="Selecionar" /></SelectTrigger>
                 <SelectContent>
@@ -877,7 +877,7 @@ function DocumentosTab({ caso, caseId }: { caso: CaseData; caseId: string }) {
                           if (d.arquivo_url) {
                             window.open(d.arquivo_url, "_blank")
                           } else {
-                            alert("Arquivo nao disponivel")
+                            alert("Arquivo não disponível")
                           }
                         }}
                       >
@@ -893,7 +893,7 @@ function DocumentosTab({ caso, caseId }: { caso: CaseData; caseId: string }) {
                             link.download = d.titulo || "documento"
                             link.click()
                           } else {
-                            alert("Arquivo nao disponivel para download")
+                            alert("Arquivo não disponível para download")
                           }
                         }}
                       >
@@ -902,7 +902,7 @@ function DocumentosTab({ caso, caseId }: { caso: CaseData; caseId: string }) {
                       <Button
                         variant="ghost" size="icon" className="size-7"
                         title="Excluir"
-                        onClick={() => alert("Exclusao de documento em desenvolvimento")}
+                        onClick={() => alert("Exclusão de documento em desenvolvimento")}
                       >
                         <Trash2 className="size-3.5 text-[#DC3545]" />
                       </Button>
@@ -951,7 +951,7 @@ function EquipeTab({
       {/* Responsible */}
       <Card>
         <CardContent className="pt-4 pb-4">
-          <p className="text-xs text-[#666666] mb-1">Advogado Responsavel</p>
+          <p className="text-xs text-[#666666] mb-1">Advogado Responsável</p>
           <p className="text-sm font-medium">
             {caso.advogado_responsavel.name}
             {caso.advogado_responsavel.oab_number && (
