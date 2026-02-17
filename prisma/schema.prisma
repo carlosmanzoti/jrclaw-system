@@ -1231,6 +1231,8 @@ model ChatMessage {
   case_     Case?    @relation("ChatMessageCase", fields: [caseId], references: [id])
   projectId String?
   project   Project? @relation("ChatMessageProject", fields: [projectId], references: [id])
+  negotiationId String?
+  negotiation   StratNegotiation? @relation("NegChatMessages", fields: [negotiationId], references: [id])
   userId    String
   user      User     @relation(fields: [userId], references: [id])
 
@@ -1238,6 +1240,7 @@ model ChatMessage {
 
   @@index([sessionId])
   @@index([caseId])
+  @@index([negotiationId])
   @@index([userId])
   @@map("chat_messages")
 }
@@ -1255,6 +1258,7 @@ model AIUsageLog {
   costEstimated Decimal  @default(0) @db.Decimal(10, 6)
   caseId        String?
   projectId     String?
+  negotiationId String?
   createdAt     DateTime @default(now())
 
   @@index([userId])
@@ -2259,6 +2263,18 @@ model StratNegotiation {
   responsavel_id        String?
   observacoes           String?           @db.Text
 
+  // AI-generated fields
+  health_score          Int?
+  health_score_details  Json?
+  probability_acordo    Float?
+  haircut_estimado_min  Float?
+  haircut_estimado_max  Float?
+  tempo_estimado_dias   Int?
+  ai_proxima_acao       String?           @db.Text
+  ai_insights           Json?
+  ai_playbook           Json?
+  ai_last_analysis      DateTime?
+
   created_at            DateTime          @default(now())
   updated_at            DateTime          @updatedAt
 
@@ -2273,6 +2289,8 @@ model StratNegotiation {
   concessoes            StratNegConcession[]
   propostas             StratNegProposal[]
   one_sheets            StratNegOneSheet[]
+  ai_insights_list      NegAIInsight[]
+  chat_messages         ChatMessage[]     @relation("NegChatMessages")
 
   @@index([case_id])
   @@index([jrc_id])
@@ -2425,4 +2443,30 @@ model StratNegOneSheet {
 
   @@index([negotiation_id])
   @@map("strat_neg_one_sheets")
+}
+
+// ========== NEGOTIATION AI INSIGHT ==========
+
+model NegAIInsight {
+  id              String           @id @default(cuid())
+  negotiation_id  String?
+  tipo            String           // OPORTUNIDADE, RISCO, SUGESTAO, ANALISE, ALERTA, CROSS_NEG, BRIEFING, DEBRIEFING, PRECEDENTE
+  titulo          String
+  descricao       String           @db.Text
+  detalhes        Json?
+  acao_sugerida   String?          @db.Text
+  framework       String?          // HARVARD, VOSS, TKI, CAMP, KARRASS, GAME_THEORY
+  prioridade      String?          // CRITICA, ALTA, MEDIA, BAIXA
+  lido            Boolean          @default(false)
+  aplicado        Boolean          @default(false)
+  expires_at      DateTime?
+
+  created_at      DateTime         @default(now())
+
+  negotiation     StratNegotiation? @relation(fields: [negotiation_id], references: [id], onDelete: Cascade)
+
+  @@index([negotiation_id])
+  @@index([tipo])
+  @@index([created_at])
+  @@map("neg_ai_insights")
 }

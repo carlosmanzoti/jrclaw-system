@@ -78,6 +78,8 @@ import {
   ArrowRightLeft,
   FolderOpen,
 } from "lucide-react";
+import { NegotiationAssistant } from "./negotiation-assistant";
+import { NegAIBar } from "./neg-ai-bar";
 
 // ---------------------------------------------------------------------------
 // Props
@@ -101,6 +103,12 @@ export function StratNegDetail({ params }: StratNegDetailProps) {
     onSuccess: () => {
       refetch();
       resetEventForm();
+      // Auto-analyze event with AI (fire and forget)
+      fetch("/api/ai/neg/analyze", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ type: "event", negotiationId: id }),
+      }).catch(() => {});
     },
   });
 
@@ -109,6 +117,12 @@ export function StratNegDetail({ params }: StratNegDetailProps) {
       refetch();
       setShowProposalDialog(false);
       resetProposalForm();
+      // Auto-analyze proposal with AI (fire and forget)
+      fetch("/api/ai/neg/analyze", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ type: "proposal", negotiationId: id }),
+      }).catch(() => {});
     },
   });
 
@@ -117,6 +131,12 @@ export function StratNegDetail({ params }: StratNegDetailProps) {
       refetch();
       setShowConcessionDialog(false);
       resetConcessionForm();
+      // Auto-analyze concession with AI (fire and forget)
+      fetch("/api/ai/neg/analyze", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ type: "concession", negotiationId: id }),
+      }).catch(() => {});
     },
   });
 
@@ -475,6 +495,23 @@ export function StratNegDetail({ params }: StratNegDetailProps) {
   }
 
   // =========================================================================
+  // AI Analysis handler
+  // =========================================================================
+
+  async function handleAnalyzeWithAI() {
+    try {
+      const res = await fetch("/api/ai/neg/analyze", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ type: "health_score", negotiationId: id }),
+      });
+      if (res.ok) {
+        refetch();
+      }
+    } catch {}
+  }
+
+  // =========================================================================
   // Render
   // =========================================================================
 
@@ -559,7 +596,7 @@ export function StratNegDetail({ params }: StratNegDetailProps) {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => alert("Analise com IA sera implementada em breve.")}
+              onClick={handleAnalyzeWithAI}
             >
               <Sparkles className="size-4 mr-2" />
               Analisar com IA
@@ -679,6 +716,21 @@ export function StratNegDetail({ params }: StratNegDetailProps) {
             </CardContent>
           </Card>
         )}
+
+        {/* ============================================================= */}
+        {/* AI BAR                                                        */}
+        {/* ============================================================= */}
+        <NegAIBar
+          negotiationId={id}
+          healthScore={(negotiation as any)?.health_score}
+          healthDetails={(negotiation as any)?.health_score_details}
+          probabilityAcordo={(negotiation as any)?.probability_acordo}
+          haircutMin={(negotiation as any)?.haircut_estimado_min}
+          haircutMax={(negotiation as any)?.haircut_estimado_max}
+          aiProximaAcao={(negotiation as any)?.ai_proxima_acao}
+          aiLastAnalysis={(negotiation as any)?.ai_last_analysis}
+          onRefresh={() => refetch()}
+        />
 
         {/* ============================================================= */}
         {/* TABS                                                          */}
@@ -1874,6 +1926,26 @@ export function StratNegDetail({ params }: StratNegDetailProps) {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        {/* ============================================================= */}
+        {/* NEGOTIATION ASSISTANT (AI Chat)                               */}
+        {/* ============================================================= */}
+        <NegotiationAssistant
+          negotiationId={id}
+          negotiation={negotiation}
+          fase={(negotiation as any)?.fase}
+        />
+
+        {/* AI Glow Effect CSS */}
+        <style>{`
+          .ai-glow {
+            animation: aiGlow 2s ease-in-out infinite;
+          }
+          @keyframes aiGlow {
+            0%, 100% { box-shadow: 0 0 5px rgba(201, 169, 97, 0.3); }
+            50% { box-shadow: 0 0 20px rgba(201, 169, 97, 0.6); }
+          }
+        `}</style>
       </div>
     </div>
   );

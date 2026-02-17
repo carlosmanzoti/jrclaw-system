@@ -741,6 +741,85 @@ const oneSheetsSubRouter = router({
     }),
 });
 
+const aiSubRouter = router({
+  // List insights for a negotiation (or global)
+  insights: protectedProcedure
+    .input(
+      z.object({
+        negotiationId: z.string().optional(),
+        tipo: z.string().optional(),
+        limit: z.number().default(20),
+      })
+    )
+    .query(async ({ ctx, input }) => {
+      return ctx.db.negAIInsight.findMany({
+        where: {
+          ...(input.negotiationId && { negotiation_id: input.negotiationId }),
+          ...(input.tipo && { tipo: input.tipo }),
+        },
+        orderBy: { created_at: "desc" },
+        take: input.limit,
+      });
+    }),
+
+  // Mark insight as read
+  markInsightRead: protectedProcedure
+    .input(z.object({ id: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      return ctx.db.negAIInsight.update({
+        where: { id: input.id },
+        data: { lido: true },
+      });
+    }),
+
+  // Mark insight as applied
+  markInsightApplied: protectedProcedure
+    .input(z.object({ id: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      return ctx.db.negAIInsight.update({
+        where: { id: input.id },
+        data: { aplicado: true },
+      });
+    }),
+
+  // Delete old insights
+  clearInsights: protectedProcedure
+    .input(z.object({ negotiationId: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      return ctx.db.negAIInsight.deleteMany({
+        where: { negotiation_id: input.negotiationId },
+      });
+    }),
+
+  // Get unread insight count
+  unreadCount: protectedProcedure
+    .input(z.object({ negotiationId: z.string().optional() }))
+    .query(async ({ ctx, input }) => {
+      return ctx.db.negAIInsight.count({
+        where: {
+          lido: false,
+          ...(input.negotiationId && { negotiation_id: input.negotiationId }),
+        },
+      });
+    }),
+
+  // Get chat history for a negotiation
+  chatHistory: protectedProcedure
+    .input(
+      z.object({
+        negotiationId: z.string(),
+        limit: z.number().default(50),
+      })
+    )
+    .query(async ({ ctx, input }) => {
+      return ctx.db.chatMessage.findMany({
+        where: { negotiationId: input.negotiationId },
+        orderBy: { createdAt: "asc" },
+        take: input.limit,
+      });
+    }),
+});
+
 // ========== Main stratNeg Router ==========
 
 export const stratNegRouter = router({
@@ -750,4 +829,5 @@ export const stratNegRouter = router({
   proposals: proposalsSubRouter,
   concessions: concessionsSubRouter,
   oneSheets: oneSheetsSubRouter,
+  ai: aiSubRouter,
 });

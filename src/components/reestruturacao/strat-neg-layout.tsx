@@ -32,7 +32,10 @@ import {
   Columns3,
   Calendar,
   User,
+  Sparkles,
+  RefreshCw,
 } from "lucide-react";
+import { NegotiationAssistant } from "./negotiation-assistant";
 import {
   STRAT_NEG_PHASES,
   STRAT_NEG_PHASE_LABELS,
@@ -82,6 +85,9 @@ interface NegotiationItem {
     id: string;
     nome: string;
   } | null;
+  // AI fields
+  health_score?: number | null;
+  ai_proxima_acao?: string | null;
 }
 
 // ============================================================
@@ -326,6 +332,40 @@ export function StratNegLayout() {
         </div>
 
         {/* ============================================================ */}
+        {/* Cross-Negotiation Intelligence */}
+        {/* ============================================================ */}
+        <Card className="mb-4 border-[#C9A961]/30 bg-gradient-to-r from-white to-[#FFFFF0]">
+          <CardHeader className="pb-2">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Sparkles className="size-4 text-[#C9A961]" />
+                <CardTitle className="text-sm">Inteligencia IA — Visao Global</CardTitle>
+              </div>
+              <Button
+                size="sm"
+                variant="outline"
+                className="text-xs"
+                onClick={() => {
+                  fetch("/api/ai/neg/analyze", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ type: "cross_insights" }),
+                  }).catch(() => {});
+                }}
+              >
+                <RefreshCw className="size-3 mr-1" />
+                Atualizar
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent className="pt-0">
+            <p className="text-xs text-muted-foreground">
+              Clique em "Atualizar" para gerar insights cruzados entre todas as negociacoes ativas.
+            </p>
+          </CardContent>
+        </Card>
+
+        {/* ============================================================ */}
         {/* CONTENT: PIPELINE OR TABLE */}
         {/* ============================================================ */}
         {isLoading ? (
@@ -375,6 +415,22 @@ export function StratNegLayout() {
             setFilterPrioridade={setFilterPrioridade}
           />
         )}
+
+        {/* ============================================================ */}
+        {/* NEGOTIATION ASSISTANT (Global context) */}
+        {/* ============================================================ */}
+        <NegotiationAssistant />
+
+        {/* AI Glow Effect CSS */}
+        <style>{`
+          .ai-glow {
+            animation: aiGlow 2s ease-in-out infinite;
+          }
+          @keyframes aiGlow {
+            0%, 100% { box-shadow: 0 0 5px rgba(201, 169, 97, 0.3); }
+            50% { box-shadow: 0 0 20px rgba(201, 169, 97, 0.6); }
+          }
+        `}</style>
       </div>
     </div>
   );
@@ -437,10 +493,11 @@ function PipelineView({
 
 function NegotiationCard({ negotiation }: { negotiation: NegotiationItem }) {
   const n = negotiation;
+  const needsGlow = !!n.ai_proxima_acao || (n.health_score != null && n.health_score < 40);
 
   return (
     <Link href={`/reestruturacao/${n.id}`}>
-      <Card className="bg-white rounded-lg shadow-sm border cursor-pointer hover:shadow-md transition-shadow">
+      <Card className={`bg-white rounded-lg shadow-sm border cursor-pointer hover:shadow-md transition-shadow${needsGlow ? " ai-glow" : ""}`}>
         <CardContent className="p-3 space-y-2">
           {/* Title */}
           <p className="text-sm font-medium leading-tight line-clamp-2">
