@@ -171,6 +171,17 @@ export const deadlinesRouter = router({
     }),
 
   /**
+   * Delete a deadline
+   */
+  delete: protectedProcedure
+    .input(z.object({ id: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      return ctx.db.deadline.delete({
+        where: { id: input.id },
+      });
+    }),
+
+  /**
    * List of cases for the "new deadline" modal
    */
   casesForSelect: protectedProcedure.query(async ({ ctx }) => {

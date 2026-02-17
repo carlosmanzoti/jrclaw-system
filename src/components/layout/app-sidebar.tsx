@@ -7,7 +7,6 @@ import {
   Scale,
   FolderKanban,
   Users,
-  UserRound,
   Calendar,
   Clock,
   FileText,
@@ -22,7 +21,6 @@ import {
   BarChart3,
   Settings,
   ChevronDown,
-  GanttChart,
 } from "lucide-react"
 import {
   Sidebar,
@@ -100,7 +98,7 @@ const navModules = [
     icon: FileText,
   },
   {
-    title: "Confecção (IA)",
+    title: "Harvey Specter",
     url: "/confeccao",
     icon: Sparkles,
   },
@@ -180,7 +178,7 @@ function NavItem({
       <SidebarMenuItem>
         <SidebarMenuButton asChild isActive={isActive} tooltip={item.title}>
           <Link href={item.url}>
-            <item.icon className="size-4" />
+            <item.icon className="size-4 text-[#C9A961]" />
             <span>{item.title}</span>
           </Link>
         </SidebarMenuButton>
@@ -197,7 +195,7 @@ function NavItem({
       <SidebarMenuItem>
         <CollapsibleTrigger asChild>
           <SidebarMenuButton isActive={isActive} tooltip={item.title}>
-            <item.icon className="size-4" />
+            <item.icon className="size-4 text-[#C9A961]" />
             <span>{item.title}</span>
             <ChevronDown className="ml-auto size-4 transition-transform duration-200 group-data-[state=open]/collapsible:rotate-180" />
           </SidebarMenuButton>
@@ -233,11 +231,16 @@ export function AppSidebar() {
           <SidebarMenuItem>
             <SidebarMenuButton size="lg" asChild>
               <Link href="/dashboard">
-                <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
-                  <GanttChart className="size-4" />
+                <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-[#1A1A2E]">
+                  <span className="font-heading text-sm font-bold text-[#C9A961]">
+                    JRC
+                  </span>
                 </div>
                 <div className="grid flex-1 text-left text-sm leading-tight">
-                  <span className="truncate font-semibold">JRCLaw</span>
+                  <span className="truncate font-semibold">
+                    <span className="font-heading text-[#C9A961]">JRC</span>
+                    <span className="font-body text-sidebar-foreground">Law</span>
+                  </span>
                   <span className="truncate text-xs opacity-70">
                     Gestão Jurídica
                   </span>

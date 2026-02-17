@@ -11,11 +11,11 @@ import { Badge } from "@/components/ui/badge"
 import { DEADLINE_TYPE_LABELS, DEADLINE_STATUS_LABELS, formatCNJ } from "@/lib/constants"
 
 const TYPE_COLORS: Record<string, string> = {
-  FATAL: "#dc2626",
-  ORDINARIO: "#f59e0b",
-  DILIGENCIA: "#3b82f6",
-  AUDIENCIA: "#a855f7",
-  ASSEMBLEIA: "#10b981",
+  FATAL: "#DC3545",
+  ORDINARIO: "#C9A961",
+  DILIGENCIA: "#17A2B8",
+  AUDIENCIA: "#C9A961",
+  ASSEMBLEIA: "#28A745",
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -35,7 +35,7 @@ export default function DeadlinesCalendar({ deadlines }: { deadlines: any[] }) {
 
   return (
     <>
-      <div className="rounded-lg border bg-white p-4">
+      <div className="rounded-lg border bg-white p-4 max-h-[calc(100vh-20rem)] overflow-y-auto">
         <FullCalendar
           plugins={[dayGridPlugin, interactionPlugin]}
           initialView="dayGridMonth"
@@ -69,32 +69,32 @@ export default function DeadlinesCalendar({ deadlines }: { deadlines: any[] }) {
           {selected && (
             <div className="space-y-3">
               <div>
-                <p className="text-xs text-muted-foreground">Tipo</p>
+                <p className="text-xs text-[#666666]">Tipo</p>
                 <Badge className="mt-1" style={{ backgroundColor: TYPE_COLORS[selected.tipo] }}>
                   {DEADLINE_TYPE_LABELS[selected.tipo]}
                 </Badge>
               </div>
               <div>
-                <p className="text-xs text-muted-foreground">Processo</p>
+                <p className="text-xs text-[#666666]">Processo</p>
                 <p className="text-sm font-mono">{formatCNJ(selected.case_?.numero_processo)}</p>
-                <p className="text-xs text-muted-foreground">{selected.case_?.cliente?.nome}</p>
+                <p className="text-xs text-[#666666]">{selected.case_?.cliente?.nome}</p>
               </div>
               <div>
-                <p className="text-xs text-muted-foreground">Descricao</p>
+                <p className="text-xs text-[#666666]">Descricao</p>
                 <p className="text-sm">{selected.descricao}</p>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <p className="text-xs text-muted-foreground">Data Limite</p>
+                  <p className="text-xs text-[#666666]">Data Limite</p>
                   <p className="text-sm font-medium">{new Date(selected.data_limite).toLocaleDateString("pt-BR")}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-muted-foreground">Status</p>
+                  <p className="text-xs text-[#666666]">Status</p>
                   <p className="text-sm">{DEADLINE_STATUS_LABELS[selected.status]}</p>
                 </div>
               </div>
               <div>
-                <p className="text-xs text-muted-foreground">Responsavel</p>
+                <p className="text-xs text-[#666666]">Responsavel</p>
                 <p className="text-sm">{selected.responsavel?.name}</p>
               </div>
             </div>

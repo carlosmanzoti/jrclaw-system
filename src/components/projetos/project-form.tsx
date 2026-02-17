@@ -72,7 +72,7 @@ export function ProjectForm() {
   const selectedCategoria = watch("categoria")
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 overflow-y-auto max-h-[calc(100vh-14rem)] pr-1">
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Main form */}
         <div className="lg:col-span-2 space-y-6">
@@ -84,7 +84,7 @@ export function ProjectForm() {
               <div>
                 <Label htmlFor="titulo">Titulo *</Label>
                 <Input id="titulo" {...register("titulo", { required: true })} placeholder="Ex: Recuperacao de Credito - Empresa X" />
-                {errors.titulo && <p className="text-xs text-red-500 mt-1">Titulo obrigatorio</p>}
+                {errors.titulo && <p className="text-xs text-[#DC3545] mt-1">Titulo obrigatorio</p>}
               </div>
 
               <div className="grid gap-4 sm:grid-cols-2">
@@ -96,7 +96,7 @@ export function ProjectForm() {
                     tipo="CLIENTE"
                     placeholder="Selecionar cliente..."
                   />
-                  {errors.cliente_id && <p className="text-xs text-red-500 mt-1">Cliente obrigatorio</p>}
+                  {errors.cliente_id && <p className="text-xs text-[#DC3545] mt-1">Cliente obrigatorio</p>}
                 </div>
                 <div>
                   <Label>Categoria *</Label>
@@ -108,7 +108,7 @@ export function ProjectForm() {
                       ))}
                     </SelectContent>
                   </Select>
-                  {errors.categoria && <p className="text-xs text-red-500 mt-1">Categoria obrigatoria</p>}
+                  {errors.categoria && <p className="text-xs text-[#DC3545] mt-1">Categoria obrigatoria</p>}
                 </div>
               </div>
 
@@ -161,7 +161,7 @@ export function ProjectForm() {
                       ))}
                     </SelectContent>
                   </Select>
-                  {errors.advogado_responsavel_id && <p className="text-xs text-red-500 mt-1">Responsavel obrigatorio</p>}
+                  {errors.advogado_responsavel_id && <p className="text-xs text-[#DC3545] mt-1">Responsavel obrigatorio</p>}
                 </div>
                 <div className="flex items-end gap-3 pb-1">
                   <Switch
@@ -186,11 +186,11 @@ export function ProjectForm() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
-              <p className="text-xs text-muted-foreground mb-3">
+              <p className="text-xs text-[#666666] mb-3">
                 Selecione um template para gerar automaticamente etapas, tarefas e marcos.
               </p>
               {templates?.length === 0 ? (
-                <p className="text-xs text-muted-foreground text-center py-2">Nenhum template disponivel</p>
+                <p className="text-xs text-[#666666] text-center py-2">Nenhum template disponivel</p>
               ) : (
                 templates?.map((t) => (
                   <div
@@ -204,11 +204,11 @@ export function ProjectForm() {
                       <p className="text-sm font-medium">{t.titulo}</p>
                       {selectedTemplateId === t.id && <Badge className="text-[10px]">Selecionado</Badge>}
                     </div>
-                    <p className="text-xs text-muted-foreground mt-1">
+                    <p className="text-xs text-[#666666] mt-1">
                       {PROJECT_CATEGORY_LABELS[t.categoria] || t.categoria}
                     </p>
                     {t.descricao && (
-                      <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{t.descricao}</p>
+                      <p className="text-xs text-[#666666] mt-1 line-clamp-2">{t.descricao}</p>
                     )}
                   </div>
                 ))

@@ -107,11 +107,11 @@ export function CaseForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 max-h-[calc(100vh-8rem)] overflow-y-auto pr-1">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Novo Processo</h1>
-          <p className="text-muted-foreground">Cadastre um novo processo judicial.</p>
+          <p className="text-[#666666]">Cadastre um novo processo judicial.</p>
         </div>
         <div className="flex gap-2">
           <Button type="button" variant="outline" onClick={() => router.back()}>
@@ -138,7 +138,7 @@ export function CaseForm() {
                 value={cnj}
                 onChange={(e) => setCnj(formatCNJInput(e.target.value))}
               />
-              <p className="text-xs text-muted-foreground">Opcional para processos em fase de distribuicao.</p>
+              <p className="text-xs text-[#666666]">Opcional para processos em fase de distribuicao.</p>
             </div>
 
             <div className="space-y-2">
@@ -151,7 +151,7 @@ export function CaseForm() {
                   ))}
                 </SelectContent>
               </Select>
-              {errors.tipo && <p className="text-xs text-red-500">{errors.tipo.message}</p>}
+              {errors.tipo && <p className="text-xs text-[#DC3545]">{errors.tipo.message}</p>}
             </div>
 
             <div className="space-y-2">
@@ -233,7 +233,7 @@ export function CaseForm() {
                 tipo="CLIENTE"
                 placeholder="Buscar cliente..."
               />
-              {errors.cliente_id && <p className="text-xs text-red-500">{errors.cliente_id.message}</p>}
+              {errors.cliente_id && <p className="text-xs text-[#DC3545]">{errors.cliente_id.message}</p>}
             </div>
 
             <div className="space-y-2">
@@ -252,7 +252,7 @@ export function CaseForm() {
                 </SelectContent>
               </Select>
               {errors.advogado_responsavel_id && (
-                <p className="text-xs text-red-500">{errors.advogado_responsavel_id.message}</p>
+                <p className="text-xs text-[#DC3545]">{errors.advogado_responsavel_id.message}</p>
               )}
             </div>
           </CardContent>

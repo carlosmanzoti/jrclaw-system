@@ -71,7 +71,7 @@ enum CaseType {
   EXECUCAO
   COBRANCA
   REESTRUTURACAO_EXTRAJUDICIAL
-  AGRARIO
+  AGRONEGOCIO
   TRABALHISTA
   TRIBUTARIO
   SOCIETARIO
@@ -168,11 +168,12 @@ enum TemplateArea {
   RECUPERACAO_JUDICIAL
   FALENCIA
   EXECUCAO
-  AGRARIO
+  AGRONEGOCIO
   TRABALHISTA
   TRIBUTARIO
   SOCIETARIO
   CONTRATUAL
+  BANCARIO
   GERAL
 }
 
@@ -341,12 +342,22 @@ enum ProjectTeamRole {
 
 enum LibraryEntryType {
   JURISPRUDENCIA
-  DOUTRINA
-  LEGISLACAO
-  MODELO
-  ARTIGO
-  PARECER
   SUMULA
+  DOUTRINA
+  ARTIGO
+  LEGISLACAO
+  MODELO_PECA
+  PARECER_INTERNO
+  PESQUISA
+  TESE
+  NOTA_TECNICA
+  LIVRO
+  ENUNCIADO
+  CONTRATO_MODELO
+  ESTRATEGIA
+  CASO_REFERENCIA
+  MATERIAL_ESTUDO
+  TABELA_REFERENCIA
   OUTRO
 }
 
@@ -388,6 +399,7 @@ model User {
   reports_created      ReportSnapshot[]       @relation("ReportCreator")
   chat_messages        ChatMessage[]
   ai_usage_logs        AIUsageLog[]           @relation("AIUsageLogs")
+  library_search_logs  LibrarySearchLog[]     @relation("LibrarySearchLogs")
 
   @@map("users")
 }
@@ -512,6 +524,7 @@ model Case {
   negociacoes   Negotiation[]
   calendar_events CalendarEvent[]
   library_entries     LibraryEntry[]      @relation("LibraryCases")
+  library_refs        LibraryEntry[]      @relation("LibraryCaseRef")
   financial_releases  FinancialRelease[]
   chat_messages       ChatMessage[]       @relation("ChatMessageCase")
 
@@ -797,25 +810,34 @@ model ReportSnapshot {
 }
 
 model LibraryEntry {
-  id         String           @id @default(cuid())
-  tipo       LibraryEntryType
-  titulo     String
-  resumo     String?          @db.Text
-  conteudo   String?          @db.Text
-  fonte      String?
-  url_fonte  String?
-  area       TemplateArea?
-  tags       String[]         @default([])
-  arquivo_url String?
-  relevancia Int?             @default(0)
-  favorito   Boolean          @default(false)
+  id              String           @id @default(cuid())
+  tipo            LibraryEntryType
+  titulo          String
+  resumo          String?          @db.Text
+  conteudo        String?          @db.Text
+  fonte           String?
+  url_fonte       String?
+  area            TemplateArea?
+  tags            String[]         @default([])
+  arquivo_url     String?
+  relevancia      Int?             @default(0)
+  favorito        Boolean          @default(false)
+  metadata        Json?
+  arquivo_tipo    String?
+  arquivo_tamanho Int?
+  case_id         String?
+  case_           Case?            @relation("LibraryCaseRef", fields: [case_id], references: [id])
 
   utilizado_em_casos    Case[]    @relation("LibraryCases")
   utilizado_em_projetos Project[] @relation("LibraryProjects")
 
   created_at    DateTime @default(now())
+  updated_at    DateTime @default(now()) @updatedAt
   created_by_id String?
 
+  @@index([tipo])
+  @@index([area])
+  @@index([case_id])
   @@map("library_entries")
 }
 
@@ -1086,4 +1108,20 @@ model AIUsageLog {
   @@index([userId])
   @@index([createdAt])
   @@map("ai_usage_logs")
+}
+
+model LibrarySearchLog {
+  id                    String   @id @default(cuid())
+  user_id               String
+  user                  User     @relation("LibrarySearchLogs", fields: [user_id], references: [id])
+  query                 String   @db.Text
+  results_count         Int
+  entries_used          String[] @default([])
+  document_generated_id String?
+  context               String   // CHAT | DOCUMENTO | REVISAO | MANUAL
+  created_at            DateTime @default(now())
+
+  @@index([user_id])
+  @@index([created_at])
+  @@map("library_search_logs")
 }

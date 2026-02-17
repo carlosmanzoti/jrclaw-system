@@ -6,11 +6,13 @@ import { AppHeader } from "@/components/layout/app-header"
 
 export function DashboardShell({ children }: { children: React.ReactNode }) {
   return (
-    <SidebarProvider>
+    <SidebarProvider className="!min-h-0 h-svh overflow-hidden">
       <AppSidebar />
-      <SidebarInset>
+      <SidebarInset className="min-h-0">
         <AppHeader />
-        <main className="flex-1 overflow-auto p-4 md:p-6">{children}</main>
+        <div className="flex-1 min-h-0 min-w-0 overflow-hidden">
+          {children}
+        </div>
       </SidebarInset>
     </SidebarProvider>
   )

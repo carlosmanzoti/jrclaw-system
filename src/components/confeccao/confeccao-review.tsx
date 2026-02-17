@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback } from "react"
+import { useState, useCallback, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
@@ -14,10 +14,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Loader2, Upload, FileText, Sparkles, AlertCircle, Crown } from "lucide-react"
+import { Loader2, Upload, FileText, Sparkles, AlertCircle, Crown, CheckCircle } from "lucide-react"
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
 import { MODEL_DISPLAY } from "@/lib/ai-model-map"
+import { extractTextFromFile, isFileSupported } from "@/lib/file-extractor"
 
 interface ConfeccaoReviewProps {
   caseId: string
@@ -31,6 +32,10 @@ export function ConfeccaoReview({ caseId, projectId }: ConfeccaoReviewProps) {
   const [isReviewing, setIsReviewing] = useState(false)
   const [error, setError] = useState("")
   const [useOpus, setUseOpus] = useState(false)
+  const [isDragging, setIsDragging] = useState(false)
+  const [isExtracting, setIsExtracting] = useState(false)
+  const [uploadedFilename, setUploadedFilename] = useState("")
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const handleReview = useCallback(async () => {
     if (!documentContent.trim()) return
@@ -73,18 +78,35 @@ export function ConfeccaoReview({ caseId, projectId }: ConfeccaoReviewProps) {
     }
   }, [documentContent, reviewType, caseId, projectId, useOpus])
 
-  const handleDrop = useCallback(async (e: React.DragEvent) => {
-    e.preventDefault()
-    const file = e.dataTransfer.files[0]
-    if (!file) return
+  const handleFileExtract = useCallback(async (files: FileList | File[]) => {
+    const validFiles = Array.from(files).filter(isFileSupported)
+    if (validFiles.length === 0) {
+      setError("Formatos suportados: PDF, DOCX, TXT")
+      return
+    }
 
-    if (file.type === "text/plain" || file.name.endsWith(".txt")) {
-      const text = await file.text()
-      setDocumentContent(text)
-    } else {
-      setError("Suporte apenas para arquivos .txt por enquanto. PDF/DOCX em breve.")
+    setIsExtracting(true)
+    setError("")
+
+    try {
+      const extracted = await extractTextFromFile(validFiles[0])
+      setDocumentContent(extracted.text)
+      setUploadedFilename(extracted.filename)
+    } catch (err: any) {
+      setError(err.message || "Erro ao extrair texto do arquivo")
+    } finally {
+      setIsExtracting(false)
     }
   }, [])
+
+  const handleDrop = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault()
+      setIsDragging(false)
+      handleFileExtract(e.dataTransfer.files)
+    },
+    [handleFileExtract]
+  )
 
   return (
     <div className="flex flex-col h-full">
@@ -93,16 +115,54 @@ export function ConfeccaoReview({ caseId, projectId }: ConfeccaoReviewProps) {
           <div className="max-w-3xl mx-auto space-y-4">
             {/* Drop zone */}
             <div
-              className="border-2 border-dashed rounded-lg p-8 text-center cursor-pointer hover:border-primary/50 transition-colors"
-              onDragOver={(e) => e.preventDefault()}
+              className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors ${
+                isDragging
+                  ? "border-[#28A745] bg-[#28A745]/5"
+                  : "border-[#E0E0E0] hover:border-[#C9A961]/50"
+              }`}
+              onDragOver={(e) => {
+                e.preventDefault()
+                setIsDragging(true)
+              }}
+              onDragLeave={(e) => {
+                e.preventDefault()
+                setIsDragging(false)
+              }}
               onDrop={handleDrop}
+              onClick={() => fileInputRef.current?.click()}
             >
-              <Upload className="size-8 text-muted-foreground/50 mx-auto" />
-              <p className="text-sm text-muted-foreground mt-2">
-                Arraste um arquivo ou cole o texto abaixo
-              </p>
-              <p className="text-xs text-muted-foreground mt-1">TXT (PDF/DOCX em breve)</p>
+              {isExtracting ? (
+                <div className="flex items-center justify-center gap-2">
+                  <Loader2 className="size-6 animate-spin text-[#28A745]" />
+                  <span className="text-sm text-[#666666]">Extraindo texto...</span>
+                </div>
+              ) : (
+                <>
+                  <Upload className="size-8 text-[#666666]/50 mx-auto" />
+                  <p className="text-sm text-[#666666] mt-2">
+                    Arraste um arquivo ou clique para selecionar
+                  </p>
+                  <p className="text-xs text-[#666666] mt-1">PDF, DOCX, TXT</p>
+                </>
+              )}
+              <input
+                ref={fileInputRef}
+                type="file"
+                className="hidden"
+                accept=".pdf,.docx,.txt"
+                onChange={(e) => {
+                  if (e.target.files) handleFileExtract(e.target.files)
+                  e.target.value = ""
+                }}
+              />
             </div>
+
+            {uploadedFilename && (
+              <div className="flex items-center gap-2 text-xs text-[#28A745]">
+                <FileText className="size-3" />
+                <span>Arquivo carregado: {uploadedFilename}</span>
+              </div>
+            )}
 
             {/* Text input */}
             <div className="space-y-1.5">
@@ -138,7 +198,7 @@ export function ConfeccaoReview({ caseId, projectId }: ConfeccaoReviewProps) {
             <div className="flex items-center gap-2">
               <Switch checked={useOpus} onCheckedChange={setUseOpus} />
               <Label className="text-xs flex items-center gap-1">
-                <Crown className="size-3" />
+                <Crown className="size-3 text-[#C9A961]" />
                 Revisar com Opus 4.6
               </Label>
               {useOpus && (
@@ -149,25 +209,26 @@ export function ConfeccaoReview({ caseId, projectId }: ConfeccaoReviewProps) {
             </div>
 
             {error && (
-              <div className="flex items-center gap-2 text-sm text-red-500 bg-red-50 p-3 rounded">
+              <div className="flex items-center gap-2 text-sm text-[#DC3545] bg-[#DC3545]/10 p-3 rounded">
                 <AlertCircle className="size-4" />
                 {error}
               </div>
             )}
 
+            {/* Review button — enhanced emerald */}
             <Button
-              className="w-full"
+              className="w-full h-12 text-base bg-[#28A745] hover:bg-[#28A745]/90"
               onClick={handleReview}
               disabled={!documentContent.trim() || isReviewing}
             >
               {isReviewing ? (
                 <>
-                  <Loader2 className="size-4 mr-2 animate-spin" />
+                  <Loader2 className="size-5 mr-2 animate-spin" />
                   Revisando{useOpus ? " com Opus 4.6" : ""}...
                 </>
               ) : (
                 <>
-                  <Sparkles className="size-4 mr-2" />
+                  <CheckCircle className="size-5 mr-2" />
                   Revisar Documento
                 </>
               )}
@@ -178,7 +239,7 @@ export function ConfeccaoReview({ caseId, projectId }: ConfeccaoReviewProps) {
         <div className="flex flex-1 divide-x">
           {/* Original */}
           <div className="w-1/2 flex flex-col">
-            <div className="px-4 py-2 border-b bg-muted/30">
+            <div className="px-4 py-2 border-b bg-[#F7F3F1]">
               <Badge variant="outline" className="text-xs">
                 <FileText className="size-3 mr-1" />
                 Original
@@ -191,9 +252,9 @@ export function ConfeccaoReview({ caseId, projectId }: ConfeccaoReviewProps) {
 
           {/* Review */}
           <div className="w-1/2 flex flex-col">
-            <div className="px-4 py-2 border-b bg-muted/30 flex items-center gap-2">
+            <div className="px-4 py-2 border-b bg-[#F7F3F1] flex items-center gap-2">
               <Badge variant="secondary" className="text-xs">
-                <Sparkles className="size-3 mr-1" />
+                <Sparkles className="size-3 mr-1 text-[#17A2B8]" />
                 Revisão IA
               </Badge>
               <div className="flex-1" />

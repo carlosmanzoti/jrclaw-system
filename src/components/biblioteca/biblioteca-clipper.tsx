@@ -73,12 +73,12 @@ export function BibliotecaClipper({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-md max-h-[85vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>Clipper Rápido</DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-3">
+        <div className="space-y-3 overflow-y-auto flex-1 min-h-0">
           <div className="space-y-1">
             <Label className="text-xs">Título *</Label>
             <Input
@@ -107,12 +107,22 @@ export function BibliotecaClipper({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="JURISPRUDENCIA">Jurisprudência</SelectItem>
-                  <SelectItem value="DOUTRINA">Doutrina</SelectItem>
-                  <SelectItem value="LEGISLACAO">Legislação</SelectItem>
-                  <SelectItem value="MODELO">Modelo</SelectItem>
-                  <SelectItem value="ARTIGO">Artigo</SelectItem>
-                  <SelectItem value="PARECER">Parecer</SelectItem>
                   <SelectItem value="SUMULA">Súmula</SelectItem>
+                  <SelectItem value="DOUTRINA">Doutrina</SelectItem>
+                  <SelectItem value="ARTIGO">Artigo</SelectItem>
+                  <SelectItem value="LEGISLACAO">Legislação</SelectItem>
+                  <SelectItem value="MODELO_PECA">Modelo de Peça</SelectItem>
+                  <SelectItem value="PARECER_INTERNO">Parecer Interno</SelectItem>
+                  <SelectItem value="PESQUISA">Pesquisa</SelectItem>
+                  <SelectItem value="TESE">Tese</SelectItem>
+                  <SelectItem value="NOTA_TECNICA">Nota Técnica</SelectItem>
+                  <SelectItem value="LIVRO">Livro</SelectItem>
+                  <SelectItem value="ENUNCIADO">Enunciado</SelectItem>
+                  <SelectItem value="CONTRATO_MODELO">Contrato Modelo</SelectItem>
+                  <SelectItem value="ESTRATEGIA">Estratégia</SelectItem>
+                  <SelectItem value="CASO_REFERENCIA">Caso Referência</SelectItem>
+                  <SelectItem value="MATERIAL_ESTUDO">Material de Estudo</SelectItem>
+                  <SelectItem value="TABELA_REFERENCIA">Tabela Referência</SelectItem>
                   <SelectItem value="OUTRO">Outro</SelectItem>
                 </SelectContent>
               </Select>
@@ -129,10 +139,12 @@ export function BibliotecaClipper({
                   <SelectItem value="RECUPERACAO_JUDICIAL">Recuperação Judicial</SelectItem>
                   <SelectItem value="FALENCIA">Falência</SelectItem>
                   <SelectItem value="EXECUCAO">Execução</SelectItem>
-                  <SelectItem value="AGRARIO">Agrário</SelectItem>
+                  <SelectItem value="AGRONEGOCIO">Agronegócio</SelectItem>
+                  <SelectItem value="TRABALHISTA">Trabalhista</SelectItem>
                   <SelectItem value="TRIBUTARIO">Tributário</SelectItem>
                   <SelectItem value="SOCIETARIO">Societário</SelectItem>
                   <SelectItem value="CONTRATUAL">Contratual</SelectItem>
+                  <SelectItem value="BANCARIO">Bancário</SelectItem>
                   <SelectItem value="GERAL">Geral</SelectItem>
                 </SelectContent>
               </Select>

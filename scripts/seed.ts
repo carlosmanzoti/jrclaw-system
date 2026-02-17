@@ -417,10 +417,10 @@ async function main() {
     },
   });
 
-  const caso4_agrario = await prisma.case.create({
+  const caso4_agro = await prisma.case.create({
     data: {
       numero_processo: "5004567-89.2025.8.16.0001",
-      tipo: "AGRARIO",
+      tipo: "AGRONEGOCIO",
       status: "ATIVO",
       fase_processual: "Instrução",
       vara: "2ª Vara Cível",
@@ -431,7 +431,7 @@ async function main() {
       valor_causa: 3200000.00,
       cliente_id: pessoa3.id,
       advogado_responsavel_id: admin.id,
-      tags: ["agrário", "usucapião", "terra"],
+      tags: ["agronegócio", "usucapião", "terra"],
     },
   });
 
@@ -467,7 +467,7 @@ async function main() {
       { case_id: caso2_rj.id, user_id: advogado2.id, role: "RESPONSAVEL" },
       { case_id: caso2_rj.id, user_id: admin.id, role: "CONSULTOR" },
       { case_id: caso3_exec.id, user_id: advogado1.id, role: "RESPONSAVEL" },
-      { case_id: caso4_agrario.id, user_id: admin.id, role: "RESPONSAVEL" },
+      { case_id: caso4_agro.id, user_id: admin.id, role: "RESPONSAVEL" },
       { case_id: caso5_trib.id, user_id: advogado2.id, role: "RESPONSAVEL" },
     ],
   });
@@ -478,7 +478,7 @@ async function main() {
       { case_id: caso1_rj.id, person_id: pessoa6.id, role: "AUTOR" },
       { case_id: caso2_rj.id, person_id: pessoa2.id, role: "AUTOR" },
       { case_id: caso3_exec.id, person_id: pessoa1.id, role: "AUTOR" },
-      { case_id: caso4_agrario.id, person_id: pessoa3.id, role: "AUTOR" },
+      { case_id: caso4_agro.id, person_id: pessoa3.id, role: "AUTOR" },
       { case_id: caso5_trib.id, person_id: pessoa5.id, role: "AUTOR" },
     ],
   });
@@ -530,10 +530,10 @@ async function main() {
       { case_id: caso3_exec.id, tipo: "FATAL", descricao: "Prazo para embargos à execução", data_limite: addDays(now, 12), data_alerta: [addDays(now, 7), addDays(now, 10), addDays(now, 11)], responsavel_id: advogado1.id },
       { case_id: caso3_exec.id, tipo: "ORDINARIO", descricao: "Providenciar cálculo atualizado do débito", data_limite: addDays(now, 8), data_alerta: [addDays(now, 5)], responsavel_id: advogado1.id },
       { case_id: caso3_exec.id, tipo: "DILIGENCIA", descricao: "Diligência para localização de bens do executado", data_limite: addDays(now, 18), data_alerta: [addDays(now, 14)], responsavel_id: advogado1.id },
-      // Caso 4 - Agrário
-      { case_id: caso4_agrario.id, tipo: "FATAL", descricao: "Prazo para contestação", data_limite: addDays(now, 5), data_alerta: [addDays(now, 2), addDays(now, 4)], responsavel_id: admin.id },
-      { case_id: caso4_agrario.id, tipo: "AUDIENCIA", descricao: "Audiência de instrução e julgamento", data_limite: addDays(now, 60), data_alerta: [addDays(now, 50), addDays(now, 58)], responsavel_id: admin.id },
-      { case_id: caso4_agrario.id, tipo: "ORDINARIO", descricao: "Indicação de assistente técnico para perícia", data_limite: addDays(now, 25), data_alerta: [addDays(now, 20)], responsavel_id: admin.id },
+      // Caso 4 - Agronegócio
+      { case_id: caso4_agro.id, tipo: "FATAL", descricao: "Prazo para contestação", data_limite: addDays(now, 5), data_alerta: [addDays(now, 2), addDays(now, 4)], responsavel_id: admin.id },
+      { case_id: caso4_agro.id, tipo: "AUDIENCIA", descricao: "Audiência de instrução e julgamento", data_limite: addDays(now, 60), data_alerta: [addDays(now, 50), addDays(now, 58)], responsavel_id: admin.id },
+      { case_id: caso4_agro.id, tipo: "ORDINARIO", descricao: "Indicação de assistente técnico para perícia", data_limite: addDays(now, 25), data_alerta: [addDays(now, 20)], responsavel_id: admin.id },
       // Caso 5 - Tributário
       { case_id: caso5_trib.id, tipo: "FATAL", descricao: "Prazo para contrarrazões ao recurso especial", data_limite: addDays(now, 14), data_alerta: [addDays(now, 9), addDays(now, 12), addDays(now, 13)], responsavel_id: advogado2.id },
       { case_id: caso5_trib.id, tipo: "ORDINARIO", descricao: "Pedido de efeito suspensivo", data_limite: addDays(now, 3), data_alerta: [addDays(now, 1), addDays(now, 2)], responsavel_id: advogado2.id },
@@ -1305,7 +1305,7 @@ async function main() {
         resumo: "Institui a Cédula de Produto Rural. Instrumento fundamental no agronegócio para financiamento da produção agrícola.",
         conteudo: "Lei que institui a CPR como título líquido e certo, negociável no mercado financeiro. Tipos: CPR física (entrega do produto) e CPR financeira (liquidação financeira). Art. 1º ao 22. Essencial para operações de crédito rural e garantias no agronegócio.",
         fonte: "Presidência da República",
-        area: "AGRARIO",
+        area: "AGRONEGOCIO",
         tags: ["CPR", "crédito rural", "agronegócio", "título"],
         relevancia: 8,
         favorito: true,
@@ -1336,7 +1336,7 @@ async function main() {
       { case_id: caso2_rj.id, data: addDays(now, -60), tipo: "DECISAO", descricao: "Deferido o processamento da recuperação judicial do Grupo Cerrado Agroindustrial.", notificar_cliente: true },
       { case_id: caso2_rj.id, data: addDays(now, -10), tipo: "DESPACHO", descricao: "Designada assembleia geral de credores para deliberação sobre o plano." },
       { case_id: caso3_exec.id, data: addDays(now, -8), tipo: "CITACAO", descricao: "Citação do executado para pagamento em 3 dias ou nomear bens à penhora." },
-      { case_id: caso4_agrario.id, data: addDays(now, -20), tipo: "DESPACHO", descricao: "Determinada a realização de perícia técnica no imóvel rural." },
+      { case_id: caso4_agro.id, data: addDays(now, -20), tipo: "DESPACHO", descricao: "Determinada a realização de perícia técnica no imóvel rural." },
     ],
   });
 
@@ -1425,7 +1425,7 @@ async function main() {
   console.log("\n✅ Seed completed successfully!");
   console.log("   - 3 users (admin, advogado1, advogado2)");
   console.log("   - 8 clients + 8 creditors + 2 judges = 18 persons");
-  console.log("   - 5 cases (2 RJ, 1 execução, 1 agrário, 1 tributário)");
+  console.log("   - 5 cases (2 RJ, 1 execução, 1 agronegócio, 1 tributário)");
   console.log("   - 3 projects (alvará, recuperação crédito, consultoria)");
   console.log("   - 15 deadlines");
   console.log("   - 10 creditors (5 per RJ)");

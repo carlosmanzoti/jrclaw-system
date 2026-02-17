@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback, useMemo } from "react"
+import { useState, useCallback, useMemo, useRef, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
 import { Switch } from "@/components/ui/switch"
 import { ScrollArea } from "@/components/ui/scroll-area"
+import { Progress } from "@/components/ui/progress"
 import {
   Select,
   SelectContent,
@@ -23,7 +24,19 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
-import { Loader2, Sparkles, RotateCcw, Save, Download, Crown } from "lucide-react"
+import {
+  Loader2,
+  Sparkles,
+  RotateCcw,
+  Save,
+  Download,
+  Crown,
+  Upload,
+  X,
+  FileText,
+  StopCircle,
+  BookOpen,
+} from "lucide-react"
 import { TiptapEditor } from "@/components/ui/tiptap-editor"
 import {
   getModelDisplayForDocType,
@@ -31,6 +44,19 @@ import {
   COST_ESTIMATES,
 } from "@/lib/ai-model-map"
 import type { ModelTier } from "@/lib/ai-model-map"
+import {
+  extractTextFromFile,
+  isFileSupported,
+  FILE_LABELS,
+  type ExtractedFile,
+} from "@/lib/file-extractor"
+import {
+  BibliotecaReferences,
+  type BibliotecaRefEntry,
+} from "@/components/confeccao/biblioteca-references"
+import { BibliotecaSearchModal } from "@/components/biblioteca/biblioteca-search-modal"
+import { BibliotecaForm } from "@/components/biblioteca/biblioteca-form"
+import { trpc } from "@/lib/trpc"
 
 const DOC_TYPE_GROUPS: Record<string, Array<{ value: string; label: string }>> = {
   "Fase de Conhecimento": [
@@ -122,6 +148,91 @@ export function ConfeccaoGenerate({
   const [error, setError] = useState("")
   const [forceOpus, setForceOpus] = useState(false)
   const [generationTier, setGenerationTier] = useState<ModelTier | null>(null)
+  const [progress, setProgress] = useState(0)
+  const abortControllerRef = useRef<AbortController | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  // Reference files
+  const [referenceFiles, setReferenceFiles] = useState<ExtractedFile[]>([])
+  const [isExtracting, setIsExtracting] = useState(false)
+  const [isDragging, setIsDragging] = useState(false)
+
+  // Biblioteca references (Harvey Specter)
+  const [bibliotecaRefs, setBibliotecaRefs] = useState<BibliotecaRefEntry[]>([])
+  const [selectedRefIds, setSelectedRefIds] = useState<Set<string>>(new Set())
+  const [showRefSearch, setShowRefSearch] = useState(false)
+  const [showSaveToLibrary, setShowSaveToLibrary] = useState(false)
+  const [generatedBibliotecaRefIds, setGeneratedBibliotecaRefIds] = useState<string[]>([])
+
+  // Auto-search biblioteca when tipoDocumento + context changes
+  const smartSearchQuery = trpc.biblioteca.smartSearch.useQuery(
+    {
+      tipoDocumento: tipoDocumento || undefined,
+      caseId: caseId && caseId !== "none" ? caseId : undefined,
+      projectId: projectId && projectId !== "none" ? projectId : undefined,
+      limit: 10,
+    },
+    {
+      enabled: !!tipoDocumento,
+    }
+  )
+
+  // Populate bibliotecaRefs when smart search returns
+  useEffect(() => {
+    if (smartSearchQuery.data && smartSearchQuery.data.length > 0) {
+      const refs: BibliotecaRefEntry[] = smartSearchQuery.data.map((entry: any) => ({
+        id: entry.id,
+        titulo: entry.titulo,
+        tipo: entry.tipo,
+        area: entry.area,
+        resumo: entry.resumo,
+        relevancia: entry.relevancia,
+        favorito: entry.favorito,
+      }))
+      setBibliotecaRefs(refs)
+      // Select all by default
+      setSelectedRefIds(new Set(refs.map((r) => r.id)))
+    }
+  }, [smartSearchQuery.data])
+
+  const handleToggleRef = useCallback((id: string) => {
+    setSelectedRefIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) {
+        next.delete(id)
+      } else {
+        next.add(id)
+      }
+      return next
+    })
+  }, [])
+
+  const handleClearRefs = useCallback(() => {
+    setSelectedRefIds(new Set())
+  }, [])
+
+  const handleSearchMore = useCallback(() => {
+    setShowRefSearch(true)
+  }, [])
+
+  const handleAddRefFromSearch = useCallback((entry: any) => {
+    setBibliotecaRefs((prev) => {
+      if (prev.find((r) => r.id === entry.id)) return prev
+      return [
+        ...prev,
+        {
+          id: entry.id,
+          titulo: entry.titulo,
+          tipo: entry.tipo,
+          area: entry.area,
+          resumo: entry.resumo,
+          relevancia: entry.relevancia,
+          favorito: entry.favorito,
+        },
+      ]
+    })
+    setSelectedRefIds((prev) => new Set([...prev, entry.id]))
+  }, [])
 
   // Derive current model display from selected type + forceOpus
   const currentModelDisplay = useMemo(() => {
@@ -138,12 +249,66 @@ export function ConfeccaoGenerate({
     return COST_ESTIMATES[currentModelDisplay.tier]
   }, [currentModelDisplay])
 
+  const handleFilesUpload = useCallback(async (files: FileList | File[]) => {
+    const validFiles = Array.from(files).filter(isFileSupported)
+    if (validFiles.length === 0) {
+      setError("Formatos suportados: PDF, DOCX, TXT")
+      return
+    }
+
+    setIsExtracting(true)
+    setError("")
+
+    try {
+      const extracted = await Promise.all(validFiles.map(extractTextFromFile))
+      setReferenceFiles((prev) => [...prev, ...extracted])
+    } catch (err: any) {
+      setError(err.message || "Erro ao extrair texto dos arquivos")
+    } finally {
+      setIsExtracting(false)
+    }
+  }, [])
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault()
+    setIsDragging(true)
+  }, [])
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault()
+    setIsDragging(false)
+  }, [])
+
+  const handleDrop = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault()
+      setIsDragging(false)
+      handleFilesUpload(e.dataTransfer.files)
+    },
+    [handleFilesUpload]
+  )
+
+  const removeFile = useCallback((index: number) => {
+    setReferenceFiles((prev) => prev.filter((_, i) => i !== index))
+  }, [])
+
+  const updateFileLabel = useCallback((index: number, label: string) => {
+    setReferenceFiles((prev) =>
+      prev.map((f, i) => (i === index ? { ...f, label } : f))
+    )
+  }, [])
+
   const handleGenerate = useCallback(async () => {
     if (!tipoDocumento) return
     setIsGenerating(true)
     setError("")
     setGeneratedContent("")
     setGenerationTier(null)
+    setProgress(0)
+    setGeneratedBibliotecaRefIds([])
+
+    const controller = new AbortController()
+    abortControllerRef.current = controller
 
     try {
       const res = await fetch("/api/ai/generate", {
@@ -161,7 +326,14 @@ export function ConfeccaoGenerate({
           incluirDoutrina,
           incluirTutela,
           forceOpus,
+          referenceDocs: referenceFiles.map((f) => ({
+            filename: f.filename,
+            label: f.label,
+            text: f.text,
+          })),
+          bibliotecaEntryIds: Array.from(selectedRefIds),
         }),
+        signal: controller.signal,
       })
 
       if (!res.ok) throw new Error("Erro ao gerar documento")
@@ -169,6 +341,15 @@ export function ConfeccaoGenerate({
       // Read model tier from response header
       const tier = res.headers.get("X-AI-Tier") as ModelTier | null
       if (tier) setGenerationTier(tier)
+
+      // Read biblioteca refs from response header
+      const bibRefsHeader = res.headers.get("X-Biblioteca-Refs")
+      if (bibRefsHeader) {
+        try {
+          const refIds = JSON.parse(bibRefsHeader)
+          setGeneratedBibliotecaRefIds(refIds)
+        } catch {}
+      }
 
       const reader = res.body?.getReader()
       if (!reader) throw new Error("No stream")
@@ -182,13 +363,28 @@ export function ConfeccaoGenerate({
         const chunk = decoder.decode(value, { stream: true })
         accumulated += chunk
         setGeneratedContent(accumulated)
+        // Estimate progress based on accumulated chars
+        const estimatedTotal =
+          extensao === "conciso" ? 3000 : extensao === "padrao" ? 8000 : extensao === "detalhado" ? 15000 : 25000
+        setProgress(Math.min(95, Math.round((accumulated.length / estimatedTotal) * 100)))
       }
+
+      setProgress(100)
     } catch (err: any) {
-      setError(err.message || "Erro ao gerar documento")
+      if (err.name === "AbortError") {
+        setError("Geração cancelada pelo usuário.")
+      } else {
+        setError(err.message || "Erro ao gerar documento")
+      }
     } finally {
       setIsGenerating(false)
+      abortControllerRef.current = null
     }
-  }, [tipoDocumento, caseId, projectId, tom, extensao, destinatario, instrucoes, incluirJurisprudencia, incluirDoutrina, incluirTutela, forceOpus])
+  }, [tipoDocumento, caseId, projectId, tom, extensao, destinatario, instrucoes, incluirJurisprudencia, incluirDoutrina, incluirTutela, forceOpus, referenceFiles, selectedRefIds])
+
+  const handleCancel = useCallback(() => {
+    abortControllerRef.current?.abort()
+  }, [])
 
   const handleReviewWithAI = useCallback(async () => {
     if (!generatedContent) return
@@ -228,6 +424,18 @@ export function ConfeccaoGenerate({
     }
   }, [generatedContent, caseId])
 
+  // Determine save-to-library tipo based on document type
+  const saveToLibraryTipo = useMemo(() => {
+    if (!tipoDocumento) return "MODELO_PECA"
+    if (tipoDocumento.startsWith("PARECER") || tipoDocumento === "MEMORANDO_INTERNO" || tipoDocumento === "NOTA_TECNICA") {
+      return "PARECER_INTERNO"
+    }
+    if (tipoDocumento.startsWith("CONTRATO") || tipoDocumento === "CPR_CEDULA_PRODUTO_RURAL" || tipoDocumento === "DISTRATO") {
+      return "CONTRATO_MODELO"
+    }
+    return "MODELO_PECA"
+  }, [tipoDocumento])
+
   return (
     <div className="flex flex-col h-full">
       {/* Config bar */}
@@ -258,12 +466,12 @@ export function ConfeccaoGenerate({
               {currentModelDisplay && (
                 <div className="flex items-center gap-2 mt-2">
                   <Badge variant="outline" className={`text-xs ${currentModelDisplay.badgeClass}`}>
-                    {currentModelDisplay.tier === "premium" && <Crown className="size-3 mr-1" />}
+                    {currentModelDisplay.tier === "premium" && <Crown className="size-3 mr-1 text-[#C9A961]" />}
                     {MODEL_DISPLAY[currentModelDisplay.tier].name}
                     {forceOpus && currentModelDisplay.tier === "premium" && " (manual)"}
                   </Badge>
                   {currentCostEstimate && (
-                    <span className="text-[10px] text-muted-foreground">
+                    <span className="text-[10px] text-[#666666]">
                       Custo estimado: {currentCostEstimate}
                     </span>
                   )}
@@ -288,6 +496,121 @@ export function ConfeccaoGenerate({
                 placeholder="Descreva o que deseja, contexto adicional, fatos relevantes, tese a sustentar..."
                 rows={5}
               />
+            </div>
+
+            {/* Biblioteca References Card (Harvey Specter) */}
+            {bibliotecaRefs.length > 0 && (
+              <BibliotecaReferences
+                entries={bibliotecaRefs}
+                selectedIds={selectedRefIds}
+                onToggle={handleToggleRef}
+                onSearchMore={handleSearchMore}
+                onClear={handleClearRefs}
+              />
+            )}
+            {tipoDocumento && bibliotecaRefs.length === 0 && !smartSearchQuery.isLoading && (
+              <div className="border rounded-lg bg-[#F7F3F1] p-3 flex items-center gap-2">
+                <BookOpen className="size-4 text-[#666666]/50" />
+                <span className="text-xs text-[#666666]">
+                  Nenhuma referência encontrada na Biblioteca.
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-6 text-[10px] ml-auto"
+                  onClick={handleSearchMore}
+                >
+                  Buscar manualmente
+                </Button>
+              </div>
+            )}
+
+            {/* Reference Files Upload */}
+            <div className="space-y-2">
+              <Label className="text-sm">Documentos de Referência (opcional)</Label>
+              <div
+                className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors cursor-pointer ${
+                  isDragging
+                    ? "border-[#17A2B8] bg-[#17A2B8]/5"
+                    : "border-[#E0E0E0] hover:border-[#C9A961]/50"
+                }`}
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
+                onClick={() => fileInputRef.current?.click()}
+              >
+                {isExtracting ? (
+                  <div className="flex items-center justify-center gap-2">
+                    <Loader2 className="size-5 animate-spin text-[#17A2B8]" />
+                    <span className="text-sm text-[#666666]">Extraindo texto...</span>
+                  </div>
+                ) : (
+                  <>
+                    <Upload className="size-6 text-[#666666]/50 mx-auto" />
+                    <p className="text-sm text-[#666666] mt-2">
+                      Arraste arquivos ou clique para selecionar
+                    </p>
+                    <p className="text-[10px] text-[#666666] mt-1">
+                      PDF, DOCX, TXT — O texto será extraído e enviado como contexto para a IA
+                    </p>
+                  </>
+                )}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  className="hidden"
+                  multiple
+                  accept=".pdf,.docx,.txt"
+                  onChange={(e) => {
+                    if (e.target.files) handleFilesUpload(e.target.files)
+                    e.target.value = ""
+                  }}
+                />
+              </div>
+
+              {/* Uploaded files list */}
+              {referenceFiles.length > 0 && (
+                <div className="space-y-2">
+                  {referenceFiles.map((file, index) => (
+                    <div
+                      key={`${file.filename}-${index}`}
+                      className="flex items-center gap-2 p-2 rounded border bg-[#F7F3F1]"
+                    >
+                      <FileText className="size-4 text-[#17A2B8] shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-medium truncate">{file.filename}</p>
+                        <p className="text-[10px] text-[#666666]">
+                          {file.chars.toLocaleString("pt-BR")} caracteres
+                        </p>
+                      </div>
+                      <Select
+                        value={file.label || "__none__"}
+                        onValueChange={(v) => updateFileLabel(index, v === "__none__" ? "" : v)}
+                      >
+                        <SelectTrigger className="h-7 w-[160px] text-[10px]">
+                          <SelectValue placeholder="Rótulo..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="__none__">Sem rótulo</SelectItem>
+                          {FILE_LABELS.map((label) => (
+                            <SelectItem key={label} value={label}>
+                              {label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 w-7 p-0"
+                        onClick={() => removeFile(index)}
+                      >
+                        <X className="size-3" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             <div className="grid grid-cols-2 gap-4">
@@ -337,7 +660,7 @@ export function ConfeccaoGenerate({
                     <div className="flex items-center gap-2">
                       <Switch checked={forceOpus} onCheckedChange={setForceOpus} />
                       <Label className="text-xs flex items-center gap-1">
-                        <Crown className="size-3" />
+                        <Crown className="size-3 text-[#C9A961]" />
                         Forçar modelo premium
                       </Label>
                     </div>
@@ -352,26 +675,48 @@ export function ConfeccaoGenerate({
             </div>
 
             {error && (
-              <div className="text-sm text-red-500 bg-red-50 p-3 rounded">{error}</div>
+              <div className="text-sm text-[#DC3545] bg-[#DC3545]/10 p-3 rounded">{error}</div>
             )}
 
-            <Button
-              className="w-full"
-              onClick={handleGenerate}
-              disabled={!tipoDocumento || isGenerating}
-            >
+            {/* Generate button area */}
+            <div className="space-y-2 pt-2">
               {isGenerating ? (
-                <>
-                  <Loader2 className="size-4 mr-2 animate-spin" />
-                  Gerando documento...
-                </>
+                <div className="space-y-3">
+                  <Progress value={progress} className="h-2" />
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Loader2 className="size-4 animate-spin text-[#17A2B8]" />
+                      <span className="text-sm text-[#666666]">
+                        Gerando documento... {progress}%
+                      </span>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="text-xs text-[#DC3545] border-[#DC3545]/30 hover:bg-[#DC3545]/10"
+                      onClick={handleCancel}
+                    >
+                      <StopCircle className="size-3 mr-1" />
+                      Cancelar
+                    </Button>
+                  </div>
+                </div>
               ) : (
-                <>
-                  <Sparkles className="size-4 mr-2" />
+                <Button
+                  className="w-full h-12 text-base bg-[#17A2B8] hover:bg-[#17A2B8]/90"
+                  onClick={handleGenerate}
+                  disabled={!tipoDocumento}
+                >
+                  <Sparkles className="size-5 mr-2" />
                   Gerar Documento
-                </>
+                  {currentModelDisplay && (
+                    <span className="ml-2 text-xs opacity-80">
+                      ({MODEL_DISPLAY[currentModelDisplay.tier].name})
+                    </span>
+                  )}
+                </Button>
               )}
-            </Button>
+            </div>
           </div>
         </ScrollArea>
       )}
@@ -380,15 +725,21 @@ export function ConfeccaoGenerate({
       {generatedContent && (
         <div className="flex flex-col flex-1">
           {/* Toolbar */}
-          <div className="flex items-center gap-2 px-4 py-2 border-b bg-muted/30">
+          <div className="flex items-center gap-2 px-4 py-2 border-b bg-[#F7F3F1]">
             <Badge variant="secondary" className="text-xs">
-              <Sparkles className="size-3 mr-1" />
+              <Sparkles className="size-3 mr-1 text-[#17A2B8]" />
               Gerado por IA
             </Badge>
             {generationTier && (
               <Badge variant="outline" className={`text-xs ${MODEL_DISPLAY[generationTier].badgeClass}`}>
-                {generationTier === "premium" && <Crown className="size-3 mr-1" />}
+                {generationTier === "premium" && <Crown className="size-3 mr-1 text-[#C9A961]" />}
                 {MODEL_DISPLAY[generationTier].name}
+              </Badge>
+            )}
+            {generatedBibliotecaRefIds.length > 0 && (
+              <Badge variant="outline" className="text-xs text-[#17A2B8]">
+                <BookOpen className="size-3 mr-1" />
+                {generatedBibliotecaRefIds.length} ref. Biblioteca
               </Badge>
             )}
             <div className="flex-1" />
@@ -399,8 +750,8 @@ export function ConfeccaoGenerate({
               onClick={handleReviewWithAI}
               disabled={isGenerating}
             >
-              <Sparkles className="size-3 mr-1" />
-              Revisar com IA
+              <Sparkles className="size-3 mr-1 text-[#17A2B8]" />
+              Revisar com Harvey Specter
             </Button>
             <Button
               variant="outline"
@@ -409,6 +760,8 @@ export function ConfeccaoGenerate({
               onClick={() => {
                 setGeneratedContent("")
                 setGenerationTier(null)
+                setProgress(0)
+                setGeneratedBibliotecaRefIds([])
               }}
             >
               <RotateCcw className="size-3 mr-1" />
@@ -425,7 +778,7 @@ export function ConfeccaoGenerate({
           </div>
 
           {/* Banner */}
-          <div className="bg-amber-50 border-b border-amber-200 px-4 py-1.5 text-xs text-amber-700">
+          <div className="bg-[#FFC107]/20 border-b border-[#FFC107] px-4 py-1.5 text-xs text-[#2A2A2A]">
             RASCUNHO GERADO POR IA — REVISÃO HUMANA OBRIGATÓRIA ANTES DO PROTOCOLO
           </div>
 
@@ -437,9 +790,49 @@ export function ConfeccaoGenerate({
                 onChange={setGeneratedContent}
               />
             </div>
+
+            {/* Save to Library suggestion */}
+            {generatedContent && !isGenerating && (
+              <div className="max-w-3xl mx-auto mt-6 border rounded-lg bg-[#F7F3F1] p-3 flex items-center gap-3">
+                <BookOpen className="size-5 text-[#17A2B8] shrink-0" />
+                <div className="flex-1">
+                  <p className="text-xs font-medium">Salvar na Biblioteca?</p>
+                  <p className="text-[10px] text-[#666666]">
+                    Salve este documento como referência para uso futuro pelo Harvey Specter.
+                  </p>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="text-xs shrink-0"
+                  onClick={() => setShowSaveToLibrary(true)}
+                >
+                  <BookOpen className="size-3 mr-1" />
+                  Salvar na Biblioteca
+                </Button>
+              </div>
+            )}
           </ScrollArea>
         </div>
       )}
+
+      {/* Search modal for adding more Biblioteca refs */}
+      <BibliotecaSearchModal
+        open={showRefSearch}
+        onOpenChange={setShowRefSearch}
+        onSelectEntry={handleAddRefFromSearch}
+      />
+
+      {/* Save to Library form */}
+      <BibliotecaForm
+        open={showSaveToLibrary}
+        onOpenChange={setShowSaveToLibrary}
+        prefill={{
+          tipo: saveToLibraryTipo,
+          titulo: titulo || tipoDocumento?.replace(/_/g, " ") || "",
+          conteudo: generatedContent,
+        }}
+      />
     </div>
   )
 }

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react"
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogFooter,
@@ -73,6 +74,7 @@ export function CalendarEventModal({
 }: CalendarEventModalProps) {
   const utils = trpc.useUtils()
   const isEdit = !!eventId
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
 
   // Form state
   const [tipoEvento, setTipoEvento] = useState("")
@@ -117,6 +119,15 @@ export function CalendarEventModal({
       utils.calendar.list.invalidate()
       onSuccess()
       onOpenChange(false)
+    },
+  })
+
+  const deleteMutation = trpc.calendar.delete.useMutation({
+    onSuccess: () => {
+      utils.calendar.list.invalidate()
+      onSuccess()
+      onOpenChange(false)
+      setDeleteConfirmOpen(false)
     },
   })
 
@@ -198,6 +209,7 @@ export function CalendarEventModal({
   const isLoading = createMutation.isPending || updateMutation.isPending
 
   return (
+    <>
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col">
         <DialogHeader>
@@ -402,7 +414,17 @@ export function CalendarEventModal({
           </div>
         </ScrollArea>
 
-        <DialogFooter>
+        <DialogFooter className="gap-2 sm:gap-0">
+          {isEdit && (
+            <Button
+              variant="ghost"
+              className="text-destructive mr-auto"
+              onClick={() => setDeleteConfirmOpen(true)}
+              disabled={deleteMutation.isPending}
+            >
+              Excluir Evento
+            </Button>
+          )}
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancelar
           </Button>
@@ -415,5 +437,32 @@ export function CalendarEventModal({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+
+    {/* Delete Confirmation Dialog */}
+    {isEdit && (
+      <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirmar exclusão</DialogTitle>
+            <DialogDescription>
+              Tem certeza? Esta ação não pode ser desfeita.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteConfirmOpen(false)}>
+              Cancelar
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={deleteMutation.isPending}
+              onClick={() => eventId && deleteMutation.mutate({ id: eventId })}
+            >
+              {deleteMutation.isPending ? "Excluindo..." : "Excluir"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    )}
+    </>
   )
 }

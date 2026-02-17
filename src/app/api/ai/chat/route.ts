@@ -4,8 +4,32 @@ import type { ModelConfig } from "@/lib/ai"
 import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
 import { buildChatSystemPrompt } from "@/lib/ai-prompt-builder"
+import { Prisma } from "@prisma/client"
 
 export const maxDuration = 120
+
+// Portuguese stopwords to filter from search
+const STOPWORDS = new Set([
+  "de", "do", "da", "dos", "das", "em", "no", "na", "nos", "nas",
+  "um", "uma", "uns", "umas", "e", "ou", "que", "o", "a", "os", "as",
+  "por", "para", "com", "sem", "como", "mais", "mas", "ao", "aos",
+  "se", "não", "sim", "ser", "ter", "foi", "são", "está", "isso",
+  "este", "esta", "esse", "essa", "aquele", "aquela", "ele", "ela",
+  "nos", "lhe", "seu", "sua", "seus", "suas", "meu", "minha",
+  "qual", "quem", "onde", "quando", "porque", "sobre", "entre",
+  "muito", "bem", "também", "pode", "deve", "há", "já", "ainda",
+  "então", "depois", "antes", "desde", "até", "mesmo", "assim",
+  "todo", "toda", "todos", "todas", "cada", "outro", "outra",
+])
+
+function extractSearchTerms(text: string): string[] {
+  return text
+    .toLowerCase()
+    .replace(/[^\w\sáéíóúâêîôûãõç]/g, " ")
+    .split(/\s+/)
+    .filter((w) => w.length > 3 && !STOPWORDS.has(w))
+    .slice(0, 8) // max 8 terms
+}
 
 export async function POST(req: Request) {
   const session = await auth()
@@ -31,7 +55,6 @@ export async function POST(req: Request) {
   // Load context
   let processo = null
   let projeto = null
-  let biblioteca: any[] = []
 
   if (caseId) {
     processo = await db.case.findUnique({
@@ -55,23 +78,64 @@ export async function POST(req: Request) {
     })
   }
 
-  // Auto-search library by area
+  // Smart Biblioteca search based on message terms + context
   const areas: string[] = []
   if (processo?.tipo) areas.push(processo.tipo)
   if (projeto?.categoria) areas.push(projeto.categoria)
 
-  if (areas.length > 0) {
-    biblioteca = await db.libraryEntry.findMany({
-      where: { area: { in: areas as any } },
-      orderBy: { relevancia: "desc" },
-      take: 5,
+  const lastMessage = messages[messages.length - 1]
+  const userText = lastMessage?.role === "user" ? lastMessage.content : ""
+  const searchTerms = extractSearchTerms(userText)
+
+  const searchConditions: Prisma.LibraryEntryWhereInput[] = []
+
+  // Term-based search
+  if (searchTerms.length > 0) {
+    searchConditions.push({
+      OR: searchTerms.flatMap((term) => [
+        { titulo: { contains: term, mode: "insensitive" as const } },
+        { resumo: { contains: term, mode: "insensitive" as const } },
+        { conteudo: { contains: term, mode: "insensitive" as const } },
+        { tags: { hasSome: [term] } },
+      ]),
     })
+  }
+
+  // Area match
+  if (areas.length > 0) {
+    searchConditions.push({ area: { in: areas as any } })
+  }
+
+  // Case/project linked
+  if (caseId) {
+    searchConditions.push({
+      OR: [
+        { case_id: caseId },
+        { utilizado_em_casos: { some: { id: caseId } } },
+      ],
+    })
+  }
+  if (projectId) {
+    searchConditions.push({
+      utilizado_em_projetos: { some: { id: projectId } },
+    })
+  }
+
+  let biblioteca: any[] = []
+  let bibliotecaRefIds: string[] = []
+
+  if (searchConditions.length > 0) {
+    biblioteca = await db.libraryEntry.findMany({
+      where: { OR: searchConditions },
+      orderBy: [{ favorito: "desc" }, { relevancia: "desc" }],
+      take: 8,
+    })
+    bibliotecaRefIds = biblioteca.map((e) => e.id)
   }
 
   const systemPrompt = buildChatSystemPrompt(processo as any, projeto as any, biblioteca)
 
   // Save user message
-  const lastMessage = messages[messages.length - 1]
   if (lastMessage?.role === "user" && sessionId) {
     await db.chatMessage.create({
       data: {
@@ -122,6 +186,19 @@ export async function POST(req: Request) {
           projectId: projectId || null,
         },
       })
+
+      // Log Biblioteca search
+      if (biblioteca.length > 0) {
+        await db.librarySearchLog.create({
+          data: {
+            user_id: session.user!.id!,
+            query: searchTerms.join(" "),
+            results_count: biblioteca.length,
+            entries_used: bibliotecaRefIds,
+            context: "CHAT",
+          },
+        }).catch(() => {})
+      }
     },
   }
 
@@ -137,6 +214,7 @@ export async function POST(req: Request) {
   const response = result.toTextStreamResponse()
   response.headers.set("X-AI-Model", config.model)
   response.headers.set("X-AI-Tier", config.tier)
+  response.headers.set("X-Biblioteca-Refs", JSON.stringify(bibliotecaRefIds))
 
   return response
 }

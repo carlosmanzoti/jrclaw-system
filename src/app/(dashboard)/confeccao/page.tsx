@@ -8,5 +8,9 @@ const ConfeccaoDashboard = dynamic(
 )
 
 export default function ConfeccaoPage() {
-  return <ConfeccaoDashboard />
+  return (
+    <div className="h-full flex flex-col min-h-0 overflow-hidden p-4 md:p-6">
+      <ConfeccaoDashboard />
+    </div>
+  )
 }

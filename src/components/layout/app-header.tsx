@@ -60,7 +60,7 @@ export function AppHeader() {
   const user = session?.user
 
   return (
-    <header className="flex h-14 shrink-0 items-center gap-2 border-b bg-white px-4">
+    <header className="flex h-14 shrink-0 items-center gap-2 border-b border-[#E5E5E5] bg-white px-4">
       <SidebarTrigger className="-ml-1 text-muted-foreground" />
       <Separator orientation="vertical" className="mr-2 h-4" />
 
@@ -70,7 +70,7 @@ export function AppHeader() {
         <Input
           type="search"
           placeholder="Buscar processos, clientes, documentos..."
-          className="h-9 pl-9 bg-muted/50 border-0 focus-visible:ring-1"
+          className="h-9 pl-9 bg-[#F2F2F2] border-0 focus-visible:ring-1 focus-visible:ring-[#C9A961]"
         />
       </div>
 
@@ -81,7 +81,7 @@ export function AppHeader() {
             <Button variant="ghost" size="icon" className="relative">
               <Bell className="size-4 text-muted-foreground" />
               {totalNotifications > 0 && (
-                <Badge className="absolute -top-1 -right-1 size-5 rounded-full p-0 flex items-center justify-center text-[10px] font-bold bg-destructive text-white border-2 border-white">
+                <Badge className="absolute -top-1 -right-1 size-5 rounded-full p-0 flex items-center justify-center text-[10px] font-bold bg-[#DC3545] text-white border-2 border-white">
                   {totalNotifications}
                 </Badge>
               )}
@@ -94,7 +94,7 @@ export function AppHeader() {
               className="cursor-pointer"
               onClick={() => router.push("/prazos")}
             >
-              <Clock className="mr-2 size-4 text-amber-500" />
+              <Clock className="mr-2 size-4 text-[#C9A961]" />
               <div className="flex-1">
                 <p className="text-sm font-medium">Prazos próximos</p>
                 <p className="text-xs text-muted-foreground">
@@ -109,7 +109,7 @@ export function AppHeader() {
               className="cursor-pointer"
               onClick={() => router.push("/monitoramento")}
             >
-              <FileText className="mr-2 size-4 text-blue-500" />
+              <FileText className="mr-2 size-4 text-[#17A2B8]" />
               <div className="flex-1">
                 <p className="text-sm font-medium">Movimentações</p>
                 <p className="text-xs text-muted-foreground">
@@ -132,7 +132,7 @@ export function AppHeader() {
               variant="ghost"
               className="flex items-center gap-2 px-2 h-9"
             >
-              <Avatar className="size-7">
+              <Avatar className="size-7 border-2 border-[#C9A961]">
                 <AvatarFallback className="bg-primary text-primary-foreground text-xs font-semibold">
                   {getInitials(user?.name)}
                 </AvatarFallback>

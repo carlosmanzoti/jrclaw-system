@@ -328,7 +328,8 @@ export default function TemplatesProjetoPage() {
   // ─── Render ──────────────────────────────────────────
 
   return (
-    <div className="space-y-6">
+    <div className="h-full overflow-y-auto">
+      <div className="p-4 md:p-6 space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -338,10 +339,10 @@ export default function TemplatesProjetoPage() {
             </Button>
           </Link>
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">
+            <h1 className="text-2xl font-bold tracking-tight font-heading">
               Templates de Projeto
             </h1>
-            <p className="text-muted-foreground">
+            <p className="text-[#666666]">
               Modelos reutilizaveis para criacao rapida de projetos com fases,
               tarefas e marcos pre-definidos.
             </p>
@@ -357,16 +358,16 @@ export default function TemplatesProjetoPage() {
       <Card>
         <CardContent className="p-0">
           {isLoading ? (
-            <div className="flex items-center justify-center p-12 text-muted-foreground">
+            <div className="flex items-center justify-center p-12 text-[#666666]">
               Carregando templates...
             </div>
           ) : !templates || templates.length === 0 ? (
             <div className="flex flex-col items-center justify-center p-12">
-              <FileText className="size-12 text-muted-foreground/50" />
+              <FileText className="size-12 text-[#666666]/50" />
               <h3 className="mt-4 text-lg font-semibold">
                 Nenhum template cadastrado
               </h3>
-              <p className="mt-2 text-sm text-muted-foreground">
+              <p className="mt-2 text-sm text-[#666666]">
                 Crie um template para agilizar a criacao de novos projetos.
               </p>
               <Button onClick={handleOpenNew} className="mt-4">
@@ -527,7 +528,7 @@ export default function TemplatesProjetoPage() {
               </div>
 
               {form.fases_padrao.length === 0 && (
-                <p className="text-sm text-muted-foreground py-4 text-center border border-dashed rounded-lg">
+                <p className="text-sm text-[#666666] py-4 text-center border border-dashed rounded-lg">
                   Nenhuma fase adicionada. Clique em &quot;Adicionar Fase&quot;
                   para comecar.
                 </p>
@@ -558,7 +559,7 @@ export default function TemplatesProjetoPage() {
               </div>
 
               {form.marcos_padrao.length === 0 && (
-                <p className="text-sm text-muted-foreground py-4 text-center border border-dashed rounded-lg">
+                <p className="text-sm text-[#666666] py-4 text-center border border-dashed rounded-lg">
                   Nenhum marco adicionado. Clique em &quot;Adicionar Marco&quot;
                   para comecar.
                 </p>
@@ -568,7 +569,7 @@ export default function TemplatesProjetoPage() {
                 <Card key={milestoneIdx} className="border-muted">
                   <CardContent className="pt-4 pb-3">
                     <div className="flex items-start gap-3">
-                      <GripVertical className="size-4 mt-2.5 text-muted-foreground/50 shrink-0" />
+                      <GripVertical className="size-4 mt-2.5 text-[#666666]/50 shrink-0" />
                       <div className="grid grid-cols-[1fr_1fr_120px] gap-3 flex-1">
                         <div className="space-y-1">
                           <Label className="text-xs">Titulo</Label>
@@ -652,7 +653,7 @@ export default function TemplatesProjetoPage() {
           <DialogHeader>
             <DialogTitle>Confirmar exclusao</DialogTitle>
           </DialogHeader>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm text-[#666666]">
             Tem certeza que deseja excluir este template? Esta acao nao pode ser
             desfeita.
           </p>
@@ -677,6 +678,7 @@ export default function TemplatesProjetoPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      </div>
     </div>
   );
 }
@@ -718,14 +720,14 @@ function PhaseEditor({
     <Card className="border-muted">
       <CardHeader className="py-3 px-4">
         <div className="flex items-center gap-2">
-          <GripVertical className="size-4 text-muted-foreground/50 shrink-0" />
+          <GripVertical className="size-4 text-[#666666]/50 shrink-0" />
           <Badge variant="secondary" className="shrink-0">
             Fase {index + 1}
           </Badge>
           <button
             type="button"
             onClick={() => setExpanded(!expanded)}
-            className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
+            className="flex items-center gap-1 text-sm text-[#666666] hover:text-foreground"
           >
             {expanded ? (
               <ChevronDown className="size-4" />
@@ -780,7 +782,7 @@ function PhaseEditor({
           {/* Tasks within phase */}
           <div className="pl-6 space-y-2">
             <div className="flex items-center justify-between">
-              <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+              <Label className="text-xs font-semibold text-[#666666] uppercase tracking-wide">
                 Tarefas Padrao
               </Label>
               <Button
@@ -795,7 +797,7 @@ function PhaseEditor({
             </div>
 
             {tasks.length === 0 && (
-              <p className="text-xs text-muted-foreground text-center py-2 border border-dashed rounded">
+              <p className="text-xs text-[#666666] text-center py-2 border border-dashed rounded">
                 Nenhuma tarefa nesta fase.
               </p>
             )}

@@ -42,6 +42,13 @@ interface BibliotecaEntry {
   conteudo?: string | null
   fonte?: string | null
   tags?: string[]
+  metadata?: any
+}
+
+export interface ReferenceDoc {
+  filename: string
+  label: string
+  text: string
 }
 
 function formatCurrency(value: number): string {
@@ -117,13 +124,30 @@ function buildProjetoContext(projeto: ProjetoData): string {
 }
 
 function buildBibliotecaContext(biblioteca: BibliotecaEntry[]): string {
-  let ctx = `\n## BASE DE CONHECIMENTO DO ESCRITÓRIO\nReferências curadas — considerar na elaboração:\n\n`
+  let ctx = `\n## BASE DE CONHECIMENTO DO ESCRITÓRIO (Harvey Specter — Biblioteca JRCLaw)\nReferências curadas da Biblioteca Jurídica do escritório. PRIORIZE e CITE estas referências quando aplicável:\n\n`
   biblioteca.forEach((entry, i) => {
     ctx += `[${i + 1}] ${entry.titulo} (${entry.tipo}${entry.area ? `, ${entry.area}` : ""})\n`
     if (entry.resumo) ctx += `Resumo: ${entry.resumo}\n`
-    if (entry.conteudo) ctx += `Conteúdo: ${entry.conteudo.substring(0, 1500)}...\n`
+    if (entry.conteudo) ctx += `Conteúdo: ${entry.conteudo.substring(0, 3000)}\n`
     if (entry.fonte) ctx += `Fonte: ${entry.fonte}\n`
+    if (entry.tags && entry.tags.length > 0) ctx += `Tags: ${entry.tags.join(", ")}\n`
+    if (entry.metadata) {
+      const meta = typeof entry.metadata === "string" ? JSON.parse(entry.metadata) : entry.metadata
+      if (meta.tribunal) ctx += `Tribunal: ${meta.tribunal}\n`
+      if (meta.relator) ctx += `Relator: ${meta.relator}\n`
+      if (meta.numero_recurso) ctx += `Recurso: ${meta.numero_recurso}\n`
+      if (meta.orgao_julgador) ctx += `Órgão julgador: ${meta.orgao_julgador}\n`
+    }
     ctx += `\n`
+  })
+  return ctx
+}
+
+function buildReferenceDocsContext(docs: ReferenceDoc[]): string {
+  let ctx = `\n## DOCUMENTOS DE REFERÊNCIA FORNECIDOS PELO ADVOGADO\nConsiderar o conteúdo abaixo como base para a redação:\n\n`
+  docs.forEach((doc, i) => {
+    ctx += `### [${i + 1}] ${doc.filename}${doc.label ? ` — ${doc.label}` : ""}\n`
+    ctx += `${doc.text.substring(0, 50000)}\n\n`
   })
   return ctx
 }
@@ -199,6 +223,11 @@ export function buildDocumentPrompt(context: PromptContext): string {
   // Library context
   if (context.biblioteca && context.biblioteca.length > 0) {
     parts.push(buildBibliotecaContext(context.biblioteca))
+  }
+
+  // Reference docs
+  if (context.referenceDocs && context.referenceDocs.length > 0) {
+    parts.push(buildReferenceDocsContext(context.referenceDocs))
   }
 
   // User config

@@ -33,7 +33,13 @@
       "Bash(node -e:*)",
       "Bash(tasklist:*)",
       "Bash(npx prisma db execute:*)",
-      "Bash(npx tsc:*)"
+      "Bash(npx tsc:*)",
+      "Bash(CSRF=\"35c9d272efc801d0e63ea5752904600a06aa2db453d007d4700cc82b238935a0\")",
+      "Bash(COOKIE_JAR=\"/tmp/jrclaw_cookies.txt\":*)",
+      "Bash(CSRF=\"5bf5c15b8460402e0dba36c398c4a61d15139176cd01e5feca4a33a843390f7e\")",
+      "Bash(PGPASSWORD='JrcLaw2026!SecureDB#99' psql \"postgresql://postgres:JrcLaw2026%21SecureDB%2399@db.akiagtrtrwvbqmdtcdgk.supabase.co:5432/postgres\" -c \"SELECT column_name FROM information_schema.columns WHERE table_name = ''activities'' ORDER BY ordinal_position;\")",
+      "Bash(npx prisma db push:*)",
+      "Bash(1:*)"
     ]
   }
 }

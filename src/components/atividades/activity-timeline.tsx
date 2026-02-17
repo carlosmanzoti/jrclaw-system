@@ -29,10 +29,10 @@ const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
 }
 
 const TYPE_COLORS: Record<string, string> = {
-  PETICAO: "text-blue-600 bg-blue-50", AUDIENCIA: "text-purple-600 bg-purple-50",
-  REUNIAO: "text-green-600 bg-green-50", DILIGENCIA: "text-amber-600 bg-amber-50",
-  EMAIL: "text-cyan-600 bg-cyan-50", MARCO_ALCANCADO: "text-emerald-600 bg-emerald-50",
-  TAREFA_PROJETO: "text-indigo-600 bg-indigo-50", OUTRO: "text-gray-500 bg-gray-50",
+  PETICAO: "text-[#17A2B8] bg-[#17A2B8]/10", AUDIENCIA: "text-[#C9A961] bg-[#C9A961]/10",
+  REUNIAO: "text-[#28A745] bg-[#28A745]/10", DILIGENCIA: "text-[#C9A961] bg-[#C9A961]/10",
+  EMAIL: "text-[#17A2B8] bg-[#17A2B8]/10", MARCO_ALCANCADO: "text-[#28A745] bg-[#28A745]/10",
+  TAREFA_PROJETO: "text-[#C9A961] bg-[#C9A961]/10", OUTRO: "text-gray-500 bg-gray-50",
 }
 
 interface ActivityTimelineProps {
@@ -122,7 +122,7 @@ export function ActivityTimeline({
         {/* Content */}
         <div className={`pb-${compact ? "3" : "5"} min-w-0 flex-1`}>
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-xs text-muted-foreground font-mono">
+            <span className="text-xs text-[#666666] font-mono">
               {new Date(item.data).toLocaleDateString("pt-BR")}
               {!compact && (
                 <span className="ml-1">
@@ -133,9 +133,9 @@ export function ActivityTimeline({
             <Badge variant="secondary" className="text-[10px]">{label}</Badge>
             {item.report_priority >= 2 && <span title="Crítico">🔥</span>}
             {item.report_priority === 1 && <span title="Destaque">⭐</span>}
-            {item.user && <span className="text-xs text-muted-foreground">por {item.user.name}</span>}
+            {item.user && <span className="text-xs text-[#666666]">por {item.user.name}</span>}
             {item.duracao_minutos && (
-              <span className="text-xs text-muted-foreground flex items-center gap-0.5">
+              <span className="text-xs text-[#666666] flex items-center gap-0.5">
                 <Clock className="size-3" />{item.duracao_minutos}min
               </span>
             )}
@@ -144,7 +144,7 @@ export function ActivityTimeline({
           <p className={`${compact ? "text-xs" : "text-sm"} mt-0.5`}>{item.descricao}</p>
 
           {!compact && item.resultado && (
-            <p className="text-xs text-muted-foreground mt-1">
+            <p className="text-xs text-[#666666] mt-1">
               <span className="font-medium">Resultado:</span> {item.resultado}
             </p>
           )}
@@ -153,12 +153,12 @@ export function ActivityTimeline({
           {!compact && (
             <div className="flex gap-2 mt-1 flex-wrap">
               {item.case_ && (
-                <Link href={`/processos/${item.case_.id}`} className="text-xs text-blue-600 hover:underline">
+                <Link href={`/processos/${item.case_.id}`} className="text-xs text-[#17A2B8] hover:underline">
                   {item.case_.numero_processo}
                 </Link>
               )}
               {item.project && (
-                <Link href={`/projetos/${item.project.id}`} className="text-xs text-indigo-600 hover:underline">
+                <Link href={`/projetos/${item.project.id}`} className="text-xs text-[#C9A961] hover:underline">
                   {item.project.codigo} — {item.project.titulo}
                 </Link>
               )}
@@ -166,7 +166,7 @@ export function ActivityTimeline({
           )}
 
           {!compact && item.financial_impact && (
-            <Badge variant="outline" className="mt-1 text-xs text-emerald-700">
+            <Badge variant="outline" className="mt-1 text-xs text-[#28A745]">
               R$ {Number(item.financial_impact).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
             </Badge>
           )}
@@ -179,7 +179,7 @@ export function ActivityTimeline({
     <div className={className}>
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
-        <p className="text-sm text-muted-foreground">{items.length} atividade(s)</p>
+        <p className="text-sm text-[#666666]">{items.length} atividade(s)</p>
         <div className="flex gap-2">
           {showFilters && (
             <Button variant="outline" size="sm" onClick={() => setShowFilterPanel(!showFilterPanel)}>
@@ -228,14 +228,14 @@ export function ActivityTimeline({
       {/* Timeline */}
       {items.length === 0 ? (
         <div className="text-center py-8">
-          <Circle className="size-8 text-muted-foreground/30 mx-auto" />
-          <p className="text-sm text-muted-foreground mt-2">Nenhuma atividade registrada.</p>
+          <Circle className="size-8 text-[#666666]/30 mx-auto" />
+          <p className="text-sm text-[#666666] mt-2">Nenhuma atividade registrada.</p>
         </div>
       ) : groupByDate ? (
         <div className="space-y-4">
           {Array.from(grouped.entries()).map(([date, groupItems]) => (
             <div key={date}>
-              <p className="text-xs font-semibold text-muted-foreground mb-2 sticky top-0 bg-background py-1">{date}</p>
+              <p className="text-xs font-semibold text-[#666666] mb-2 sticky top-0 bg-background py-1">{date}</p>
               <div className="space-y-0">
                 {groupItems.map((item, i) => renderItem(item, i, i === groupItems.length - 1))}
               </div>

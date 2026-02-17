@@ -9,7 +9,7 @@ const EVENT_TYPES = Object.keys(CALENDAR_EVENT_TYPE_LABELS)
 
 export function CalendarLegend() {
   return (
-    <div className="flex flex-wrap gap-x-4 gap-y-2 text-xs text-muted-foreground">
+    <div className="flex flex-wrap gap-x-4 gap-y-2 text-xs text-[#666666]">
       {EVENT_TYPES.map((type) => (
         <div key={type} className="flex items-center gap-1.5">
           <span

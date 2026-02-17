@@ -48,31 +48,31 @@ export function ConfeccaoDashboard() {
   )
 
   return (
-    <div className="flex flex-col h-[calc(100vh-8rem)]">
+    <div className="flex flex-col h-full min-h-0">
       {/* Header */}
-      <div className="flex items-center gap-3 mb-4">
+      <div className="shrink-0 flex items-center gap-3 mb-4">
         <div className="flex-1">
           <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-bold tracking-tight">Confecção IA</h1>
+            <h1 className="text-2xl font-bold tracking-tight font-heading">Harvey Specter</h1>
             <Badge variant="outline" className={`text-xs ${MODEL_DISPLAY.standard.badgeClass}`}>
-              <Sparkles className="size-3 mr-1" />
+              <Sparkles className="size-3 mr-1 text-[#17A2B8]" />
               {MODEL_DISPLAY.standard.name}
             </Badge>
             <Badge variant="outline" className={`text-xs ${MODEL_DISPLAY.premium.badgeClass}`}>
-              <Crown className="size-3 mr-1" />
+              <Crown className="size-3 mr-1 text-[#C9A961]" />
               {MODEL_DISPLAY.premium.name}
             </Badge>
           </div>
-          <p className="text-muted-foreground text-sm">
-            Assistente jurídico com IA dual: Sonnet 4.5 para docs simples, Opus 4.6 com extended thinking para peças complexas.
+          <p className="text-[#666666] text-sm">
+            Assistente jurídico IA — Sonnet 4.5 para docs simples, Opus 4.6 com extended thinking para peças complexas.
           </p>
         </div>
       </div>
 
       {/* Warning banner */}
-      <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-1.5 mb-3">
-        <AlertTriangle className="size-3.5 text-amber-600 shrink-0" />
-        <p className="text-xs text-amber-700">
+      <div className="shrink-0 flex items-center gap-2 bg-[#FFC107]/20 border border-[#FFC107] rounded-lg px-3 py-1.5 mb-3">
+        <AlertTriangle className="size-3.5 text-[#2A2A2A] shrink-0" />
+        <p className="text-xs text-[#2A2A2A]">
           Toda produção de IA exige revisão humana antes de uso profissional.
         </p>
       </div>
@@ -80,7 +80,7 @@ export function ConfeccaoDashboard() {
       {/* Main content */}
       <div className="flex flex-1 border rounded-lg overflow-hidden min-h-0">
         {/* Sidebar */}
-        <div className="w-[280px] border-r bg-muted/20 shrink-0">
+        <div className="w-[280px] border-r bg-[#F7F3F1] shrink-0 flex flex-col min-h-0">
           <ConfeccaoSidebar
             caseId={caseId}
             projectId={projectId}
@@ -101,9 +101,9 @@ export function ConfeccaoDashboard() {
         </div>
 
         {/* Main area */}
-        <div className="flex-1 flex flex-col min-w-0">
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col flex-1">
-            <div className="border-b px-4">
+        <div className="flex-1 flex flex-col min-w-0 min-h-0">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col flex-1 min-h-0">
+            <div className="shrink-0 border-b px-4">
               <TabsList className="h-10">
                 <TabsTrigger value="chat" className="text-xs gap-1.5">
                   <MessageSquare className="size-3.5" />
@@ -120,7 +120,7 @@ export function ConfeccaoDashboard() {
               </TabsList>
             </div>
 
-            <TabsContent value="chat" className="flex-1 mt-0 data-[state=inactive]:hidden">
+            <TabsContent value="chat" className="flex-1 min-h-0 mt-0 data-[state=inactive]:hidden">
               <ConfeccaoChat
                 sessionId={sessionId}
                 caseId={caseId}
@@ -128,7 +128,7 @@ export function ConfeccaoDashboard() {
               />
             </TabsContent>
 
-            <TabsContent value="gerar" className="flex-1 mt-0 data-[state=inactive]:hidden">
+            <TabsContent value="gerar" className="flex-1 min-h-0 mt-0 data-[state=inactive]:hidden">
               <ConfeccaoGenerate
                 caseId={caseId}
                 projectId={projectId}
@@ -140,7 +140,7 @@ export function ConfeccaoDashboard() {
               />
             </TabsContent>
 
-            <TabsContent value="revisar" className="flex-1 mt-0 data-[state=inactive]:hidden">
+            <TabsContent value="revisar" className="flex-1 min-h-0 mt-0 data-[state=inactive]:hidden">
               <ConfeccaoReview caseId={caseId} projectId={projectId} />
             </TabsContent>
           </Tabs>

@@ -21,68 +21,114 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import {
-  Plus, Search, Star, Heart, MoreHorizontal, Pencil, Copy, Trash2,
-  BookOpen, Scale, FileText, Bookmark, X, Scissors,
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogDescription,
+} from "@/components/ui/dialog"
+import {
+  Plus, Search, Star, Heart, MoreHorizontal, Pencil, Trash2,
+  BookOpen, Scale, FileText, X, Scissors, LayoutGrid, List, Layers,
+  Upload, Eye,
 } from "lucide-react"
 import { BibliotecaForm } from "./biblioteca-form"
 import { BibliotecaClipper } from "./biblioteca-clipper"
+import { BibliotecaClippers } from "./biblioteca-clippers"
+import { BibliotecaBulkUpload } from "./biblioteca-bulk-upload"
 
-const TYPE_LABELS: Record<string, string> = {
+export const TYPE_LABELS: Record<string, string> = {
   JURISPRUDENCIA: "Jurisprudência",
-  DOUTRINA: "Doutrina",
-  LEGISLACAO: "Legislação",
-  MODELO: "Modelo",
-  ARTIGO: "Artigo",
-  PARECER: "Parecer",
   SUMULA: "Súmula",
+  DOUTRINA: "Doutrina",
+  ARTIGO: "Artigo",
+  LEGISLACAO: "Legislação",
+  MODELO_PECA: "Modelo de Peça",
+  PARECER_INTERNO: "Parecer Interno",
+  PESQUISA: "Pesquisa",
+  TESE: "Tese",
+  NOTA_TECNICA: "Nota Técnica",
+  LIVRO: "Livro",
+  ENUNCIADO: "Enunciado",
+  CONTRATO_MODELO: "Contrato Modelo",
+  ESTRATEGIA: "Estratégia",
+  CASO_REFERENCIA: "Caso Referência",
+  MATERIAL_ESTUDO: "Material de Estudo",
+  TABELA_REFERENCIA: "Tabela Referência",
   OUTRO: "Outro",
 }
 
-const TYPE_COLORS: Record<string, string> = {
-  JURISPRUDENCIA: "bg-blue-50 text-blue-700",
-  DOUTRINA: "bg-purple-50 text-purple-700",
-  LEGISLACAO: "bg-emerald-50 text-emerald-700",
-  MODELO: "bg-amber-50 text-amber-700",
-  ARTIGO: "bg-cyan-50 text-cyan-700",
-  PARECER: "bg-pink-50 text-pink-700",
-  SUMULA: "bg-orange-50 text-orange-700",
+export const TYPE_COLORS: Record<string, string> = {
+  JURISPRUDENCIA: "bg-[#17A2B8]/10 text-[#17A2B8]",
+  SUMULA: "bg-[#17A2B8]/10 text-[#17A2B8]",
+  DOUTRINA: "bg-[#C9A961]/10 text-[#C9A961]",
+  ARTIGO: "bg-[#6F42C1]/10 text-[#6F42C1]",
+  LEGISLACAO: "bg-[#28A745]/10 text-[#28A745]",
+  MODELO_PECA: "bg-[#FD7E14]/10 text-[#FD7E14]",
+  PARECER_INTERNO: "bg-[#C9A961]/10 text-[#C9A961]",
+  PESQUISA: "bg-[#6F42C1]/10 text-[#6F42C1]",
+  TESE: "bg-[#6F42C1]/10 text-[#6F42C1]",
+  NOTA_TECNICA: "bg-[#FD7E14]/10 text-[#FD7E14]",
+  LIVRO: "bg-[#C9A961]/10 text-[#C9A961]",
+  ENUNCIADO: "bg-[#17A2B8]/10 text-[#17A2B8]",
+  CONTRATO_MODELO: "bg-[#FD7E14]/10 text-[#FD7E14]",
+  ESTRATEGIA: "bg-[#DC3545]/10 text-[#DC3545]",
+  CASO_REFERENCIA: "bg-[#DC3545]/10 text-[#DC3545]",
+  MATERIAL_ESTUDO: "bg-[#6F42C1]/10 text-[#6F42C1]",
+  TABELA_REFERENCIA: "bg-gray-100 text-gray-600",
   OUTRO: "bg-gray-50 text-gray-600",
 }
 
-const AREA_LABELS: Record<string, string> = {
+export const AREA_LABELS: Record<string, string> = {
   RECUPERACAO_JUDICIAL: "Recuperação Judicial",
   FALENCIA: "Falência",
   EXECUCAO: "Execução",
-  AGRARIO: "Agrário",
+  AGRONEGOCIO: "Agronegócio",
   TRABALHISTA: "Trabalhista",
   TRIBUTARIO: "Tributário",
   SOCIETARIO: "Societário",
   CONTRATUAL: "Contratual",
+  BANCARIO: "Bancário",
   GERAL: "Geral",
 }
 
-export function BibliotecaList() {
+type ViewMode = "cards" | "lista" | "area"
+
+interface BibliotecaListProps {
+  sidebarTipoFilter?: string
+}
+
+export function BibliotecaList({ sidebarTipoFilter }: BibliotecaListProps) {
   const [search, setSearch] = useState("")
   const [tipoFilter, setTipoFilter] = useState("")
   const [areaFilter, setAreaFilter] = useState("")
   const [favoritoFilter, setFavoritoFilter] = useState(false)
   const [orderBy, setOrderBy] = useState<"recentes" | "antigos" | "relevancia" | "titulo">("recentes")
   const [page, setPage] = useState(1)
+  const [viewMode, setViewMode] = useState<ViewMode>("cards")
 
   const [formOpen, setFormOpen] = useState(false)
   const [editId, setEditId] = useState<string | null>(null)
   const [clipperOpen, setClipperOpen] = useState(false)
+  const [clippersOpen, setClippersOpen] = useState(false)
+  const [bulkUploadOpen, setBulkUploadOpen] = useState(false)
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
+  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null)
 
   const utils = trpc.useUtils()
 
+  // Apply sidebar filter or local filter
+  const effectiveTipo = sidebarTipoFilter || tipoFilter
+
   const { data, isLoading } = trpc.biblioteca.list.useQuery({
     search: search || undefined,
-    tipo: tipoFilter && tipoFilter !== "all" ? [tipoFilter] : undefined,
+    tipo: effectiveTipo && effectiveTipo !== "all" ? [effectiveTipo] : undefined,
     area: areaFilter && areaFilter !== "all" ? [areaFilter] : undefined,
     favorito: favoritoFilter || undefined,
     orderBy,
     page,
-    limit: 12,
+    limit: viewMode === "lista" ? 20 : 12,
   })
 
   const { data: countsByType } = trpc.biblioteca.countsByType.useQuery()
@@ -90,26 +136,56 @@ export function BibliotecaList() {
     onSuccess: () => utils.biblioteca.list.invalidate(),
   })
   const deleteMutation = trpc.biblioteca.delete.useMutation({
-    onSuccess: () => utils.biblioteca.list.invalidate(),
+    onSuccess: () => {
+      utils.biblioteca.list.invalidate()
+      utils.biblioteca.countsByType.invalidate()
+    },
   })
 
   const items = data?.items || []
   const totalPages = data?.pages || 1
   const total = data?.total || 0
   const totalEntries = countsByType?.reduce((sum, c) => sum + c.count, 0) || 0
+  const favCount = items.filter((i) => i.favorito).length
 
-  const hasFilters = search || (tipoFilter && tipoFilter !== "all") || (areaFilter && areaFilter !== "all") || favoritoFilter
+  const hasFilters = search || (effectiveTipo && effectiveTipo !== "all") || (areaFilter && areaFilter !== "all") || favoritoFilter
+
+  // Group by area for area view
+  const itemsByArea = items.reduce<Record<string, typeof items>>((acc, item) => {
+    const area = item.area || "SEM_AREA"
+    if (!acc[area]) acc[area] = []
+    acc[area].push(item)
+    return acc
+  }, {})
 
   return (
     <>
       {/* Stats */}
-      <div className="flex items-center gap-3 text-sm text-muted-foreground">
-        <span>{totalEntries} entradas</span>
-        {countsByType?.map((c) => (
-          <Badge key={c.tipo} variant="outline" className="text-[10px]">
-            {TYPE_LABELS[c.tipo] || c.tipo}: {c.count}
-          </Badge>
-        ))}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <Card>
+          <CardContent className="p-3">
+            <p className="text-[10px] text-[#666666] uppercase tracking-wide">Total</p>
+            <p className="text-xl font-bold">{totalEntries}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-3">
+            <p className="text-[10px] text-[#666666] uppercase tracking-wide">Favoritas</p>
+            <p className="text-xl font-bold text-[#DC3545]">{favCount}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-3">
+            <p className="text-[10px] text-[#666666] uppercase tracking-wide">Tipos ativos</p>
+            <p className="text-xl font-bold">{countsByType?.length || 0}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-3">
+            <p className="text-[10px] text-[#666666] uppercase tracking-wide">Resultados</p>
+            <p className="text-xl font-bold">{total}</p>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Toolbar */}
@@ -118,15 +194,69 @@ export function BibliotecaList() {
           <Plus className="size-4 mr-1" />
           Nova Entrada
         </Button>
-        <Button variant="outline" size="sm" onClick={() => setClipperOpen(true)}>
-          <Scissors className="size-3 mr-1" />
-          Clipper Rápido
+        <Button variant="outline" size="sm" onClick={() => setBulkUploadOpen(true)}>
+          <Upload className="size-3 mr-1" />
+          Importar Múltiplos
         </Button>
+
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" size="sm">
+              <Scissors className="size-3 mr-1" />
+              Clipper
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start">
+            <DropdownMenuItem onClick={() => setClipperOpen(true)}>
+              <Scissors className="size-3 mr-2" />Clipper Rápido
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setClippersOpen(true)}>
+              <Scale className="size-3 mr-2" />Clipper Jurisprudência
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setClippersOpen(true)}>
+              <FileText className="size-3 mr-2" />Clipper Legislação
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setClippersOpen(true)}>
+              <BookOpen className="size-3 mr-2" />Clipper Caso Referência
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setClippersOpen(true)}>
+              <BookOpen className="size-3 mr-2" />Clipper Livro/Doutrina
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
 
         <div className="flex-1" />
 
+        {/* View mode toggle */}
+        <div className="flex border rounded-md">
+          <Button
+            variant={viewMode === "cards" ? "default" : "ghost"}
+            size="sm"
+            className="h-8 px-2 rounded-r-none"
+            onClick={() => setViewMode("cards")}
+          >
+            <LayoutGrid className="size-3.5" />
+          </Button>
+          <Button
+            variant={viewMode === "lista" ? "default" : "ghost"}
+            size="sm"
+            className="h-8 px-2 rounded-none border-x"
+            onClick={() => setViewMode("lista")}
+          >
+            <List className="size-3.5" />
+          </Button>
+          <Button
+            variant={viewMode === "area" ? "default" : "ghost"}
+            size="sm"
+            className="h-8 px-2 rounded-l-none"
+            onClick={() => setViewMode("area")}
+          >
+            <Layers className="size-3.5" />
+          </Button>
+        </div>
+
         <div className="relative">
-          <Search className="absolute left-2.5 top-2.5 size-3.5 text-muted-foreground" />
+          <Search className="absolute left-2.5 top-2.5 size-3.5 text-[#666666]" />
           <Input
             placeholder="Buscar..."
             value={search}
@@ -135,17 +265,19 @@ export function BibliotecaList() {
           />
         </div>
 
-        <Select value={tipoFilter} onValueChange={(v) => { setTipoFilter(v); setPage(1) }}>
-          <SelectTrigger className="w-[140px] h-8 text-xs">
-            <SelectValue placeholder="Tipo" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todos os tipos</SelectItem>
-            {Object.entries(TYPE_LABELS).map(([k, v]) => (
-              <SelectItem key={k} value={k}>{v}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        {!sidebarTipoFilter && (
+          <Select value={tipoFilter} onValueChange={(v) => { setTipoFilter(v); setPage(1) }}>
+            <SelectTrigger className="w-[140px] h-8 text-xs">
+              <SelectValue placeholder="Tipo" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos os tipos</SelectItem>
+              {Object.entries(TYPE_LABELS).map(([k, v]) => (
+                <SelectItem key={k} value={k}>{v}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
 
         <Select value={areaFilter} onValueChange={(v) => { setAreaFilter(v); setPage(1) }}>
           <SelectTrigger className="w-[140px] h-8 text-xs">
@@ -193,7 +325,7 @@ export function BibliotecaList() {
         )}
       </div>
 
-      {/* Grid */}
+      {/* Content */}
       {isLoading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {Array.from({ length: 6 }).map((_, i) => (
@@ -202,8 +334,8 @@ export function BibliotecaList() {
         </div>
       ) : items.length === 0 ? (
         <div className="text-center py-12 border rounded-lg border-dashed">
-          <BookOpen className="size-10 text-muted-foreground/30 mx-auto" />
-          <p className="text-sm text-muted-foreground mt-3">Nenhuma entrada encontrada.</p>
+          <BookOpen className="size-10 text-[#666666]/30 mx-auto" />
+          <p className="text-sm text-[#666666] mt-3">Nenhuma entrada encontrada.</p>
           <Button
             variant="outline"
             size="sm"
@@ -214,92 +346,143 @@ export function BibliotecaList() {
             Nova entrada
           </Button>
         </div>
-      ) : (
+      ) : viewMode === "cards" ? (
+        /* Cards view */
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {items.map((entry) => (
-            <Card key={entry.id} className="group hover:shadow-md transition-shadow">
-              <CardContent className="p-4">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="space-y-1 min-w-0 flex-1">
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      <Badge className={`text-[10px] ${TYPE_COLORS[entry.tipo] || TYPE_COLORS.OUTRO}`}>
-                        {TYPE_LABELS[entry.tipo] || entry.tipo}
-                      </Badge>
-                      {entry.area && (
-                        <Badge variant="outline" className="text-[10px]">
-                          {AREA_LABELS[entry.area] || entry.area}
-                        </Badge>
-                      )}
+            <EntryCard
+              key={entry.id}
+              entry={entry}
+              onEdit={() => { setEditId(entry.id); setFormOpen(true) }}
+              onDelete={() => { setDeleteTargetId(entry.id); setDeleteConfirmOpen(true) }}
+              onToggleFav={() => toggleFavMutation.mutate({ id: entry.id })}
+            />
+          ))}
+        </div>
+      ) : viewMode === "lista" ? (
+        /* List view */
+        <div className="border rounded-lg divide-y">
+          {items.map((entry) => (
+            <div key={entry.id} className="flex items-center gap-3 px-4 py-2 hover:bg-[#F7F3F1]/50 group">
+              <Badge className={`text-[9px] shrink-0 ${TYPE_COLORS[entry.tipo] || TYPE_COLORS.OUTRO}`}>
+                {TYPE_LABELS[entry.tipo] || entry.tipo}
+              </Badge>
+              <span className="text-sm font-medium flex-1 truncate">{entry.titulo}</span>
+              {entry.area && (
+                <Badge variant="outline" className="text-[9px] shrink-0">
+                  {AREA_LABELS[entry.area] || entry.area}
+                </Badge>
+              )}
+              <div className="flex items-center gap-0.5 shrink-0">
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <Star
+                    key={i}
+                    className={`size-2.5 ${
+                      i < (entry.relevancia || 0) ? "fill-[#C9A961] text-[#C9A961]" : "text-[#666666]/20"
+                    }`}
+                  />
+                ))}
+              </div>
+              <div className="flex gap-1 shrink-0">
+                {entry.tags.slice(0, 2).map((tag) => (
+                  <span key={tag} className="text-[9px] bg-muted px-1 py-0 rounded">{tag}</span>
+                ))}
+              </div>
+              <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 shrink-0">
+                <button
+                  onClick={() => toggleFavMutation.mutate({ id: entry.id })}
+                  className="p-1 hover:text-[#DC3545]"
+                >
+                  <Heart className={`size-3 ${entry.favorito ? "fill-[#DC3545] text-[#DC3545]" : "text-[#666666]/50"}`} />
+                </button>
+                {entry.arquivo_url && (
+                  <a
+                    href={entry.arquivo_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="p-1 hover:text-[#17A2B8]"
+                  >
+                    <Eye className="size-3 text-[#666666]/50" />
+                  </a>
+                )}
+                <button
+                  onClick={() => { setEditId(entry.id); setFormOpen(true) }}
+                  className="p-1 hover:text-[#17A2B8]"
+                >
+                  <Pencil className="size-3 text-[#666666]/50" />
+                </button>
+                <button
+                  onClick={() => { setDeleteTargetId(entry.id); setDeleteConfirmOpen(true) }}
+                  className="p-1 hover:text-[#DC3545]"
+                >
+                  <Trash2 className="size-3 text-[#666666]/50" />
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        /* Area view — accordion by area */
+        <div className="space-y-3">
+          {Object.entries(itemsByArea).map(([area, areaItems]) => (
+            <div key={area} className="border rounded-lg overflow-hidden">
+              <div className="bg-[#F7F3F1] px-4 py-2 flex items-center gap-2">
+                <Badge variant="outline" className="text-[10px]">
+                  {AREA_LABELS[area] || (area === "SEM_AREA" ? "Sem área" : area)}
+                </Badge>
+                <span className="text-xs text-[#666666]">{areaItems.length} entrada(s)</span>
+              </div>
+              <div className="divide-y">
+                {areaItems.map((entry) => (
+                  <div key={entry.id} className="flex items-center gap-3 px-4 py-2 hover:bg-[#F7F3F1]/30 group">
+                    <Badge className={`text-[9px] shrink-0 ${TYPE_COLORS[entry.tipo] || TYPE_COLORS.OUTRO}`}>
+                      {TYPE_LABELS[entry.tipo] || entry.tipo}
+                    </Badge>
+                    <span className="text-sm flex-1 truncate">{entry.titulo}</span>
+                    <div className="flex items-center gap-0.5 shrink-0">
+                      {Array.from({ length: 5 }).map((_, i) => (
+                        <Star
+                          key={i}
+                          className={`size-2.5 ${
+                            i < (entry.relevancia || 0) ? "fill-[#C9A961] text-[#C9A961]" : "text-[#666666]/20"
+                          }`}
+                        />
+                      ))}
                     </div>
-                    <h3 className="text-sm font-medium line-clamp-2">{entry.titulo}</h3>
-                  </div>
-
-                  <div className="flex items-center gap-0.5 shrink-0">
-                    <button
-                      onClick={() => toggleFavMutation.mutate({ id: entry.id })}
-                      className="p-1 hover:text-red-500 transition-colors"
-                    >
-                      <Heart className={`size-3.5 ${entry.favorito ? "fill-red-500 text-red-500" : "text-muted-foreground/50"}`} />
-                    </button>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="sm" className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100">
-                          <MoreHorizontal className="size-3.5" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => { setEditId(entry.id); setFormOpen(true) }}>
-                          <Pencil className="size-3 mr-2" />Editar
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          className="text-red-600"
-                          onClick={() => {
-                            if (confirm("Excluir entrada?")) deleteMutation.mutate({ id: entry.id })
-                          }}
+                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 shrink-0">
+                      <button
+                        onClick={() => toggleFavMutation.mutate({ id: entry.id })}
+                        className="p-1 hover:text-[#DC3545]"
+                      >
+                        <Heart className={`size-3 ${entry.favorito ? "fill-[#DC3545] text-[#DC3545]" : "text-[#666666]/50"}`} />
+                      </button>
+                      {entry.arquivo_url && (
+                        <a
+                          href={entry.arquivo_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="p-1 hover:text-[#17A2B8]"
                         >
-                          <Trash2 className="size-3 mr-2" />Excluir
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                          <Eye className="size-3 text-[#666666]/50" />
+                        </a>
+                      )}
+                      <button
+                        onClick={() => { setEditId(entry.id); setFormOpen(true) }}
+                        className="p-1 hover:text-[#17A2B8]"
+                      >
+                        <Pencil className="size-3 text-[#666666]/50" />
+                      </button>
+                      <button
+                        onClick={() => { setDeleteTargetId(entry.id); setDeleteConfirmOpen(true) }}
+                        className="p-1 hover:text-[#DC3545]"
+                      >
+                        <Trash2 className="size-3 text-[#666666]/50" />
+                      </button>
+                    </div>
                   </div>
-                </div>
-
-                {entry.resumo && (
-                  <p className="text-xs text-muted-foreground line-clamp-2 mt-2">{entry.resumo}</p>
-                )}
-
-                {entry.fonte && (
-                  <p className="text-[10px] text-muted-foreground mt-1">Fonte: {entry.fonte}</p>
-                )}
-
-                <div className="flex items-center justify-between mt-3">
-                  <div className="flex gap-1">
-                    {entry.tags.slice(0, 3).map((tag) => (
-                      <span key={tag} className="text-[10px] bg-muted px-1.5 py-0.5 rounded">{tag}</span>
-                    ))}
-                    {entry.tags.length > 3 && (
-                      <span className="text-[10px] text-muted-foreground">+{entry.tags.length - 3}</span>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-0.5">
-                    {Array.from({ length: 5 }).map((_, i) => (
-                      <Star
-                        key={i}
-                        className={`size-3 ${
-                          i < (entry.relevancia || 0) ? "fill-amber-400 text-amber-400" : "text-muted-foreground/20"
-                        }`}
-                      />
-                    ))}
-                  </div>
-                </div>
-
-                {(entry._count.utilizado_em_casos > 0 || entry._count.utilizado_em_projetos > 0) && (
-                  <p className="text-[10px] text-muted-foreground mt-1">
-                    Utilizado em {entry._count.utilizado_em_casos} caso(s), {entry._count.utilizado_em_projetos} projeto(s)
-                  </p>
-                )}
-              </CardContent>
-            </Card>
+                ))}
+              </div>
+            </div>
           ))}
         </div>
       )}
@@ -315,7 +498,7 @@ export function BibliotecaList() {
           >
             Anterior
           </Button>
-          <span className="text-xs text-muted-foreground">
+          <span className="text-xs text-[#666666]">
             Página {page} de {totalPages} ({total} resultados)
           </span>
           <Button
@@ -332,6 +515,138 @@ export function BibliotecaList() {
       {/* Modals */}
       <BibliotecaForm open={formOpen} onOpenChange={setFormOpen} entryId={editId} />
       <BibliotecaClipper open={clipperOpen} onOpenChange={setClipperOpen} />
+      <BibliotecaClippers open={clippersOpen} onOpenChange={setClippersOpen} />
+      <BibliotecaBulkUpload open={bulkUploadOpen} onOpenChange={setBulkUploadOpen} />
+
+      {/* Delete confirmation dialog */}
+      <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Excluir Entrada</DialogTitle>
+            <DialogDescription>
+              Tem certeza? Esta ação não pode ser desfeita.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteConfirmOpen(false)}>
+              Cancelar
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                if (deleteTargetId) {
+                  deleteMutation.mutate({ id: deleteTargetId })
+                }
+                setDeleteConfirmOpen(false)
+                setDeleteTargetId(null)
+              }}
+            >
+              Excluir
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
+  )
+}
+
+/** Card component for entries */
+function EntryCard({
+  entry,
+  onEdit,
+  onDelete,
+  onToggleFav,
+}: {
+  entry: any
+  onEdit: () => void
+  onDelete: () => void
+  onToggleFav: () => void
+}) {
+  return (
+    <Card className="group hover:shadow-md transition-shadow">
+      <CardContent className="p-4">
+        <div className="flex items-start justify-between gap-2">
+          <div className="space-y-1 min-w-0 flex-1">
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <Badge className={`text-[10px] ${TYPE_COLORS[entry.tipo] || TYPE_COLORS.OUTRO}`}>
+                {TYPE_LABELS[entry.tipo] || entry.tipo}
+              </Badge>
+              {entry.area && (
+                <Badge variant="outline" className="text-[10px]">
+                  {AREA_LABELS[entry.area] || entry.area}
+                </Badge>
+              )}
+            </div>
+            <h3 className="text-sm font-medium line-clamp-2">{entry.titulo}</h3>
+          </div>
+
+          <div className="flex items-center gap-0.5 shrink-0">
+            <button
+              onClick={onToggleFav}
+              className="p-1 hover:text-[#DC3545] transition-colors"
+            >
+              <Heart className={`size-3.5 ${entry.favorito ? "fill-[#DC3545] text-[#DC3545]" : "text-[#666666]/50"}`} />
+            </button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm" className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100">
+                  <MoreHorizontal className="size-3.5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {entry.arquivo_url && (
+                  <DropdownMenuItem asChild>
+                    <a href={entry.arquivo_url} target="_blank" rel="noopener noreferrer">
+                      <Eye className="size-3 mr-2" />Visualizar arquivo
+                    </a>
+                  </DropdownMenuItem>
+                )}
+                <DropdownMenuItem onClick={onEdit}>
+                  <Pencil className="size-3 mr-2" />Editar
+                </DropdownMenuItem>
+                <DropdownMenuItem className="text-[#DC3545]" onClick={onDelete}>
+                  <Trash2 className="size-3 mr-2" />Excluir
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </div>
+
+        {entry.resumo && (
+          <p className="text-xs text-[#666666] line-clamp-2 mt-2">{entry.resumo}</p>
+        )}
+
+        {entry.fonte && (
+          <p className="text-[10px] text-[#666666] mt-1">Fonte: {entry.fonte}</p>
+        )}
+
+        <div className="flex items-center justify-between mt-3">
+          <div className="flex gap-1">
+            {entry.tags.slice(0, 3).map((tag: string) => (
+              <span key={tag} className="text-[10px] bg-muted px-1.5 py-0.5 rounded">{tag}</span>
+            ))}
+            {entry.tags.length > 3 && (
+              <span className="text-[10px] text-[#666666]">+{entry.tags.length - 3}</span>
+            )}
+          </div>
+          <div className="flex items-center gap-0.5">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <Star
+                key={i}
+                className={`size-3 ${
+                  i < (entry.relevancia || 0) ? "fill-[#C9A961] text-[#C9A961]" : "text-[#666666]/20"
+                }`}
+              />
+            ))}
+          </div>
+        </div>
+
+        {(entry._count?.utilizado_em_casos > 0 || entry._count?.utilizado_em_projetos > 0) && (
+          <p className="text-[10px] text-[#666666] mt-1">
+            Utilizado em {entry._count.utilizado_em_casos} caso(s), {entry._count.utilizado_em_projetos} projeto(s)
+          </p>
+        )}
+      </CardContent>
+    </Card>
   )
 }

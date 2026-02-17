@@ -14,6 +14,7 @@ import {
   Eye,
   Filter,
   X,
+  Download,
 } from "lucide-react"
 import { trpc } from "@/lib/trpc"
 import { Button } from "@/components/ui/button"
@@ -60,12 +61,12 @@ interface PersonsListProps {
 }
 
 const TYPE_COLORS: Record<string, string> = {
-  CLIENTE: "bg-blue-100 text-blue-700",
-  PARTE_CONTRARIA: "bg-red-100 text-red-700",
-  JUIZ: "bg-purple-100 text-purple-700",
-  DESEMBARGADOR: "bg-purple-100 text-purple-700",
-  PERITO: "bg-amber-100 text-amber-700",
-  ADMINISTRADOR_JUDICIAL: "bg-emerald-100 text-emerald-700",
+  CLIENTE: "bg-[#17A2B8]/10 text-[#17A2B8]",
+  PARTE_CONTRARIA: "bg-[#DC3545]/10 text-[#DC3545]",
+  JUIZ: "bg-[#C9A961]/10 text-[#C9A961]",
+  DESEMBARGADOR: "bg-[#C9A961]/10 text-[#C9A961]",
+  PERITO: "bg-[#C9A961]/10 text-[#C9A961]",
+  ADMINISTRADOR_JUDICIAL: "bg-[#28A745]/10 text-[#28A745]",
   CREDOR: "bg-orange-100 text-orange-700",
   TESTEMUNHA: "bg-gray-100 text-gray-700",
   OUTRO: "bg-gray-100 text-gray-700",
@@ -124,23 +125,29 @@ export function PersonsList({ defaultTipo, title }: PersonsListProps = {}) {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">{title || "Pessoas"}</h1>
-          <p className="text-muted-foreground">
+          <p className="text-[#666666]">
             {total} {total === 1 ? "pessoa cadastrada" : "pessoas cadastradas"}
           </p>
         </div>
-        <Button asChild>
-          <Link href="/pessoas/novo">
-            <Plus className="mr-2 size-4" />
-            Nova Pessoa
-          </Link>
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={() => alert("Em desenvolvimento")}>
+            <Download className="mr-2 size-4" />
+            Exportar
+          </Button>
+          <Button asChild>
+            <Link href="/pessoas/novo">
+              <Plus className="mr-2 size-4" />
+              Nova Pessoa
+            </Link>
+          </Button>
+        </div>
       </div>
 
       {/* Search and Filters */}
       <div className="space-y-3">
         <div className="flex gap-2">
           <div className="relative flex-1">
-            <Search className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+            <Search className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-[#666666]" />
             <Input
               placeholder="Buscar por nome, CPF/CNPJ, e-mail, cidade..."
               value={search}
@@ -214,9 +221,10 @@ export function PersonsList({ defaultTipo, title }: PersonsListProps = {}) {
       </div>
 
       {/* Table */}
-      <div className="rounded-lg border bg-white">
+      <div className="rounded-lg border bg-white overflow-x-auto">
+        <div className="max-h-[calc(100vh-20rem)] overflow-y-auto">
         <Table>
-          <TableHeader>
+          <TableHeader className="sticky top-0 z-10 bg-white">
             <TableRow>
               <TableHead>Nome</TableHead>
               <TableHead>Tipo</TableHead>
@@ -237,7 +245,7 @@ export function PersonsList({ defaultTipo, title }: PersonsListProps = {}) {
               ))
             ) : persons.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="h-32 text-center text-muted-foreground">
+                <TableCell colSpan={6} className="h-32 text-center text-[#666666]">
                   {debouncedSearch || hasActiveFilters
                     ? "Nenhuma pessoa encontrada com esses filtros."
                     : "Nenhuma pessoa cadastrada ainda."}
@@ -254,15 +262,15 @@ export function PersonsList({ defaultTipo, title }: PersonsListProps = {}) {
                     <div className="flex items-center gap-3">
                       <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-muted">
                         {person.subtipo === "PESSOA_JURIDICA" ? (
-                          <Building2 className="size-4 text-muted-foreground" />
+                          <Building2 className="size-4 text-[#666666]" />
                         ) : (
-                          <UserRound className="size-4 text-muted-foreground" />
+                          <UserRound className="size-4 text-[#666666]" />
                         )}
                       </div>
                       <div className="min-w-0">
                         <p className="font-medium truncate">{person.nome}</p>
                         {person.razao_social && person.razao_social !== person.nome && (
-                          <p className="text-xs text-muted-foreground truncate">
+                          <p className="text-xs text-[#666666] truncate">
                             {person.razao_social}
                           </p>
                         )}
@@ -326,6 +334,7 @@ export function PersonsList({ defaultTipo, title }: PersonsListProps = {}) {
             )}
           </TableBody>
         </Table>
+        </div>
       </div>
 
       {/* Delete confirmation */}

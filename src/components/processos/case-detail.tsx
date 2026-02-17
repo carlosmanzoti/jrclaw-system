@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation"
 import {
   ArrowLeft, Scale, Users, FileText, Clock, FolderOpen, UserCog,
   Activity, Landmark, Handshake, Plus, Trash2, Check, X, AlertTriangle,
-  ChevronRight,
+  ChevronRight, Archive, Pencil, Download, Eye, Wand2,
 } from "lucide-react"
 import { trpc } from "@/lib/trpc"
 import { Button } from "@/components/ui/button"
@@ -17,7 +17,7 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table"
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
+  Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog"
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
@@ -35,24 +35,24 @@ import {
 } from "@/lib/constants"
 
 const STATUS_COLORS: Record<string, string> = {
-  ATIVO: "bg-emerald-100 text-emerald-700",
-  SUSPENSO: "bg-amber-100 text-amber-700",
+  ATIVO: "bg-[#28A745]/10 text-[#28A745]",
+  SUSPENSO: "bg-[#C9A961]/10 text-[#C9A961]",
   ARQUIVADO: "bg-gray-100 text-gray-600",
-  ENCERRADO: "bg-blue-100 text-blue-700",
+  ENCERRADO: "bg-[#17A2B8]/10 text-[#17A2B8]",
 }
 
 const TYPE_COLORS: Record<string, string> = {
-  RECUPERACAO_JUDICIAL: "bg-purple-100 text-purple-700",
-  FALENCIA: "bg-red-100 text-red-700",
+  RECUPERACAO_JUDICIAL: "bg-[#C9A961]/10 text-[#C9A961]",
+  FALENCIA: "bg-[#DC3545]/10 text-[#DC3545]",
   EXECUCAO: "bg-orange-100 text-orange-700",
-  AGRARIO: "bg-green-100 text-green-700",
+  AGRONEGOCIO: "bg-[#28A745]/10 text-[#28A745]",
   TRIBUTARIO: "bg-sky-100 text-sky-700",
 }
 
 const DEADLINE_STATUS_COLORS: Record<string, string> = {
-  PENDENTE: "bg-amber-100 text-amber-700",
-  CUMPRIDO: "bg-emerald-100 text-emerald-700",
-  PERDIDO: "bg-red-100 text-red-700",
+  PENDENTE: "bg-[#C9A961]/10 text-[#C9A961]",
+  CUMPRIDO: "bg-[#28A745]/10 text-[#28A745]",
+  PERDIDO: "bg-[#DC3545]/10 text-[#DC3545]",
   CANCELADO: "bg-gray-100 text-gray-600",
 }
 
@@ -64,6 +64,8 @@ export function CaseDetail({ caseId }: { caseId: string }) {
   const { data: caso, isLoading } = trpc.cases.getById.useQuery({ id: caseId })
   const { data: users } = trpc.users.list.useQuery()
   const utils = trpc.useUtils()
+  const [deleteOpen, setDeleteOpen] = useState(false)
+  const [archiveOpen, setArchiveOpen] = useState(false)
 
   if (isLoading) {
     return (
@@ -77,7 +79,7 @@ export function CaseDetail({ caseId }: { caseId: string }) {
   if (!caso) {
     return (
       <div className="flex flex-col items-center justify-center py-12">
-        <Scale className="size-12 text-muted-foreground/50" />
+        <Scale className="size-12 text-[#666666]/50" />
         <h3 className="mt-4 text-lg font-semibold">Processo nao encontrado</h3>
         <Button variant="outline" className="mt-4" onClick={() => router.push("/processos")}>
           Voltar para lista
@@ -122,7 +124,7 @@ export function CaseDetail({ caseId }: { caseId: string }) {
                 {CASE_STATUS_LABELS[caso.status]}
               </Badge>
             </div>
-            <p className="text-muted-foreground mt-1">
+            <p className="text-[#666666] mt-1">
               Cliente: <Link href={`/pessoas/${caso.cliente.id}`} className="text-primary hover:underline">{caso.cliente.nome}</Link>
               {caso.vara && <> &middot; {caso.vara}</>}
               {caso.comarca && <> &middot; {caso.comarca}</>}
@@ -130,9 +132,20 @@ export function CaseDetail({ caseId }: { caseId: string }) {
             </p>
           </div>
         </div>
-        <Button variant="outline" onClick={() => router.push(`/processos/${caseId}?edit=true`)}>
-          Editar
-        </Button>
+        <div className="flex gap-2 shrink-0">
+          <Button variant="outline" onClick={() => router.push(`/processos/${caseId}?edit=true`)}>
+            <Pencil className="mr-2 size-4" />
+            Editar
+          </Button>
+          <Button variant="outline" onClick={() => setArchiveOpen(true)}>
+            <Archive className="mr-2 size-4" />
+            Arquivar
+          </Button>
+          <Button variant="outline" className="text-[#DC3545] hover:text-[#DC3545] border-[#DC3545]/30 hover:bg-[#DC3545]/5" onClick={() => setDeleteOpen(true)}>
+            <Trash2 className="mr-2 size-4" />
+            Excluir
+          </Button>
+        </div>
       </div>
 
       {/* Tabs */}
@@ -146,36 +159,43 @@ export function CaseDetail({ caseId }: { caseId: string }) {
           ))}
         </TabsList>
 
-        <TabsContent value="resumo" className="mt-6">
+        <TabsContent value="resumo" className="mt-6 overflow-y-auto max-h-[calc(100vh-16rem)]">
           <ResumoTab caso={caso} />
         </TabsContent>
 
-        <TabsContent value="partes" className="mt-6">
+        <TabsContent value="partes" className="mt-6 overflow-y-auto max-h-[calc(100vh-16rem)]">
           <PartesTab caso={caso} caseId={caseId} utils={utils} />
         </TabsContent>
 
-        <TabsContent value="movimentacoes" className="mt-6">
+        <TabsContent value="movimentacoes" className="mt-6 overflow-y-auto max-h-[calc(100vh-16rem)]">
           <MovimentacoesTab caso={caso} caseId={caseId} utils={utils} />
         </TabsContent>
 
-        <TabsContent value="prazos" className="mt-6">
+        <TabsContent value="prazos" className="mt-6 overflow-y-auto max-h-[calc(100vh-16rem)]">
           <PrazosTab caso={caso} caseId={caseId} users={users} utils={utils} />
         </TabsContent>
 
-        <TabsContent value="documentos" className="mt-6">
-          <DocumentosTab caso={caso} />
+        <TabsContent value="documentos" className="mt-6 overflow-y-auto max-h-[calc(100vh-16rem)]">
+          <DocumentosTab caso={caso} caseId={caseId} />
         </TabsContent>
 
-        <TabsContent value="equipe" className="mt-6">
+        <TabsContent value="equipe" className="mt-6 overflow-y-auto max-h-[calc(100vh-16rem)]">
           <EquipeTab caso={caso} caseId={caseId} users={users} utils={utils} />
         </TabsContent>
 
-        <TabsContent value="atividades" className="mt-6">
-          <ActivityTimeline caseId={caseId} showFilters groupByDate />
+        <TabsContent value="atividades" className="mt-6 overflow-y-auto max-h-[calc(100vh-16rem)]">
+          <div className="space-y-4">
+            <div className="flex items-center justify-end">
+              <Button size="sm" onClick={() => alert("Registro de atividade manual em desenvolvimento")}>
+                <Plus className="mr-1 size-3.5" />Registrar Atividade Manual
+              </Button>
+            </div>
+            <ActivityTimeline caseId={caseId} showFilters groupByDate />
+          </div>
         </TabsContent>
 
         {isRJ && (
-          <TabsContent value="credores" className="mt-6">
+          <TabsContent value="credores" className="mt-6 overflow-y-auto max-h-[calc(100vh-16rem)]">
             <PlaceholderTab
               icon={Landmark}
               title="Quadro de Credores"
@@ -185,7 +205,7 @@ export function CaseDetail({ caseId }: { caseId: string }) {
         )}
 
         {isRJ && (
-          <TabsContent value="negociacoes" className="mt-6">
+          <TabsContent value="negociacoes" className="mt-6 overflow-y-auto max-h-[calc(100vh-16rem)]">
             <PlaceholderTab
               icon={Handshake}
               title="Negociacoes"
@@ -194,6 +214,53 @@ export function CaseDetail({ caseId }: { caseId: string }) {
           </TabsContent>
         )}
       </Tabs>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Excluir Processo</DialogTitle>
+            <DialogDescription>
+              Tem certeza? Esta acao nao pode ser desfeita.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteOpen(false)}>Cancelar</Button>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                alert("Exclusao em desenvolvimento")
+                setDeleteOpen(false)
+              }}
+            >
+              Excluir
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Archive Confirmation Dialog */}
+      <Dialog open={archiveOpen} onOpenChange={setArchiveOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Arquivar Processo</DialogTitle>
+            <DialogDescription>
+              O processo sera marcado como arquivado. Voce podera reativa-lo posteriormente.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setArchiveOpen(false)}>Cancelar</Button>
+            <Button
+              onClick={() => {
+                alert("Arquivamento em desenvolvimento")
+                setArchiveOpen(false)
+              }}
+            >
+              Arquivar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
@@ -210,25 +277,25 @@ function ResumoTab({ caso }: { caso: CaseData }) {
       <div className="grid gap-4 sm:grid-cols-2">
         <Card>
           <CardContent className="pt-4 pb-4">
-            <p className="text-xs text-muted-foreground">Valor da Causa</p>
+            <p className="text-xs text-[#666666]">Valor da Causa</p>
             <p className="text-lg font-bold font-mono">{formatCurrency(caso.valor_causa)}</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="pt-4 pb-4">
-            <p className="text-xs text-muted-foreground">Valor de Risco</p>
+            <p className="text-xs text-[#666666]">Valor de Risco</p>
             <p className="text-lg font-bold font-mono">{formatCurrency(caso.valor_risco)}</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="pt-4 pb-4">
-            <p className="text-xs text-muted-foreground">Advogado Responsavel</p>
+            <p className="text-xs text-[#666666]">Advogado Responsavel</p>
             <p className="text-sm font-medium">{caso.advogado_responsavel.name}</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="pt-4 pb-4">
-            <p className="text-xs text-muted-foreground">Vara / Comarca</p>
+            <p className="text-xs text-[#666666]">Vara / Comarca</p>
             <p className="text-sm font-medium">
               {[caso.vara, caso.comarca, caso.uf].filter(Boolean).join(" / ") || "—"}
             </p>
@@ -242,7 +309,7 @@ function ResumoTab({ caso }: { caso: CaseData }) {
         {caso.projeto && (
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Projeto Vinculado</CardTitle>
+              <CardTitle className="text-sm font-medium text-[#666666]">Projeto Vinculado</CardTitle>
             </CardHeader>
             <CardContent>
               <Link href={`/projetos/${caso.projeto.id}`} className="flex items-center gap-2 text-primary hover:underline">
@@ -257,11 +324,11 @@ function ResumoTab({ caso }: { caso: CaseData }) {
         {/* Next Deadlines */}
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Proximos Prazos</CardTitle>
+            <CardTitle className="text-sm font-medium text-[#666666]">Proximos Prazos</CardTitle>
           </CardHeader>
           <CardContent>
             {pendingDeadlines.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Nenhum prazo pendente.</p>
+              <p className="text-sm text-[#666666]">Nenhum prazo pendente.</p>
             ) : (
               <div className="space-y-2">
                 {pendingDeadlines.map((p: CaseData) => (
@@ -285,11 +352,11 @@ function ResumoTab({ caso }: { caso: CaseData }) {
         {/* Recent Movements */}
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Ultimas Movimentacoes</CardTitle>
+            <CardTitle className="text-sm font-medium text-[#666666]">Ultimas Movimentacoes</CardTitle>
           </CardHeader>
           <CardContent>
             {recentMovements.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Nenhuma movimentacao registrada.</p>
+              <p className="text-sm text-[#666666]">Nenhuma movimentacao registrada.</p>
             ) : (
               <div className="space-y-3">
                 {recentMovements.map((m: CaseData) => (
@@ -297,7 +364,7 @@ function ResumoTab({ caso }: { caso: CaseData }) {
                     <div className="mt-1 size-2 rounded-full bg-primary shrink-0" />
                     <div className="min-w-0">
                       <div className="flex items-center gap-2">
-                        <span className="text-xs text-muted-foreground">
+                        <span className="text-xs text-[#666666]">
                           {new Date(m.data).toLocaleDateString("pt-BR")}
                         </span>
                         <Badge variant="secondary" className="text-[10px]">
@@ -343,7 +410,7 @@ function PartesTab({ caso, caseId, utils }: { caso: CaseData; caseId: string; ut
       {caso.juiz && (
         <Card>
           <CardContent className="pt-4 pb-4">
-            <p className="text-xs text-muted-foreground mb-1">Juiz(a)</p>
+            <p className="text-xs text-[#666666] mb-1">Juiz(a)</p>
             <Link href={`/pessoas/${caso.juiz.id}`} className="text-sm font-medium text-primary hover:underline">
               {caso.juiz.nome}
             </Link>
@@ -352,7 +419,7 @@ function PartesTab({ caso, caseId, utils }: { caso: CaseData; caseId: string; ut
       )}
 
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-medium text-muted-foreground">Partes do Processo</h3>
+        <h3 className="text-sm font-medium text-[#666666]">Partes do Processo</h3>
         <Button size="sm" onClick={() => setDialogOpen(true)}>
           <Plus className="mr-1 size-3.5" />Adicionar Parte
         </Button>
@@ -371,7 +438,7 @@ function PartesTab({ caso, caseId, utils }: { caso: CaseData; caseId: string; ut
           <TableBody>
             {(caso.partes as CaseData[]).length === 0 ? (
               <TableRow>
-                <TableCell colSpan={4} className="h-20 text-center text-muted-foreground">
+                <TableCell colSpan={4} className="h-20 text-center text-[#666666]">
                   Nenhuma parte adicionada.
                 </TableCell>
               </TableRow>
@@ -389,7 +456,7 @@ function PartesTab({ caso, caseId, utils }: { caso: CaseData; caseId: string; ut
                   </TableCell>
                   <TableCell>
                     <Button variant="ghost" size="icon" className="size-7" onClick={() => removeParty.mutate({ id: p.id })}>
-                      <Trash2 className="size-3.5 text-red-500" />
+                      <Trash2 className="size-3.5 text-[#DC3545]" />
                     </Button>
                   </TableCell>
                 </TableRow>
@@ -458,7 +525,7 @@ function MovimentacoesTab({ caso, caseId, utils }: { caso: CaseData; caseId: str
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-medium text-muted-foreground">
+        <h3 className="text-sm font-medium text-[#666666]">
           {(caso.movimentacoes as CaseData[]).length} movimentacao(oes)
         </h3>
         <Button size="sm" onClick={() => setDialogOpen(true)}>
@@ -469,7 +536,7 @@ function MovimentacoesTab({ caso, caseId, utils }: { caso: CaseData; caseId: str
       {/* Timeline */}
       <div className="space-y-0">
         {(caso.movimentacoes as CaseData[]).length === 0 ? (
-          <p className="text-sm text-muted-foreground py-8 text-center">Nenhuma movimentacao registrada.</p>
+          <p className="text-sm text-[#666666] py-8 text-center">Nenhuma movimentacao registrada.</p>
         ) : (
           (caso.movimentacoes as CaseData[]).map((m: CaseData, i: number) => (
             <div key={m.id} className="flex gap-4">
@@ -481,13 +548,13 @@ function MovimentacoesTab({ caso, caseId, utils }: { caso: CaseData; caseId: str
               </div>
               <div className="pb-6 min-w-0 flex-1">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-xs text-muted-foreground font-mono">
+                  <span className="text-xs text-[#666666] font-mono">
                     {new Date(m.data).toLocaleDateString("pt-BR")}
                   </span>
                   <Badge variant="secondary" className="text-[10px]">
                     {MOVEMENT_TYPE_LABELS[m.tipo] || m.tipo}
                   </Badge>
-                  {m.fonte && <span className="text-xs text-muted-foreground">via {m.fonte}</span>}
+                  {m.fonte && <span className="text-xs text-[#666666]">via {m.fonte}</span>}
                 </div>
                 <p className="text-sm mt-1">{m.descricao}</p>
                 {m.conteudo_integral && (
@@ -598,7 +665,7 @@ function PrazosTab({
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-medium text-muted-foreground">
+        <h3 className="text-sm font-medium text-[#666666]">
           {(caso.prazos as CaseData[]).length} prazo(s)
         </h3>
         <Button size="sm" onClick={() => setDialogOpen(true)}>
@@ -621,7 +688,7 @@ function PrazosTab({
           <TableBody>
             {(caso.prazos as CaseData[]).length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="h-20 text-center text-muted-foreground">
+                <TableCell colSpan={6} className="h-20 text-center text-[#666666]">
                   Nenhum prazo registrado.
                 </TableCell>
               </TableRow>
@@ -636,7 +703,7 @@ function PrazosTab({
                           {new Date(p.data_limite).toLocaleDateString("pt-BR")}
                         </span>
                         {p.status === "PENDENTE" && days < 0 && (
-                          <AlertTriangle className="size-3.5 text-red-500" />
+                          <AlertTriangle className="size-3.5 text-[#DC3545]" />
                         )}
                       </div>
                     </TableCell>
@@ -660,14 +727,14 @@ function PrazosTab({
                             title="Marcar como cumprido"
                             onClick={() => updateDeadline.mutate({ id: p.id, status: "CUMPRIDO" })}
                           >
-                            <Check className="size-3.5 text-emerald-600" />
+                            <Check className="size-3.5 text-[#28A745]" />
                           </Button>
                           <Button
                             variant="ghost" size="icon" className="size-7"
                             title="Cancelar prazo"
                             onClick={() => updateDeadline.mutate({ id: p.id, status: "CANCELADO" })}
                           >
-                            <X className="size-3.5 text-red-500" />
+                            <X className="size-3.5 text-[#DC3545]" />
                           </Button>
                         </div>
                       )}
@@ -751,18 +818,20 @@ function PrazosTab({
 
 // ─── Documentos Tab ──────────────────────────────────────────────
 
-function DocumentosTab({ caso }: { caso: CaseData }) {
+function DocumentosTab({ caso, caseId }: { caso: CaseData; caseId: string }) {
+  const router = useRouter()
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-medium text-muted-foreground">
+        <h3 className="text-sm font-medium text-[#666666]">
           {(caso.documentos as CaseData[]).length} documento(s)
         </h3>
         <div className="flex gap-2">
-          <Button size="sm" variant="outline" disabled>
-            Gerar com IA
+          <Button size="sm" variant="outline" onClick={() => router.push(`/confeccao?case_id=${caseId}`)}>
+            <Wand2 className="mr-1 size-3.5" />Gerar com Harvey Specter
           </Button>
-          <Button size="sm" disabled>
+          <Button size="sm" onClick={() => alert("Upload em desenvolvimento")}>
             <Plus className="mr-1 size-3.5" />Upload
           </Button>
         </div>
@@ -776,13 +845,14 @@ function DocumentosTab({ caso }: { caso: CaseData }) {
               <TableHead>Tipo</TableHead>
               <TableHead>Criado por</TableHead>
               <TableHead>Data</TableHead>
+              <TableHead className="w-[120px]" />
             </TableRow>
           </TableHeader>
           <TableBody>
             {(caso.documentos as CaseData[]).length === 0 ? (
               <TableRow>
-                <TableCell colSpan={4} className="h-20 text-center text-muted-foreground">
-                  Nenhum documento. O modulo de upload sera implementado na fase de Documentos.
+                <TableCell colSpan={5} className="h-20 text-center text-[#666666]">
+                  Nenhum documento. Clique em &quot;Upload&quot; ou &quot;Gerar com Harvey Specter&quot; para adicionar.
                 </TableCell>
               </TableRow>
             ) : (
@@ -795,8 +865,48 @@ function DocumentosTab({ caso }: { caso: CaseData }) {
                     </Badge>
                   </TableCell>
                   <TableCell className="text-sm">{d.criado_por?.name || "—"}</TableCell>
-                  <TableCell className="text-sm text-muted-foreground">
+                  <TableCell className="text-sm text-[#666666]">
                     {new Date(d.created_at).toLocaleDateString("pt-BR")}
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex gap-1">
+                      <Button
+                        variant="ghost" size="icon" className="size-7"
+                        title="Visualizar"
+                        onClick={() => {
+                          if (d.arquivo_url) {
+                            window.open(d.arquivo_url, "_blank")
+                          } else {
+                            alert("Arquivo nao disponivel")
+                          }
+                        }}
+                      >
+                        <Eye className="size-3.5" />
+                      </Button>
+                      <Button
+                        variant="ghost" size="icon" className="size-7"
+                        title="Baixar"
+                        onClick={() => {
+                          if (d.arquivo_url) {
+                            const link = document.createElement("a")
+                            link.href = d.arquivo_url
+                            link.download = d.titulo || "documento"
+                            link.click()
+                          } else {
+                            alert("Arquivo nao disponivel para download")
+                          }
+                        }}
+                      >
+                        <Download className="size-3.5" />
+                      </Button>
+                      <Button
+                        variant="ghost" size="icon" className="size-7"
+                        title="Excluir"
+                        onClick={() => alert("Exclusao de documento em desenvolvimento")}
+                      >
+                        <Trash2 className="size-3.5 text-[#DC3545]" />
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))
@@ -841,19 +951,19 @@ function EquipeTab({
       {/* Responsible */}
       <Card>
         <CardContent className="pt-4 pb-4">
-          <p className="text-xs text-muted-foreground mb-1">Advogado Responsavel</p>
+          <p className="text-xs text-[#666666] mb-1">Advogado Responsavel</p>
           <p className="text-sm font-medium">
             {caso.advogado_responsavel.name}
             {caso.advogado_responsavel.oab_number && (
-              <span className="text-muted-foreground"> (OAB {caso.advogado_responsavel.oab_number})</span>
+              <span className="text-[#666666]"> (OAB {caso.advogado_responsavel.oab_number})</span>
             )}
           </p>
-          <p className="text-xs text-muted-foreground">{caso.advogado_responsavel.email}</p>
+          <p className="text-xs text-[#666666]">{caso.advogado_responsavel.email}</p>
         </CardContent>
       </Card>
 
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-medium text-muted-foreground">Membros da Equipe</h3>
+        <h3 className="text-sm font-medium text-[#666666]">Membros da Equipe</h3>
         <Button size="sm" onClick={() => setDialogOpen(true)}>
           <Plus className="mr-1 size-3.5" />Adicionar Membro
         </Button>
@@ -872,7 +982,7 @@ function EquipeTab({
           <TableBody>
             {(caso.equipe as CaseData[]).length === 0 ? (
               <TableRow>
-                <TableCell colSpan={4} className="h-20 text-center text-muted-foreground">
+                <TableCell colSpan={4} className="h-20 text-center text-[#666666]">
                   Nenhum membro adicionado.
                 </TableCell>
               </TableRow>
@@ -886,7 +996,7 @@ function EquipeTab({
                   </TableCell>
                   <TableCell>
                     <Button variant="ghost" size="icon" className="size-7" onClick={() => removeMember.mutate({ id: m.id })}>
-                      <Trash2 className="size-3.5 text-red-500" />
+                      <Trash2 className="size-3.5 text-[#DC3545]" />
                     </Button>
                   </TableCell>
                 </TableRow>
@@ -956,9 +1066,9 @@ function PlaceholderTab({
 }) {
   return (
     <div className="flex flex-col items-center justify-center rounded-lg border border-dashed p-12">
-      <Icon className="size-12 text-muted-foreground/50" />
+      <Icon className="size-12 text-[#666666]/50" />
       <h3 className="mt-4 text-lg font-semibold">{title}</h3>
-      <p className="mt-2 text-sm text-muted-foreground text-center max-w-md">{description}</p>
+      <p className="mt-2 text-sm text-[#666666] text-center max-w-md">{description}</p>
     </div>
   )
 }

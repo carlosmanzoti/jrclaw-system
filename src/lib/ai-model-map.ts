@@ -14,11 +14,11 @@ export interface ModelDisplay {
 export const MODEL_DISPLAY: Record<ModelTier, ModelDisplay> = {
   standard: {
     name: "Sonnet 4.5",
-    badgeClass: "bg-blue-100 text-blue-700 border-blue-200",
+    badgeClass: "bg-[#17A2B8]/20 text-[#17A2B8] border-[#17A2B8]/30",
   },
   premium: {
     name: "Opus 4.6",
-    badgeClass: "bg-amber-100 text-amber-700 border-amber-200",
+    badgeClass: "bg-[#C9A961]/20 text-[#C9A961] border-[#C9A961]/30",
   },
 }
 

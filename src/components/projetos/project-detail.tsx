@@ -17,8 +17,11 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select"
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle,
+  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog"
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import {
   Accordion, AccordionContent, AccordionItem, AccordionTrigger,
 } from "@/components/ui/accordion"
@@ -33,7 +36,8 @@ import {
   AlertTriangle, Calendar, User, Loader2, MessageSquare,
   ListTodo, ChevronRight, Star, ArrowUp, Minus, Phone,
   Mail, Users, Target, Columns3, LayoutList, DollarSign,
-  Clock, Pencil, Link2,
+  Clock, Pencil, Link2, MoreHorizontal, XCircle, Ban,
+  Receipt,
 } from "lucide-react"
 import {
   PROJECT_STATUS_LABELS, PROJECT_STATUS_COLORS, PROJECT_CATEGORY_LABELS,
@@ -56,11 +60,13 @@ export function ProjectDetail({ projectId }: ProjectDetailProps) {
   const router = useRouter()
   const { data: project, isLoading } = trpc.projects.getById.useQuery({ id: projectId })
   const { data: users } = trpc.users.list.useQuery()
+  const [showConcluirDialog, setShowConcluirDialog] = useState(false)
+  const [showCancelarDialog, setShowCancelarDialog] = useState(false)
 
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <Loader2 className="size-8 animate-spin text-muted-foreground" />
+        <Loader2 className="size-8 animate-spin text-[#666666]" />
       </div>
     )
   }
@@ -68,7 +74,7 @@ export function ProjectDetail({ projectId }: ProjectDetailProps) {
   if (!project) {
     return (
       <div className="text-center py-12">
-        <p className="text-muted-foreground">Projeto nao encontrado.</p>
+        <p className="text-[#666666]">Projeto nao encontrado.</p>
         <Button variant="outline" className="mt-4" onClick={() => router.push("/projetos")}>Voltar</Button>
       </div>
     )
@@ -85,30 +91,86 @@ export function ProjectDetail({ projectId }: ProjectDetailProps) {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-start gap-3">
-        <Button variant="ghost" size="icon" onClick={() => router.push("/projetos")}>
-          <ArrowLeft className="size-4" />
-        </Button>
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <span className="text-sm text-muted-foreground font-mono">{project.codigo}</span>
-            <Badge variant="secondary" className={PROJECT_STATUS_COLORS[project.status] || ""}>
-              {PROJECT_STATUS_LABELS[project.status]}
-            </Badge>
-            <Badge variant="secondary" className={PRIORITY_COLORS[project.prioridade] || ""}>
-              {PRIORITY_LABELS[project.prioridade]}
-            </Badge>
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex items-start gap-3">
+          <Button variant="ghost" size="icon" onClick={() => router.push("/projetos")}>
+            <ArrowLeft className="size-4" />
+          </Button>
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-sm text-[#666666] font-mono">{project.codigo}</span>
+              <Badge variant="secondary" className={PROJECT_STATUS_COLORS[project.status] || ""}>
+                {PROJECT_STATUS_LABELS[project.status]}
+              </Badge>
+              <Badge variant="secondary" className={PRIORITY_COLORS[project.prioridade] || ""}>
+                {PRIORITY_LABELS[project.prioridade]}
+              </Badge>
+            </div>
+            <h1 className="text-2xl font-bold">{project.titulo}</h1>
+            <p className="text-[#666666] text-sm mt-1">
+              {project.cliente.nome} &bull; {PROJECT_CATEGORY_LABELS[project.categoria]}
+              {project.advogado_responsavel && ` \u2022 Resp: ${project.advogado_responsavel.name}`}
+            </p>
           </div>
-          <h1 className="text-2xl font-bold">{project.titulo}</h1>
-          <p className="text-muted-foreground text-sm mt-1">
-            {project.cliente.nome} &bull; {PROJECT_CATEGORY_LABELS[project.categoria]}
-            {project.advogado_responsavel && ` \u2022 Resp: ${project.advogado_responsavel.name}`}
-          </p>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          <Button variant="outline" size="sm" onClick={() => alert("Em desenvolvimento")}>
+            <Mail className="size-4 mr-1" />
+            Atualizar Cliente
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => router.push(`/projetos/${projectId}?edit=true`)}>
+            <Pencil className="size-4 mr-1" />
+            Editar Projeto
+          </Button>
+          {!["CONCLUIDO", "CANCELADO"].includes(project.status) && (
+            <>
+              <Button variant="outline" size="sm" className="text-[#28A745] border-[#28A745]/30 hover:bg-[#28A745]/10" onClick={() => setShowConcluirDialog(true)}>
+                <CheckCircle2 className="size-4 mr-1" />
+                Concluir
+              </Button>
+              <Button variant="outline" size="sm" className="text-[#DC3545] border-[#DC3545]/30 hover:bg-[#DC3545]/10" onClick={() => setShowCancelarDialog(true)}>
+                <Ban className="size-4 mr-1" />
+                Cancelar
+              </Button>
+            </>
+          )}
         </div>
       </div>
 
-      <Tabs defaultValue="resumo">
-        <div className="overflow-x-auto">
+      {/* Concluir confirmation dialog */}
+      <Dialog open={showConcluirDialog} onOpenChange={setShowConcluirDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Concluir Projeto</DialogTitle>
+            <DialogDescription>
+              Tem certeza que deseja marcar este projeto como concluido?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowConcluirDialog(false)}>Cancelar</Button>
+            <Button className="bg-[#28A745] hover:bg-[#28A745]/90" onClick={() => { alert("Em desenvolvimento"); setShowConcluirDialog(false) }}>Concluir Projeto</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Cancelar confirmation dialog */}
+      <Dialog open={showCancelarDialog} onOpenChange={setShowCancelarDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Cancelar Projeto</DialogTitle>
+            <DialogDescription>
+              Tem certeza? Esta acao nao pode ser desfeita.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowCancelarDialog(false)}>Voltar</Button>
+            <Button variant="destructive" onClick={() => { alert("Em desenvolvimento"); setShowCancelarDialog(false) }}>Cancelar Projeto</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Tabs defaultValue="resumo" className="flex flex-col min-h-0">
+        <div className="overflow-x-auto sticky top-0 z-20 bg-background pb-1">
           <TabsList className="inline-flex w-auto min-w-full lg:grid lg:grid-cols-9">
             <TabsTrigger value="resumo">Resumo</TabsTrigger>
             <TabsTrigger value="tarefas">Tarefas</TabsTrigger>
@@ -123,35 +185,35 @@ export function ProjectDetail({ projectId }: ProjectDetailProps) {
         </div>
 
         {/* ─── RESUMO ──────────────────────────────────────── */}
-        <TabsContent value="resumo" className="space-y-4">
+        <TabsContent value="resumo" className="space-y-4 overflow-y-auto max-h-[calc(100vh-16rem)]">
           <div className="grid gap-4 md:grid-cols-3">
             <Card>
               <CardContent className="pt-4">
-                <div className="text-sm text-muted-foreground">Progresso Geral</div>
+                <div className="text-sm text-[#666666]">Progresso Geral</div>
                 <div className="flex items-center gap-3 mt-2">
                   <Progress value={progress} className="h-3 flex-1" />
                   <span className="text-lg font-bold">{progress}%</span>
                 </div>
-                <p className="text-xs text-muted-foreground mt-1">{doneTasks}/{totalTasks} tarefas concluidas</p>
+                <p className="text-xs text-[#666666] mt-1">{doneTasks}/{totalTasks} tarefas concluidas</p>
               </CardContent>
             </Card>
             <Card>
               <CardContent className="pt-4">
-                <div className="text-sm text-muted-foreground">Valor Envolvido</div>
+                <div className="text-sm text-[#666666]">Valor Envolvido</div>
                 <div className="text-lg font-bold mt-1">{formatCurrency(project.valor_envolvido)}</div>
-                <p className="text-xs text-muted-foreground">Honorarios: {formatCurrency(project.valor_honorarios)}</p>
+                <p className="text-xs text-[#666666]">Honorarios: {formatCurrency(project.valor_honorarios)}</p>
               </CardContent>
             </Card>
             <Card>
               <CardContent className="pt-4">
-                <div className="text-sm text-muted-foreground">Periodo</div>
+                <div className="text-sm text-[#666666]">Periodo</div>
                 <div className="text-sm font-medium mt-1">
                   {project.data_inicio ? new Date(project.data_inicio).toLocaleDateString("pt-BR") : "\u2014"}
                   {" \u2192 "}
                   {project.data_prevista_conclusao ? new Date(project.data_prevista_conclusao).toLocaleDateString("pt-BR") : "\u2014"}
                 </div>
                 {project.data_conclusao_real && (
-                  <p className="text-xs text-emerald-600 mt-1">
+                  <p className="text-xs text-[#28A745] mt-1">
                     Concluido em {new Date(project.data_conclusao_real).toLocaleDateString("pt-BR")}
                   </p>
                 )}
@@ -162,15 +224,15 @@ export function ProjectDetail({ projectId }: ProjectDetailProps) {
           {(overdueTasks.length > 0 || upcomingMilestones.length > 0) && (
             <div className="space-y-2">
               {overdueTasks.length > 0 && (
-                <div className="flex items-center gap-2 rounded-lg bg-red-50 border border-red-200 p-3">
-                  <AlertTriangle className="size-4 text-red-600" />
-                  <span className="text-sm text-red-700">{overdueTasks.length} tarefa(s) atrasada(s)</span>
+                <div className="flex items-center gap-2 rounded-lg bg-[#DC3545]/10 border border-[#DC3545]/20 p-3">
+                  <AlertTriangle className="size-4 text-[#DC3545]" />
+                  <span className="text-sm text-[#DC3545]">{overdueTasks.length} tarefa(s) atrasada(s)</span>
                 </div>
               )}
               {upcomingMilestones.length > 0 && (
-                <div className="flex items-center gap-2 rounded-lg bg-blue-50 border border-blue-200 p-3">
-                  <Target className="size-4 text-blue-600" />
-                  <span className="text-sm text-blue-700">{upcomingMilestones.length} marco(s) pendente(s)</span>
+                <div className="flex items-center gap-2 rounded-lg bg-[#17A2B8]/10 border border-[#17A2B8]/20 p-3">
+                  <Target className="size-4 text-[#17A2B8]" />
+                  <span className="text-sm text-[#17A2B8]">{upcomingMilestones.length} marco(s) pendente(s)</span>
                 </div>
               )}
             </div>
@@ -188,9 +250,9 @@ export function ProjectDetail({ projectId }: ProjectDetailProps) {
               <CardHeader><CardTitle className="text-sm flex items-center gap-2"><Pin className="size-3" /> Notas Fixadas</CardTitle></CardHeader>
               <CardContent className="space-y-2">
                 {project.anotacoes.filter((n) => n.fixada).map((note) => (
-                  <div key={note.id} className="rounded border p-3 bg-amber-50/50">
+                  <div key={note.id} className="rounded border p-3 bg-[#C9A961]/10">
                     <TiptapViewer content={note.conteudo} />
-                    <p className="text-xs text-muted-foreground mt-2">
+                    <p className="text-xs text-[#666666] mt-2">
                       {note.user.name} - {new Date(note.created_at).toLocaleDateString("pt-BR")}
                     </p>
                   </div>
@@ -210,42 +272,42 @@ export function ProjectDetail({ projectId }: ProjectDetailProps) {
         </TabsContent>
 
         {/* ─── TAREFAS ─────────────────────────────────────── */}
-        <TabsContent value="tarefas">
+        <TabsContent value="tarefas" className="overflow-y-auto max-h-[calc(100vh-16rem)]">
           <TasksTab project={project} users={users || []} projectId={projectId} />
         </TabsContent>
 
         {/* ─── MARCOS ──────────────────────────────────────── */}
-        <TabsContent value="marcos">
+        <TabsContent value="marcos" className="overflow-y-auto max-h-[calc(100vh-16rem)]">
           <MilestonesTab project={project} projectId={projectId} />
         </TabsContent>
 
         {/* ─── FINANCEIRO ──────────────────────────────────── */}
-        <TabsContent value="financeiro">
+        <TabsContent value="financeiro" className="overflow-y-auto max-h-[calc(100vh-16rem)]">
           <FinanceiroTab project={project} projectId={projectId} />
         </TabsContent>
 
         {/* ─── COMUNICAÇÕES ────────────────────────────────── */}
-        <TabsContent value="comunicacoes">
+        <TabsContent value="comunicacoes" className="overflow-y-auto max-h-[calc(100vh-16rem)]">
           <ComunicacoesTab project={project} projectId={projectId} />
         </TabsContent>
 
         {/* ─── PROCESSOS ───────────────────────────────────── */}
-        <TabsContent value="processos">
+        <TabsContent value="processos" className="overflow-y-auto max-h-[calc(100vh-16rem)]">
           <ProcessosTab project={project} projectId={projectId} />
         </TabsContent>
 
         {/* ─── EQUIPE ──────────────────────────────────────── */}
-        <TabsContent value="equipe">
+        <TabsContent value="equipe" className="overflow-y-auto max-h-[calc(100vh-16rem)]">
           <TeamTab project={project} users={users || []} projectId={projectId} />
         </TabsContent>
 
         {/* ─── NOTAS ───────────────────────────────────────── */}
-        <TabsContent value="notas">
+        <TabsContent value="notas" className="overflow-y-auto max-h-[calc(100vh-16rem)]">
           <NotesTab project={project} projectId={projectId} />
         </TabsContent>
 
         {/* ─── ATIVIDADES ──────────────────────────────────── */}
-        <TabsContent value="atividades">
+        <TabsContent value="atividades" className="overflow-y-auto max-h-[calc(100vh-16rem)]">
           <ActivityTimeline projectId={projectId} showFilters groupByDate />
         </TabsContent>
       </Tabs>
@@ -262,7 +324,7 @@ function MilestonesTimeline({ marcos }: {
   const now = new Date()
 
   function getColor(m: { status: string; data_prevista?: Date | string | null }) {
-    if (m.status === "ALCANCADO") return { bg: "#38a169", ring: "ring-emerald-200" }
+    if (m.status === "ALCANCADO") return { bg: "#38a169", ring: "ring-[#28A745]/20" }
     if (m.status === "CANCELADO") return { bg: "#a0aec0", ring: "ring-gray-200" }
     if (m.data_prevista && new Date(m.data_prevista) < now && m.status === "PENDENTE") return { bg: "#e53e3e", ring: "ring-red-200" }
     if (m.data_prevista) {
@@ -298,7 +360,7 @@ function MilestonesTimeline({ marcos }: {
                     </div>
                     <div className="text-center max-w-[100px]">
                       <p className="text-[10px] font-medium leading-tight truncate">{m.titulo}</p>
-                      <p className="text-[9px] text-muted-foreground">
+                      <p className="text-[9px] text-[#666666]">
                         {m.status === "ALCANCADO" && m.data_alcancada
                           ? `Alcancado ${new Date(m.data_alcancada).toLocaleDateString("pt-BR")}`
                           : m.data_prevista ? new Date(m.data_prevista).toLocaleDateString("pt-BR") : "Sem data"}
@@ -314,12 +376,12 @@ function MilestonesTimeline({ marcos }: {
                       <Badge variant="outline" className="text-[10px]">{MILESTONE_IMPACT_LABELS[m.impacto]}</Badge>
                     </div>
                     {m.data_prevista && (
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-xs text-[#666666]">
                         Previsto: {new Date(m.data_prevista).toLocaleDateString("pt-BR")}
                       </p>
                     )}
                     {m.data_alcancada && (
-                      <p className="text-xs text-emerald-600">
+                      <p className="text-xs text-[#28A745]">
                         Alcancado: {new Date(m.data_alcancada).toLocaleDateString("pt-BR")}
                       </p>
                     )}
@@ -343,12 +405,22 @@ function TasksTab({ project, users, projectId }: { project: any; users: Array<{ 
   const [viewMode, setViewMode] = useState<"list" | "kanban">("list")
   const [showNewTask, setShowNewTask] = useState(false)
   const [newTaskPhaseId, setNewTaskPhaseId] = useState<string | null>(null)
+  const [showNewPhase, setShowNewPhase] = useState(false)
+  const [newPhaseTitulo, setNewPhaseTitulo] = useState("")
+  const [newPhaseDescricao, setNewPhaseDescricao] = useState("")
+  const [deleteTaskId, setDeleteTaskId] = useState<string | null>(null)
 
   const addTask = trpc.projects.addTask.useMutation({
     onSuccess: () => { utils.projects.getById.invalidate({ id: projectId }); setShowNewTask(false) },
   })
   const updateTaskStatus = trpc.projects.updateTaskStatus.useMutation({
     onSuccess: () => utils.projects.getById.invalidate({ id: projectId }),
+  })
+  const deleteTask = trpc.projects.deleteTask.useMutation({
+    onSuccess: () => { utils.projects.getById.invalidate({ id: projectId }); setDeleteTaskId(null) },
+  })
+  const addPhase = trpc.projects.addPhase.useMutation({
+    onSuccess: () => { utils.projects.getById.invalidate({ id: projectId }); setShowNewPhase(false); setNewPhaseTitulo(""); setNewPhaseDescricao("") },
   })
 
   const KANBAN_COLS = [
@@ -367,9 +439,46 @@ function TasksTab({ project, users, projectId }: { project: any; users: Array<{ 
           <Button size="sm" variant={viewMode === "list" ? "secondary" : "ghost"} onClick={() => setViewMode("list")}><LayoutList className="size-4 mr-1" /> Lista</Button>
           <Button size="sm" variant={viewMode === "kanban" ? "secondary" : "ghost"} onClick={() => setViewMode("kanban")}><Columns3 className="size-4 mr-1" /> Kanban</Button>
         </div>
-        <Button size="sm" onClick={() => { setShowNewTask(true); setNewTaskPhaseId(null) }}><Plus className="size-4 mr-1" /> Nova Tarefa</Button>
+        <div className="flex items-center gap-2">
+          <Button size="sm" variant="outline" onClick={() => setShowNewPhase(!showNewPhase)}><Plus className="size-4 mr-1" /> Nova Fase</Button>
+          <Button size="sm" onClick={() => { setShowNewTask(true); setNewTaskPhaseId(null) }}><Plus className="size-4 mr-1" /> Nova Tarefa</Button>
+        </div>
       </div>
+
+      {showNewPhase && (
+        <Card>
+          <CardContent className="pt-4 space-y-3">
+            <div className="grid grid-cols-2 gap-3">
+              <div><Label>Titulo da Fase *</Label><Input value={newPhaseTitulo} onChange={(e) => setNewPhaseTitulo(e.target.value)} placeholder="Ex: Analise inicial" /></div>
+              <div><Label>Descricao</Label><Input value={newPhaseDescricao} onChange={(e) => setNewPhaseDescricao(e.target.value)} placeholder="Descricao breve..." /></div>
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" size="sm" onClick={() => setShowNewPhase(false)}>Cancelar</Button>
+              <Button size="sm" disabled={addPhase.isPending || !newPhaseTitulo.trim()} onClick={() => addPhase.mutate({ project_id: projectId, titulo: newPhaseTitulo, descricao: newPhaseDescricao || null, ordem: project.etapas.length })}>
+                {addPhase.isPending && <Loader2 className="size-4 mr-1 animate-spin" />}Criar Fase
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       <NewTaskDialog open={showNewTask} onOpenChange={setShowNewTask} projectId={projectId} phaseId={newTaskPhaseId} phases={project.etapas} users={users} onSubmit={(data) => addTask.mutate(data)} isPending={addTask.isPending} />
+
+      {/* Delete task confirmation */}
+      <Dialog open={!!deleteTaskId} onOpenChange={() => setDeleteTaskId(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Excluir Tarefa</DialogTitle>
+            <DialogDescription>Tem certeza? Esta acao nao pode ser desfeita.</DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteTaskId(null)}>Cancelar</Button>
+            <Button variant="destructive" disabled={deleteTask.isPending} onClick={() => { if (deleteTaskId) deleteTask.mutate({ id: deleteTaskId }) }}>
+              {deleteTask.isPending && <Loader2 className="size-4 mr-1 animate-spin" />}Excluir
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       {viewMode === "list" ? (
         <div className="space-y-4">
           {project.etapas.map((phase: PhaseItem) => (
@@ -381,18 +490,18 @@ function TasksTab({ project, users, projectId }: { project: any; users: Array<{ 
                     <Badge variant="secondary" className="text-[10px]">{PROJECT_PHASE_STATUS_LABELS[phase.status]}</Badge>
                     <div className="flex items-center gap-1 ml-auto mr-2">
                       <Progress value={phase.percentual_conclusao} className="h-1.5 w-16" />
-                      <span className="text-xs text-muted-foreground">{phase.percentual_conclusao}%</span>
+                      <span className="text-xs text-[#666666]">{phase.percentual_conclusao}%</span>
                     </div>
                   </div>
                 </AccordionTrigger>
                 <AccordionContent className="px-4 pb-4">
                   <div className="space-y-2">
                     {phase.tarefas.length === 0 ? (
-                      <p className="text-sm text-muted-foreground text-center py-3">Nenhuma tarefa nesta etapa.</p>
+                      <p className="text-sm text-[#666666] text-center py-3">Nenhuma tarefa nesta etapa.</p>
                     ) : phase.tarefas.map((task) => (
-                      <TaskRow key={task.id} task={task} onStatusChange={(status) => updateTaskStatus.mutate({ id: task.id, status })} />
+                      <TaskRow key={task.id} task={task} onStatusChange={(status) => updateTaskStatus.mutate({ id: task.id, status })} onDelete={() => setDeleteTaskId(task.id)} />
                     ))}
-                    <Button variant="ghost" size="sm" className="w-full text-muted-foreground" onClick={() => { setNewTaskPhaseId(phase.id); setShowNewTask(true) }}>
+                    <Button variant="ghost" size="sm" className="w-full text-[#666666]" onClick={() => { setNewTaskPhaseId(phase.id); setShowNewTask(true) }}>
                       <Plus className="size-3 mr-1" /> Adicionar tarefa
                     </Button>
                   </div>
@@ -405,7 +514,7 @@ function TasksTab({ project, users, projectId }: { project: any; users: Array<{ 
               <CardHeader><CardTitle className="text-sm">Tarefas Avulsas</CardTitle></CardHeader>
               <CardContent className="space-y-2">
                 {project.tarefas.filter((t: TaskItem) => !t.phase).map((task: TaskItem) => (
-                  <TaskRow key={task.id} task={task} onStatusChange={(status) => updateTaskStatus.mutate({ id: task.id, status })} />
+                  <TaskRow key={task.id} task={task} onStatusChange={(status) => updateTaskStatus.mutate({ id: task.id, status })} onDelete={() => setDeleteTaskId(task.id)} />
                 ))}
               </CardContent>
             </Card>
@@ -442,25 +551,44 @@ interface TaskItem {
   _count: { comentarios: number; documentos: number }
 }
 
-function TaskRow({ task, onStatusChange }: { task: TaskItem; onStatusChange: (s: string) => void }) {
+function TaskRow({ task, onStatusChange, onDelete }: { task: TaskItem; onStatusChange: (s: string) => void; onDelete?: () => void }) {
   const isOverdue = task.data_limite && new Date(task.data_limite) < new Date() && !["CONCLUIDA", "CANCELADA"].includes(task.status)
   const checkDone = task.checklist.filter((c) => c.concluido).length
   return (
-    <div className={`flex items-center gap-3 rounded-lg border p-3 ${isOverdue ? "border-red-200 bg-red-50/50" : ""}`}>
+    <div className={`flex items-center gap-3 rounded-lg border p-3 ${isOverdue ? "border-[#DC3545]/20 bg-[#DC3545]/5" : ""}`}>
       <Checkbox checked={task.status === "CONCLUIDA"} onCheckedChange={(checked) => onStatusChange(checked ? "CONCLUIDA" : "A_FAZER")} />
       <div className="min-w-0 flex-1">
-        <p className={`text-sm font-medium ${task.status === "CONCLUIDA" ? "line-through text-muted-foreground" : ""}`}>{task.titulo}</p>
+        <p className={`text-sm font-medium ${task.status === "CONCLUIDA" ? "line-through text-[#666666]" : ""}`}>{task.titulo}</p>
         <div className="flex items-center gap-2 mt-1 flex-wrap">
           <Badge variant="secondary" className={`text-[10px] ${PROJECT_TASK_STATUS_COLORS[task.status] || ""}`}>{PROJECT_TASK_STATUS_LABELS[task.status]}</Badge>
           <Badge variant="outline" className="text-[10px]">{PROJECT_TASK_TYPE_LABELS[task.tipo]}</Badge>
-          {task.checklist.length > 0 && <span className="text-[10px] text-muted-foreground flex items-center gap-0.5"><ListTodo className="size-3" />{checkDone}/{task.checklist.length}</span>}
-          {task._count.comentarios > 0 && <span className="text-[10px] text-muted-foreground flex items-center gap-0.5"><MessageSquare className="size-3" />{task._count.comentarios}</span>}
+          {task.checklist.length > 0 && <span className="text-[10px] text-[#666666] flex items-center gap-0.5"><ListTodo className="size-3" />{checkDone}/{task.checklist.length}</span>}
+          {task._count.comentarios > 0 && <span className="text-[10px] text-[#666666] flex items-center gap-0.5"><MessageSquare className="size-3" />{task._count.comentarios}</span>}
         </div>
       </div>
       <div className="flex items-center gap-2 shrink-0">
-        {task.responsavel && <span className="text-xs text-muted-foreground">{task.responsavel.name}</span>}
-        {task.data_limite && <span className={`text-xs ${isOverdue ? "text-red-600 font-medium" : "text-muted-foreground"}`}>{new Date(task.data_limite).toLocaleDateString("pt-BR")}</span>}
+        {task.responsavel && <span className="text-xs text-[#666666]">{task.responsavel.name}</span>}
+        {task.data_limite && <span className={`text-xs ${isOverdue ? "text-[#DC3545] font-medium" : "text-[#666666]"}`}>{new Date(task.data_limite).toLocaleDateString("pt-BR")}</span>}
         <Badge variant="secondary" className={`text-[10px] ${PRIORITY_COLORS[task.prioridade] || ""}`}>{PRIORITY_LABELS[task.prioridade]?.[0]}</Badge>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon" className="size-7"><MoreHorizontal className="size-4" /></Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={() => alert("Em desenvolvimento")}>
+              <Pencil className="mr-2 size-4" />Editar
+            </DropdownMenuItem>
+            {task.status !== "CONCLUIDA" && (
+              <DropdownMenuItem onClick={() => onStatusChange("CONCLUIDA")}>
+                <CheckCircle2 className="mr-2 size-4" />Concluir
+              </DropdownMenuItem>
+            )}
+            <DropdownMenuSeparator />
+            <DropdownMenuItem className="text-[#DC3545] focus:text-[#DC3545]" onClick={() => onDelete?.()}>
+              <Trash2 className="mr-2 size-4" />Excluir
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </div>
   )
@@ -470,16 +598,16 @@ function TaskCard({ task }: { task: TaskItem }) {
   const isOverdue = task.data_limite && new Date(task.data_limite) < new Date() && !["CONCLUIDA", "CANCELADA"].includes(task.status)
   const checkDone = task.checklist.filter((c) => c.concluido).length
   return (
-    <Card className={`cursor-pointer hover:shadow-sm ${isOverdue ? "border-red-200" : ""}`}>
+    <Card className={`cursor-pointer hover:shadow-sm ${isOverdue ? "border-[#DC3545]/20" : ""}`}>
       <CardContent className="p-2 space-y-1">
         <p className="text-xs font-medium">{task.titulo}</p>
         <div className="flex items-center gap-1 flex-wrap">
           <Badge variant="secondary" className={`text-[9px] ${PRIORITY_COLORS[task.prioridade] || ""}`}>{PRIORITY_LABELS[task.prioridade]?.[0]}</Badge>
-          {task.checklist.length > 0 && <span className="text-[9px] text-muted-foreground">{checkDone}/{task.checklist.length}</span>}
+          {task.checklist.length > 0 && <span className="text-[9px] text-[#666666]">{checkDone}/{task.checklist.length}</span>}
         </div>
         <div className="flex items-center justify-between">
-          {task.responsavel && <span className="text-[9px] text-muted-foreground">{task.responsavel.name}</span>}
-          {task.data_limite && <span className={`text-[9px] ${isOverdue ? "text-red-600" : "text-muted-foreground"}`}>{new Date(task.data_limite).toLocaleDateString("pt-BR")}</span>}
+          {task.responsavel && <span className="text-[9px] text-[#666666]">{task.responsavel.name}</span>}
+          {task.data_limite && <span className={`text-[9px] ${isOverdue ? "text-[#DC3545]" : "text-[#666666]"}`}>{new Date(task.data_limite).toLocaleDateString("pt-BR")}</span>}
         </div>
       </CardContent>
     </Card>
@@ -489,8 +617,8 @@ function TaskCard({ task }: { task: TaskItem }) {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function NewTaskDialog({ open, onOpenChange, projectId, phaseId, phases, users, onSubmit, isPending }: { open: boolean; onOpenChange: (o: boolean) => void; projectId: string; phaseId: string | null; phases: Array<{ id: string; titulo: string }>; users: Array<{ id: string; name: string }>; onSubmit: (d: any) => void; isPending: boolean }) {
   const [titulo, setTitulo] = useState(""); const [descricao, setDescricao] = useState(""); const [tipo, setTipo] = useState("OUTRO")
-  const [prioridade, setPrioridade] = useState("MEDIA"); const [responsavelId, setResponsavelId] = useState(""); const [selectedPhaseId, setSelectedPhaseId] = useState(phaseId || ""); const [dataLimite, setDataLimite] = useState("")
-  const handleSubmit = () => { if (!titulo.trim()) return; onSubmit({ project_id: projectId, titulo, descricao: descricao || null, tipo, prioridade, responsavel_id: responsavelId || null, phase_id: selectedPhaseId || null, data_limite: dataLimite || null }); setTitulo(""); setDescricao(""); setTipo("OUTRO"); setPrioridade("MEDIA"); setResponsavelId(""); setDataLimite("") }
+  const [prioridade, setPrioridade] = useState("MEDIA"); const [responsavelId, setResponsavelId] = useState(""); const [selectedPhaseId, setSelectedPhaseId] = useState(phaseId || "__none__"); const [dataLimite, setDataLimite] = useState("")
+  const handleSubmit = () => { if (!titulo.trim()) return; onSubmit({ project_id: projectId, titulo, descricao: descricao || null, tipo, prioridade, responsavel_id: responsavelId || null, phase_id: selectedPhaseId === "__none__" ? null : selectedPhaseId || null, data_limite: dataLimite || null }); setTitulo(""); setDescricao(""); setTipo("OUTRO"); setPrioridade("MEDIA"); setResponsavelId(""); setDataLimite("") }
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg">
@@ -503,7 +631,7 @@ function NewTaskDialog({ open, onOpenChange, projectId, phaseId, phases, users, 
             <div><Label>Prioridade</Label><Select value={prioridade} onValueChange={setPrioridade}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{Object.entries(PRIORITY_LABELS).map(([v, l]) => <SelectItem key={v} value={v}>{l}</SelectItem>)}</SelectContent></Select></div>
           </div>
           <div className="grid grid-cols-2 gap-3">
-            <div><Label>Etapa</Label><Select value={selectedPhaseId} onValueChange={setSelectedPhaseId}><SelectTrigger><SelectValue placeholder="Avulsa" /></SelectTrigger><SelectContent><SelectItem value="">Avulsa (sem etapa)</SelectItem>{phases.map((p) => <SelectItem key={p.id} value={p.id}>{p.titulo}</SelectItem>)}</SelectContent></Select></div>
+            <div><Label>Etapa</Label><Select value={selectedPhaseId} onValueChange={setSelectedPhaseId}><SelectTrigger><SelectValue placeholder="Avulsa" /></SelectTrigger><SelectContent><SelectItem value="__none__">Avulsa (sem etapa)</SelectItem>{phases.map((p) => <SelectItem key={p.id} value={p.id}>{p.titulo}</SelectItem>)}</SelectContent></Select></div>
             <div><Label>Responsavel</Label><Select value={responsavelId} onValueChange={setResponsavelId}><SelectTrigger><SelectValue placeholder="Selecionar..." /></SelectTrigger><SelectContent>{users.map((u) => <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>)}</SelectContent></Select></div>
           </div>
           <div><Label>Prazo</Label><Input type="date" value={dataLimite} onChange={(e) => setDataLimite(e.target.value)} /></div>
@@ -568,7 +696,7 @@ function MilestonesTab({ project, projectId }: { project: any; projectId: string
       )}
 
       {project.marcos.length === 0 ? (
-        <p className="text-sm text-muted-foreground text-center py-8">Nenhum marco definido.</p>
+        <p className="text-sm text-[#666666] text-center py-8">Nenhum marco definido.</p>
       ) : viewMode === "timeline" ? (
         <Card>
           <CardContent className="pt-6 pb-4">
@@ -596,15 +724,16 @@ function MilestonesTab({ project, projectId }: { project: any; projectId: string
             <TableBody>
               {project.marcos.map((m: MilestoneItem) => (
                 <TableRow key={m.id}>
-                  <TableCell><div><p className="font-medium text-sm">{m.titulo}</p>{m.descricao && <p className="text-xs text-muted-foreground">{m.descricao}</p>}</div></TableCell>
+                  <TableCell><div><p className="font-medium text-sm">{m.titulo}</p>{m.descricao && <p className="text-xs text-[#666666]">{m.descricao}</p>}</div></TableCell>
                   <TableCell><Badge variant="secondary" className="text-[10px]">{MILESTONE_STATUS_LABELS[m.status]}</Badge></TableCell>
                   <TableCell><Badge variant="outline" className="text-[10px]">{MILESTONE_IMPACT_LABELS[m.impacto]}</Badge></TableCell>
                   <TableCell className="text-sm">{m.data_prevista ? new Date(m.data_prevista).toLocaleDateString("pt-BR") : "\u2014"}</TableCell>
-                  <TableCell className="text-sm text-emerald-600">{m.data_alcancada ? new Date(m.data_alcancada).toLocaleDateString("pt-BR") : "\u2014"}</TableCell>
+                  <TableCell className="text-sm text-[#28A745]">{m.data_alcancada ? new Date(m.data_alcancada).toLocaleDateString("pt-BR") : "\u2014"}</TableCell>
                   <TableCell>
                     <div className="flex gap-1">
                       {m.status === "PENDENTE" && <Button size="sm" variant="outline" onClick={() => updateMilestone.mutate({ id: m.id, status: "ALCANCADO", notificar_cliente: m.notificar_cliente })}><CheckCircle2 className="size-3" /></Button>}
-                      <Button size="icon" variant="ghost" className="size-7 text-red-500" onClick={() => deleteMilestone.mutate({ id: m.id })}><Trash2 className="size-3" /></Button>
+                      <Button size="icon" variant="ghost" className="size-7" onClick={() => alert("Em desenvolvimento")}><Pencil className="size-3" /></Button>
+                      <Button size="icon" variant="ghost" className="size-7 text-[#DC3545]" onClick={() => deleteMilestone.mutate({ id: m.id })}><Trash2 className="size-3" /></Button>
                     </div>
                   </TableCell>
                 </TableRow>
@@ -620,26 +749,42 @@ function MilestonesTab({ project, projectId }: { project: any; projectId: string
 interface MilestoneItem { id: string; titulo: string; descricao?: string | null; status: string; impacto: string; data_prevista?: Date | string | null; data_alcancada?: Date | string | null; notificar_cliente: boolean }
 
 function MilestoneCard({ m, onAchieve, onDelete }: { m: MilestoneItem; onAchieve: () => void; onDelete: () => void }) {
-  const SC: Record<string, string> = { PENDENTE: "border-l-gray-400", ALCANCADO: "border-l-emerald-500", ATRASADO: "border-l-red-500", CANCELADO: "border-l-gray-300" }
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const SC: Record<string, string> = { PENDENTE: "border-l-gray-400", ALCANCADO: "border-l-[#28A745]", ATRASADO: "border-l-[#DC3545]", CANCELADO: "border-l-gray-300" }
   return (
-    <Card className={`border-l-4 ${SC[m.status] || ""}`}>
-      <CardContent className="pt-4">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-2"><h4 className="font-medium">{m.titulo}</h4><Badge variant="secondary" className="text-[10px]">{MILESTONE_STATUS_LABELS[m.status]}</Badge><Badge variant="outline" className="text-[10px]">{MILESTONE_IMPACT_LABELS[m.impacto]}</Badge></div>
-            {m.descricao && <p className="text-sm text-muted-foreground mt-1">{m.descricao}</p>}
-            <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
-              {m.data_prevista && <span className="flex items-center gap-1"><Calendar className="size-3" />{new Date(m.data_prevista).toLocaleDateString("pt-BR")}</span>}
-              {m.data_alcancada && <span className="text-emerald-600">Alcancado em {new Date(m.data_alcancada).toLocaleDateString("pt-BR")}</span>}
+    <>
+      <Card className={`border-l-4 ${SC[m.status] || ""}`}>
+        <CardContent className="pt-4">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <div className="flex items-center gap-2"><h4 className="font-medium">{m.titulo}</h4><Badge variant="secondary" className="text-[10px]">{MILESTONE_STATUS_LABELS[m.status]}</Badge><Badge variant="outline" className="text-[10px]">{MILESTONE_IMPACT_LABELS[m.impacto]}</Badge></div>
+              {m.descricao && <p className="text-sm text-[#666666] mt-1">{m.descricao}</p>}
+              <div className="flex items-center gap-3 mt-2 text-xs text-[#666666]">
+                {m.data_prevista && <span className="flex items-center gap-1"><Calendar className="size-3" />{new Date(m.data_prevista).toLocaleDateString("pt-BR")}</span>}
+                {m.data_alcancada && <span className="text-[#28A745]">Alcancado em {new Date(m.data_alcancada).toLocaleDateString("pt-BR")}</span>}
+              </div>
+            </div>
+            <div className="flex gap-1 shrink-0">
+              {m.status === "PENDENTE" && <Button size="sm" variant="outline" onClick={onAchieve}><CheckCircle2 className="size-3 mr-1" />Marcar Alcancado</Button>}
+              <Button size="icon" variant="ghost" className="size-7" onClick={() => alert("Em desenvolvimento")}><Pencil className="size-3" /></Button>
+              <Button size="icon" variant="ghost" className="size-7 text-[#DC3545]" onClick={() => setShowDeleteConfirm(true)}><Trash2 className="size-3" /></Button>
             </div>
           </div>
-          <div className="flex gap-1 shrink-0">
-            {m.status === "PENDENTE" && <Button size="sm" variant="outline" onClick={onAchieve}><CheckCircle2 className="size-3 mr-1" />Alcancado</Button>}
-            <Button size="icon" variant="ghost" className="size-7 text-red-500" onClick={onDelete}><Trash2 className="size-3" /></Button>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
+        </CardContent>
+      </Card>
+      <Dialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Excluir Marco</DialogTitle>
+            <DialogDescription>Tem certeza? Esta acao nao pode ser desfeita.</DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowDeleteConfirm(false)}>Cancelar</Button>
+            <Button variant="destructive" onClick={() => { onDelete(); setShowDeleteConfirm(false) }}>Excluir</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   )
 }
 
@@ -687,35 +832,39 @@ function FinanceiroTab({ project, projectId }: { project: any; projectId: string
 
   return (
     <div className="space-y-4">
+      <div className="flex justify-end gap-2">
+        <Button size="sm" variant="outline" onClick={() => alert("Em desenvolvimento")}><Receipt className="size-4 mr-1" />Novo Honorario</Button>
+      </div>
+
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <Card>
           <CardContent className="pt-4">
-            <div className="flex items-center gap-2 text-sm text-muted-foreground"><DollarSign className="size-4" />Valor da Operacao</div>
+            <div className="flex items-center gap-2 text-sm text-[#666666]"><DollarSign className="size-4" />Valor da Operacao</div>
             <div className="text-xl font-bold mt-1">{formatCurrency(project.valor_envolvido)}</div>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="pt-4">
-            <div className="text-sm text-muted-foreground">Honorarios</div>
+            <div className="text-sm text-[#666666]">Honorarios</div>
             <div className="text-xl font-bold mt-1">{formatCurrency(project.valor_honorarios)}</div>
             <Progress value={honorariosPrev > 0 ? 0 : 0} className="h-1.5 mt-2" />
-            <p className="text-xs text-muted-foreground mt-1">Previsto (recebimento a implementar)</p>
+            <p className="text-xs text-[#666666] mt-1">Previsto (recebimento a implementar)</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="pt-4">
-            <div className="flex items-center gap-2 text-sm text-muted-foreground"><Clock className="size-4" />Horas Investidas</div>
+            <div className="flex items-center gap-2 text-sm text-[#666666]"><Clock className="size-4" />Horas Investidas</div>
             <div className="text-xl font-bold mt-1">{totalHoras.toFixed(1)}h</div>
-            <p className="text-xs text-muted-foreground mt-1">Custo interno: {formatCurrency(custoInterno)} (R$ {VALOR_HORA_DEFAULT}/h)</p>
+            <p className="text-xs text-[#666666] mt-1">Custo interno: {formatCurrency(custoInterno)} (R$ {VALOR_HORA_DEFAULT}/h)</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="pt-4">
-            <div className="text-sm text-muted-foreground">Resultado</div>
-            <div className={`text-xl font-bold mt-1 ${resultado >= 0 ? "text-emerald-600" : "text-red-600"}`}>
+            <div className="text-sm text-[#666666]">Resultado</div>
+            <div className={`text-xl font-bold mt-1 ${resultado >= 0 ? "text-[#28A745]" : "text-[#DC3545]"}`}>
               {formatCurrency(resultado)}
             </div>
-            <p className="text-xs text-muted-foreground mt-1">Honorarios - Custos - Horas</p>
+            <p className="text-xs text-[#666666] mt-1">Honorarios - Custos - Horas</p>
           </CardContent>
         </Card>
       </div>
@@ -739,15 +888,15 @@ function FinanceiroTab({ project, projectId }: { project: any; projectId: string
                       return (
                         <div key={step} className="flex items-center flex-1">
                           <div className="flex flex-col items-center flex-1">
-                            <div className={`size-8 rounded-full flex items-center justify-center text-xs font-bold ${isActive ? "bg-emerald-500 text-white" : "bg-gray-200 text-gray-500"} ${isCurrent ? "ring-4 ring-emerald-200" : ""}`}>
+                            <div className={`size-8 rounded-full flex items-center justify-center text-xs font-bold ${isActive ? "bg-[#28A745] text-white" : "bg-gray-200 text-gray-500"} ${isCurrent ? "ring-4 ring-[#28A745]/20" : ""}`}>
                               {idx + 1}
                             </div>
-                            <p className={`text-[10px] mt-1 text-center ${isActive ? "text-emerald-700 font-medium" : "text-muted-foreground"}`}>
+                            <p className={`text-[10px] mt-1 text-center ${isActive ? "text-[#28A745] font-medium" : "text-[#666666]"}`}>
                               {ALVARA_LABELS[step]}
                             </p>
                           </div>
                           {idx < ALVARA_STEPS.length - 1 && (
-                            <div className={`h-0.5 flex-1 ${idx < currentIdx ? "bg-emerald-500" : "bg-gray-200"}`} />
+                            <div className={`h-0.5 flex-1 ${idx < currentIdx ? "bg-[#28A745]" : "bg-gray-200"}`} />
                           )}
                         </div>
                       )
@@ -783,7 +932,7 @@ function FinanceiroTab({ project, projectId }: { project: any; projectId: string
           )}
 
           {!expenses || expenses.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-4">Nenhuma despesa registrada.</p>
+            <p className="text-sm text-[#666666] text-center py-4">Nenhuma despesa registrada.</p>
           ) : (
             <>
               <Table>
@@ -804,7 +953,7 @@ function FinanceiroTab({ project, projectId }: { project: any; projectId: string
                       <TableCell><Badge variant="secondary" className="text-[10px]">{EXPENSE_CATEGORY_LABELS[e.categoria] || e.categoria}</Badge></TableCell>
                       <TableCell className="text-sm">{new Date(e.data).toLocaleDateString("pt-BR")}</TableCell>
                       <TableCell className="text-right font-mono text-sm">{formatCurrency(e.valor)}</TableCell>
-                      <TableCell><Button size="icon" variant="ghost" className="size-7 text-red-500" onClick={() => deleteExpense.mutate({ id: e.id })}><Trash2 className="size-3" /></Button></TableCell>
+                      <TableCell><Button size="icon" variant="ghost" className="size-7 text-[#DC3545]" onClick={() => deleteExpense.mutate({ id: e.id })}><Trash2 className="size-3" /></Button></TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -827,7 +976,7 @@ function FinanceiroTab({ project, projectId }: { project: any; projectId: string
 function ComunicacoesTab({ project, projectId }: { project: any; projectId: string }) {
   const utils = trpc.useUtils()
   const [showModal, setShowModal] = useState<"telefonema" | "email" | "reuniao" | null>(null)
-  const [filterStakeholder, setFilterStakeholder] = useState("")
+  const [filterStakeholder, setFilterStakeholder] = useState("__all__")
   const [desc, setDesc] = useState(""); const [resultado, setResultado] = useState(""); const [duracao, setDuracao] = useState("")
 
   const addComm = trpc.projects.addCommunication.useMutation({
@@ -841,7 +990,7 @@ function ComunicacoesTab({ project, projectId }: { project: any; projectId: stri
   )
 
   const COMM_ICONS: Record<string, typeof Phone> = { TELEFONEMA: Phone, EMAIL: Mail, REUNIAO: Users, NEGOCIACAO: Target }
-  const COMM_COLORS: Record<string, string> = { TELEFONEMA: "bg-green-100 text-green-700", EMAIL: "bg-blue-100 text-blue-700", REUNIAO: "bg-purple-100 text-purple-700", NEGOCIACAO: "bg-amber-100 text-amber-700" }
+  const COMM_COLORS: Record<string, string> = { TELEFONEMA: "bg-[#28A745]/10 text-[#28A745]", EMAIL: "bg-[#17A2B8]/10 text-[#17A2B8]", REUNIAO: "bg-[#C9A961]/10 text-[#C9A961]", NEGOCIACAO: "bg-[#C9A961]/10 text-[#C9A961]" }
   const COMM_LABELS: Record<string, string> = { TELEFONEMA: "Telefonema", EMAIL: "E-mail", REUNIAO: "Reuniao", NEGOCIACAO: "Negociacao" }
 
   const tipoMap: Record<string, string> = { telefonema: "TELEFONEMA", email: "EMAIL", reuniao: "REUNIAO" }
@@ -855,7 +1004,7 @@ function ComunicacoesTab({ project, projectId }: { project: any; projectId: stri
             <Select value={filterStakeholder} onValueChange={setFilterStakeholder}>
               <SelectTrigger className="w-[200px]"><SelectValue placeholder="Filtrar stakeholder" /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Todos</SelectItem>
+                <SelectItem value="__all__">Todos</SelectItem>
                 {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                 {project.stakeholders.map((s: any) => <SelectItem key={s.id} value={s.person.nome}>{s.person.nome}</SelectItem>)}
               </SelectContent>
@@ -888,12 +1037,12 @@ function ComunicacoesTab({ project, projectId }: { project: any; projectId: stri
       </Dialog>
 
       {commActivities.length === 0 ? (
-        <p className="text-sm text-muted-foreground text-center py-8">Nenhuma comunicacao registrada.</p>
+        <p className="text-sm text-[#666666] text-center py-8">Nenhuma comunicacao registrada.</p>
       ) : (
         <div className="relative pl-6 space-y-0">
           <div className="absolute left-2 top-0 bottom-0 w-px bg-border" />
           {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-          {commActivities.filter((a: any) => !filterStakeholder || a.descricao.toLowerCase().includes(filterStakeholder.toLowerCase())).map((a: any) => {
+          {commActivities.filter((a: any) => filterStakeholder === "__all__" || a.descricao.toLowerCase().includes(filterStakeholder.toLowerCase())).map((a: any) => {
             const Icon = COMM_ICONS[a.tipo] || MessageSquare
             return (
               <div key={a.id} className="relative pb-4">
@@ -903,12 +1052,12 @@ function ComunicacoesTab({ project, projectId }: { project: any; projectId: stri
                 <div className="rounded-lg border p-3 ml-4">
                   <div className="flex items-center gap-2 mb-1">
                     <Badge variant="secondary" className="text-[10px]">{COMM_LABELS[a.tipo] || a.tipo}</Badge>
-                    <span className="text-xs text-muted-foreground">{new Date(a.data).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "2-digit", hour: "2-digit", minute: "2-digit" })}</span>
-                    <span className="text-xs text-muted-foreground">por {a.user.name}</span>
+                    <span className="text-xs text-[#666666]">{new Date(a.data).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "2-digit", hour: "2-digit", minute: "2-digit" })}</span>
+                    <span className="text-xs text-[#666666]">por {a.user.name}</span>
                   </div>
                   <p className="text-sm">{a.descricao}</p>
-                  {a.resultado && <p className="text-xs text-muted-foreground mt-1">Resultado: {a.resultado}</p>}
-                  {a.duracao_minutos && <p className="text-xs text-muted-foreground">Duracao: {a.duracao_minutos} min</p>}
+                  {a.resultado && <p className="text-xs text-[#666666] mt-1">Resultado: {a.resultado}</p>}
+                  {a.duracao_minutos && <p className="text-xs text-[#666666]">Duracao: {a.duracao_minutos} min</p>}
                 </div>
               </div>
             )
@@ -949,9 +1098,9 @@ function ProcessosTab({ project, projectId }: { project: any; projectId: string 
       {showLink && (
         <Card>
           <CardContent className="pt-4">
-            <p className="text-sm text-muted-foreground mb-3">Processos ativos do cliente {project.cliente.nome}:</p>
+            <p className="text-sm text-[#666666] mb-3">Processos ativos do cliente {project.cliente.nome}:</p>
             {!availableCases || availableCases.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-4">Nenhum processo disponivel para vincular.</p>
+              <p className="text-sm text-[#666666] text-center py-4">Nenhum processo disponivel para vincular.</p>
             ) : (
               <div className="space-y-2">
                 {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
@@ -974,7 +1123,7 @@ function ProcessosTab({ project, projectId }: { project: any; projectId: string 
         <CardHeader><CardTitle className="text-sm">Processos Vinculados ({project.processos.length})</CardTitle></CardHeader>
         <CardContent>
           {project.processos.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-4">Nenhum processo vinculado.</p>
+            <p className="text-sm text-[#666666] text-center py-4">Nenhum processo vinculado.</p>
           ) : (
             <div className="space-y-2">
               {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
@@ -987,7 +1136,7 @@ function ProcessosTab({ project, projectId }: { project: any; projectId: string 
                       <div className="flex gap-2 mt-1">
                         <Badge variant="secondary" className="text-[10px]">{CASE_TYPE_LABELS[c.tipo] || c.tipo}</Badge>
                         <Badge variant="secondary" className="text-[10px]">{CASE_STATUS_LABELS[c.status]}</Badge>
-                        {c.advogado_responsavel && <span className="text-[10px] text-muted-foreground">{c.advogado_responsavel.name}</span>}
+                        {c.advogado_responsavel && <span className="text-[10px] text-[#666666]">{c.advogado_responsavel.name}</span>}
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
@@ -996,7 +1145,7 @@ function ProcessosTab({ project, projectId }: { project: any; projectId: string 
                           {new Date(nextDeadline.data_limite).toLocaleDateString("pt-BR")}
                         </span>
                       )}
-                      <ChevronRight className="size-3 text-muted-foreground" />
+                      <ChevronRight className="size-3 text-[#666666]" />
                     </div>
                   </Link>
                 )
@@ -1035,14 +1184,14 @@ function TeamTab({ project, users, projectId }: { project: any; users: Array<{ i
             </div>
           )}
           {project.equipe.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-4">Nenhum membro na equipe.</p>
+            <p className="text-sm text-[#666666] text-center py-4">Nenhum membro na equipe.</p>
           ) : (
             <div className="space-y-2">
               {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
               {project.equipe.map((m: any) => (
                 <div key={m.id} className="flex items-center justify-between rounded border p-3">
-                  <div className="flex items-center gap-3"><div className="size-8 rounded-full bg-primary/10 flex items-center justify-center"><User className="size-4 text-primary" /></div><div><p className="text-sm font-medium">{m.user.name}</p>{m.user.email && <p className="text-xs text-muted-foreground">{m.user.email}</p>}</div></div>
-                  <div className="flex items-center gap-2"><Badge variant="secondary" className="text-[10px]">{PROJECT_TEAM_ROLE_LABELS[m.role]}</Badge><Button size="icon" variant="ghost" className="size-7 text-red-500" onClick={() => removeMember.mutate({ id: m.id })}><Trash2 className="size-3" /></Button></div>
+                  <div className="flex items-center gap-3"><div className="size-8 rounded-full bg-primary/10 flex items-center justify-center"><User className="size-4 text-primary" /></div><div><p className="text-sm font-medium">{m.user.name}</p>{m.user.email && <p className="text-xs text-[#666666]">{m.user.email}</p>}</div></div>
+                  <div className="flex items-center gap-2"><Badge variant="secondary" className="text-[10px]">{PROJECT_TEAM_ROLE_LABELS[m.role]}</Badge><Button size="icon" variant="ghost" className="size-7 text-[#DC3545]" onClick={() => removeMember.mutate({ id: m.id })}><Trash2 className="size-3" /></Button></div>
                 </div>
               ))}
             </div>
@@ -1052,11 +1201,11 @@ function TeamTab({ project, users, projectId }: { project: any; users: Array<{ i
       <Card>
         <CardHeader><CardTitle className="text-sm">Stakeholders ({project.stakeholders.length})</CardTitle></CardHeader>
         <CardContent>
-          {project.stakeholders.length === 0 ? <p className="text-sm text-muted-foreground text-center py-4">Nenhum stakeholder registrado.</p> : (
+          {project.stakeholders.length === 0 ? <p className="text-sm text-[#666666] text-center py-4">Nenhum stakeholder registrado.</p> : (
             <div className="space-y-2">
               {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
               {project.stakeholders.map((s: any) => (
-                <div key={s.id} className="flex items-center justify-between rounded border p-3"><div><p className="text-sm font-medium">{s.person.nome}</p><p className="text-xs text-muted-foreground">{s.person.tipo}</p></div><Badge variant="secondary" className="text-[10px]">{STAKEHOLDER_ROLE_LABELS[s.role]}</Badge></div>
+                <div key={s.id} className="flex items-center justify-between rounded border p-3"><div><p className="text-sm font-medium">{s.person.nome}</p><p className="text-xs text-[#666666]">{s.person.tipo}</p></div><Badge variant="secondary" className="text-[10px]">{STAKEHOLDER_ROLE_LABELS[s.role]}</Badge></div>
               ))}
             </div>
           )}
@@ -1094,12 +1243,12 @@ function NotesTab({ project, projectId }: { project: any; projectId: string }) {
       </Card>
 
       {project.anotacoes.length === 0 ? (
-        <p className="text-sm text-muted-foreground text-center py-8">Nenhuma anotacao.</p>
+        <p className="text-sm text-[#666666] text-center py-8">Nenhuma anotacao.</p>
       ) : (
         <div className="space-y-3">
           {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
           {project.anotacoes.map((note: any) => (
-            <Card key={note.id} className={note.fixada ? "border-amber-200 bg-amber-50/30" : ""}>
+            <Card key={note.id} className={note.fixada ? "border-[#C9A961]/20 bg-[#C9A961]/5" : ""}>
               <CardContent className="pt-4">
                 {editingId === note.id ? (
                   <div>
@@ -1115,18 +1264,18 @@ function NotesTab({ project, projectId }: { project: any; projectId: string }) {
                       <TiptapViewer content={note.conteudo} />
                     </div>
                     <div className="flex gap-1 shrink-0">
-                      <Button size="icon" variant="ghost" className={`size-7 ${note.fixada ? "text-amber-600" : ""}`} onClick={() => updateNote.mutate({ id: note.id, fixada: !note.fixada })}><Pin className="size-3" /></Button>
+                      <Button size="icon" variant="ghost" className={`size-7 ${note.fixada ? "text-[#C9A961]" : ""}`} onClick={() => updateNote.mutate({ id: note.id, fixada: !note.fixada })}><Pin className="size-3" /></Button>
                       <Button size="icon" variant="ghost" className="size-7" onClick={() => { setEditingId(note.id); setEditContent(note.conteudo) }}><Pencil className="size-3" /></Button>
-                      <Button size="icon" variant="ghost" className="size-7 text-red-500" onClick={() => deleteNote.mutate({ id: note.id })}><Trash2 className="size-3" /></Button>
+                      <Button size="icon" variant="ghost" className="size-7 text-[#DC3545]" onClick={() => deleteNote.mutate({ id: note.id })}><Trash2 className="size-3" /></Button>
                     </div>
                   </div>
                 )}
                 <div className="flex items-center gap-2 mt-2">
                   <div className="size-5 rounded-full bg-primary/10 flex items-center justify-center"><User className="size-3 text-primary" /></div>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-xs text-[#666666]">
                     {note.user.name} - {new Date(note.created_at).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "2-digit", hour: "2-digit", minute: "2-digit" })}
                   </p>
-                  {note.fixada && <Pin className="size-3 text-amber-500" />}
+                  {note.fixada && <Pin className="size-3 text-[#C9A961]" />}
                 </div>
               </CardContent>
             </Card>

@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { Switch } from "@/components/ui/switch"
-import { ScrollArea } from "@/components/ui/scroll-area"
 import {
   Select,
   SelectContent,
@@ -114,7 +113,7 @@ export function ConfeccaoSidebar({
   )
 
   return (
-    <ScrollArea className="h-full">
+    <div className="h-full flex flex-col min-h-0 overflow-y-auto">
       <div className="space-y-4 p-4">
         {/* Context Binding */}
         <div className="space-y-2">
@@ -159,7 +158,7 @@ export function ConfeccaoSidebar({
               Contexto Carregado
             </CollapsibleTrigger>
             <CollapsibleContent>
-              <div className="mt-2 rounded border p-2 text-xs space-y-1 bg-muted/50">
+              <div className="mt-2 rounded border p-2 text-xs space-y-1 bg-[#F7F3F1]">
                 {caseContext && (
                   <>
                     <p><strong>Processo:</strong> {caseContext.numero_processo}</p>
@@ -193,7 +192,7 @@ export function ConfeccaoSidebar({
         {/* Quick Actions */}
         {Object.entries(DOC_ACTIONS).map(([group, actions]) => (
           <div key={group}>
-            <p className="text-[10px] font-semibold uppercase text-muted-foreground mb-1">{group}</p>
+            <p className="text-[10px] font-semibold uppercase text-[#666666] mb-1">{group}</p>
             <div className="space-y-0.5">
               {actions.map((action) => {
                 const Icon = action.icon
@@ -277,6 +276,6 @@ export function ConfeccaoSidebar({
           </CollapsibleContent>
         </Collapsible>
       </div>
-    </ScrollArea>
+    </div>
   )
 }

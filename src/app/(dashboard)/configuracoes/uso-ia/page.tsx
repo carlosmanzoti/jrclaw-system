@@ -33,18 +33,20 @@ export default function UsoIAPage() {
 
   if (isLoading) {
     return (
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Uso de IA</h1>
-          <p className="text-muted-foreground">Carregando dados de uso...</p>
-        </div>
-        <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-4">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <Card key={i}>
-              <CardHeader className="pb-2"><Skeleton className="h-4 w-24" /></CardHeader>
-              <CardContent><Skeleton className="h-8 w-16" /></CardContent>
-            </Card>
-          ))}
+      <div className="h-full overflow-y-auto">
+        <div className="p-4 md:p-6 space-y-6">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight font-heading">Uso de IA</h1>
+            <p className="text-[#666666]">Carregando dados de uso...</p>
+          </div>
+          <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-4">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <Card key={i}>
+                <CardHeader className="pb-2"><Skeleton className="h-4 w-24" /></CardHeader>
+                <CardContent><Skeleton className="h-8 w-16" /></CardContent>
+              </Card>
+            ))}
+          </div>
         </div>
       </div>
     )
@@ -57,10 +59,11 @@ export default function UsoIAPage() {
     : null
 
   return (
-    <div className="space-y-6">
+    <div className="h-full overflow-y-auto">
+      <div className="p-4 md:p-6 space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Uso de IA</h1>
-        <p className="text-muted-foreground">
+        <h1 className="text-2xl font-bold tracking-tight font-heading">Uso de IA</h1>
+        <p className="text-[#666666]">
           Estatísticas de consumo de IA dos últimos 30 dias.
         </p>
       </div>
@@ -69,10 +72,10 @@ export default function UsoIAPage() {
       <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
+            <CardTitle className="text-sm font-medium text-[#666666]">
               Total de Chamadas
             </CardTitle>
-            <Hash className="size-4 text-muted-foreground" />
+            <Hash className="size-4 text-[#666666]" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.totalRequests}</div>
@@ -81,16 +84,16 @@ export default function UsoIAPage() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
+            <CardTitle className="text-sm font-medium text-[#666666]">
               Tokens Consumidos
             </CardTitle>
-            <Zap className="size-4 text-muted-foreground" />
+            <Zap className="size-4 text-[#666666]" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
               {formatTokens(stats.tokensIn + stats.tokensOut)}
             </div>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs text-[#666666]">
               {formatTokens(stats.tokensIn)} in / {formatTokens(stats.tokensOut)} out
             </p>
           </CardContent>
@@ -98,10 +101,10 @@ export default function UsoIAPage() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
+            <CardTitle className="text-sm font-medium text-[#666666]">
               Custo Estimado
             </CardTitle>
-            <DollarSign className="size-4 text-muted-foreground" />
+            <DollarSign className="size-4 text-[#666666]" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{formatCost(stats.totalCost)}</div>
@@ -110,10 +113,10 @@ export default function UsoIAPage() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
+            <CardTitle className="text-sm font-medium text-[#666666]">
               Modelo Mais Usado
             </CardTitle>
-            <Brain className="size-4 text-muted-foreground" />
+            <Brain className="size-4 text-[#666666]" />
           </CardHeader>
           <CardContent>
             {mostUsedModel ? (
@@ -121,12 +124,12 @@ export default function UsoIAPage() {
                 <div className="text-2xl font-bold">
                   {getModelDisplayName(mostUsedModel.model).name}
                 </div>
-                <p className="text-xs text-muted-foreground">
+                <p className="text-xs text-[#666666]">
                   {mostUsedModel.requests} chamadas
                 </p>
               </>
             ) : (
-              <div className="text-sm text-muted-foreground">Sem dados</div>
+              <div className="text-sm text-[#666666]">Sem dados</div>
             )}
           </CardContent>
         </Card>
@@ -143,11 +146,11 @@ export default function UsoIAPage() {
           return (
             <Card key={tier}>
               <CardHeader className="flex flex-row items-center gap-3">
-                <div className={`rounded-lg p-2 ${tier === "premium" ? "bg-amber-50" : "bg-blue-50"}`}>
+                <div className={`rounded-lg p-2 ${tier === "premium" ? "bg-[#C9A961]/10" : "bg-[#17A2B8]/10"}`}>
                   {tier === "premium" ? (
-                    <Crown className={`size-5 text-amber-600`} />
+                    <Crown className={`size-5 text-[#C9A961]`} />
                   ) : (
-                    <Sparkles className={`size-5 text-blue-600`} />
+                    <Sparkles className={`size-5 text-[#17A2B8]`} />
                   )}
                 </div>
                 <div>
@@ -163,24 +166,24 @@ export default function UsoIAPage() {
                 {modelStats ? (
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <p className="text-xs text-muted-foreground">Chamadas</p>
+                      <p className="text-xs text-[#666666]">Chamadas</p>
                       <p className="text-lg font-semibold">{modelStats.requests}</p>
                     </div>
                     <div>
-                      <p className="text-xs text-muted-foreground">Custo</p>
+                      <p className="text-xs text-[#666666]">Custo</p>
                       <p className="text-lg font-semibold">{formatCost(modelStats.cost)}</p>
                     </div>
                     <div>
-                      <p className="text-xs text-muted-foreground">Tokens In</p>
+                      <p className="text-xs text-[#666666]">Tokens In</p>
                       <p className="text-lg font-semibold">{formatTokens(modelStats.tokensIn)}</p>
                     </div>
                     <div>
-                      <p className="text-xs text-muted-foreground">Tokens Out</p>
+                      <p className="text-xs text-[#666666]">Tokens Out</p>
                       <p className="text-lg font-semibold">{formatTokens(modelStats.tokensOut)}</p>
                     </div>
                   </div>
                 ) : (
-                  <p className="text-sm text-muted-foreground">Nenhum uso registrado</p>
+                  <p className="text-sm text-[#666666]">Nenhum uso registrado</p>
                 )}
               </CardContent>
             </Card>
@@ -202,13 +205,13 @@ export default function UsoIAPage() {
                     <p className="text-sm font-medium">
                       {ACTION_LABELS[action.actionType] || action.actionType}
                     </p>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-xs text-[#666666]">
                       {formatTokens(action.tokensIn + action.tokensOut)} tokens
                     </p>
                   </div>
                   <div className="text-right">
                     <p className="text-sm font-semibold">{action.requests} chamadas</p>
-                    <p className="text-xs text-muted-foreground">{formatCost(action.cost)}</p>
+                    <p className="text-xs text-[#666666]">{formatCost(action.cost)}</p>
                   </div>
                 </div>
               ))}
@@ -216,6 +219,7 @@ export default function UsoIAPage() {
           </CardContent>
         </Card>
       )}
+      </div>
     </div>
   )
 }

@@ -1,8 +1,10 @@
 "use client"
 
+import { useState } from "react"
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogFooter,
@@ -54,7 +56,7 @@ function DetailRow({
   if (!value) return null
   return (
     <div>
-      <p className="text-xs text-muted-foreground">{label}</p>
+      <p className="text-xs text-[#666666]">{label}</p>
       <div className="text-sm mt-0.5">{value}</div>
     </div>
   )
@@ -146,6 +148,7 @@ export function CalendarEventDetail({
   onEdit,
   onRefresh,
 }: CalendarEventDetailProps) {
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
   const utils = trpc.useUtils()
 
   const { data: event } = trpc.calendar.getById.useQuery(
@@ -180,12 +183,16 @@ export function CalendarEventDetail({
   }
 
   const handleDelete = () => {
-    if (confirm("Excluir este evento?")) {
-      deleteMutation.mutate({ id: event.id })
-    }
+    setDeleteConfirmOpen(true)
+  }
+
+  const confirmDelete = () => {
+    deleteMutation.mutate({ id: event.id })
+    setDeleteConfirmOpen(false)
   }
 
   return (
+    <>
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg max-h-[85vh] flex flex-col">
         <DialogHeader>
@@ -199,7 +206,7 @@ export function CalendarEventDetail({
                       CALENDAR_EVENT_TYPE_COLORS[event.tipo_evento],
                   }}
                 />
-                <span className="text-xs text-muted-foreground">
+                <span className="text-xs text-[#666666]">
                   {CALENDAR_EVENT_TYPE_LABELS[event.tipo_evento]}
                 </span>
               </div>
@@ -215,11 +222,11 @@ export function CalendarEventDetail({
           <div className="space-y-4 pb-4">
             {/* Date & time */}
             <div className="flex items-center gap-2 text-sm">
-              <Calendar className="size-4 text-muted-foreground" />
+              <Calendar className="size-4 text-[#666666]" />
               <span>{formatDate(event.data_inicio, event.dia_inteiro)}</span>
               {event.data_fim && (
                 <>
-                  <span className="text-muted-foreground">—</span>
+                  <span className="text-[#666666]">—</span>
                   <span>{formatDate(event.data_fim, event.dia_inteiro)}</span>
                 </>
               )}
@@ -233,7 +240,7 @@ export function CalendarEventDetail({
             {/* Responsible */}
             {event.responsavel && (
               <div className="flex items-center gap-2 text-sm">
-                <User className="size-4 text-muted-foreground" />
+                <User className="size-4 text-[#666666]" />
                 <span>{event.responsavel.name}</span>
               </div>
             )}
@@ -241,7 +248,7 @@ export function CalendarEventDetail({
             {/* Location */}
             {event.local && (
               <div className="flex items-center gap-2 text-sm">
-                <MapPin className="size-4 text-muted-foreground" />
+                <MapPin className="size-4 text-[#666666]" />
                 <span>{event.local}</span>
               </div>
             )}
@@ -249,12 +256,12 @@ export function CalendarEventDetail({
             {/* Virtual link */}
             {event.link_virtual && (
               <div className="flex items-center gap-2 text-sm">
-                <LinkIcon className="size-4 text-muted-foreground" />
+                <LinkIcon className="size-4 text-[#666666]" />
                 <a
                   href={event.link_virtual}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-blue-600 hover:underline truncate"
+                  className="text-[#17A2B8] hover:underline truncate"
                 >
                   {event.link_virtual}
                 </a>
@@ -264,7 +271,7 @@ export function CalendarEventDetail({
             {/* Reminder */}
             {event.lembrete_minutos != null && (
               <div className="flex items-center gap-2 text-sm">
-                <Clock className="size-4 text-muted-foreground" />
+                <Clock className="size-4 text-[#666666]" />
                 <span>
                   Lembrete:{" "}
                   {event.lembrete_minutos === 0
@@ -288,7 +295,7 @@ export function CalendarEventDetail({
             {/* Linked Case */}
             {event.case_ && (
               <div className="flex items-center gap-2 text-sm">
-                <Briefcase className="size-4 text-muted-foreground" />
+                <Briefcase className="size-4 text-[#666666]" />
                 <span>
                   {formatCNJ(event.case_.numero_processo)} —{" "}
                   {event.case_.cliente?.nome}
@@ -299,7 +306,7 @@ export function CalendarEventDetail({
             {/* Linked Project */}
             {event.project && (
               <div className="flex items-center gap-2 text-sm">
-                <FolderKanban className="size-4 text-muted-foreground" />
+                <FolderKanban className="size-4 text-[#666666]" />
                 <span>
                   {event.project.codigo} — {event.project.titulo}
                 </span>
@@ -315,7 +322,7 @@ export function CalendarEventDetail({
             {Object.keys(campos).length > 0 && (
               <>
                 <Separator />
-                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                <p className="text-xs font-medium text-[#666666] uppercase tracking-wide">
                   Detalhes de {CALENDAR_EVENT_TYPE_LABELS[event.tipo_evento]}
                 </p>
                 {Object.entries(campos).map(([key, val]) => {
@@ -347,7 +354,7 @@ export function CalendarEventDetail({
                     <Button
                       size="sm"
                       variant="outline"
-                      className="text-emerald-700"
+                      className="text-[#28A745]"
                       onClick={() => handleStatusChange("CONCLUIDO")}
                       disabled={updateMutation.isPending}
                     >
@@ -359,7 +366,7 @@ export function CalendarEventDetail({
                     <Button
                       size="sm"
                       variant="outline"
-                      className="text-red-600"
+                      className="text-[#DC3545]"
                       onClick={() => handleStatusChange("CANCELADO")}
                       disabled={updateMutation.isPending}
                     >
@@ -377,7 +384,7 @@ export function CalendarEventDetail({
           <Button
             size="sm"
             variant="ghost"
-            className="text-red-600"
+            className="text-[#DC3545]"
             onClick={handleDelete}
             disabled={deleteMutation.isPending}
           >
@@ -397,5 +404,30 @@ export function CalendarEventDetail({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+
+    {/* Delete Confirmation Dialog */}
+    <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Confirmar exclusão</DialogTitle>
+          <DialogDescription>
+            Tem certeza? Esta ação não pode ser desfeita.
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setDeleteConfirmOpen(false)}>
+            Cancelar
+          </Button>
+          <Button
+            variant="destructive"
+            disabled={deleteMutation.isPending}
+            onClick={confirmDelete}
+          >
+            {deleteMutation.isPending ? "Excluindo..." : "Excluir"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+    </>
   )
 }

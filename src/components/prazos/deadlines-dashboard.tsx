@@ -5,8 +5,15 @@ import Link from "next/link"
 import dynamic from "next/dynamic"
 import {
   Clock, CalendarDays, AlertTriangle, Check, Plus, Filter, X,
-  List, Calendar as CalendarIcon, ChevronRight,
+  List, Calendar as CalendarIcon, ChevronRight, MoreHorizontal,
+  Pencil, Trash2, Eye, ExternalLink,
 } from "lucide-react"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { trpc } from "@/lib/trpc"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -16,7 +23,7 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table"
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
+  Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog"
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
@@ -32,25 +39,25 @@ import {
 const DeadlinesCalendar = dynamic(() => import("./deadlines-calendar"), { ssr: false })
 
 const TYPE_BORDER: Record<string, string> = {
-  FATAL: "border-l-red-600",
-  ORDINARIO: "border-l-amber-500",
-  DILIGENCIA: "border-l-blue-500",
-  AUDIENCIA: "border-l-purple-500",
-  ASSEMBLEIA: "border-l-emerald-500",
+  FATAL: "border-l-[#DC3545]",
+  ORDINARIO: "border-l-[#C9A961]",
+  DILIGENCIA: "border-l-[#17A2B8]",
+  AUDIENCIA: "border-l-[#C9A961]",
+  ASSEMBLEIA: "border-l-[#28A745]",
 }
 
 const TYPE_BADGE: Record<string, string> = {
-  FATAL: "bg-red-100 text-red-700",
-  ORDINARIO: "bg-amber-100 text-amber-700",
-  DILIGENCIA: "bg-blue-100 text-blue-700",
-  AUDIENCIA: "bg-purple-100 text-purple-700",
-  ASSEMBLEIA: "bg-emerald-100 text-emerald-700",
+  FATAL: "bg-[#DC3545]/10 text-[#DC3545]",
+  ORDINARIO: "bg-[#C9A961]/10 text-[#C9A961]",
+  DILIGENCIA: "bg-[#17A2B8]/10 text-[#17A2B8]",
+  AUDIENCIA: "bg-[#C9A961]/10 text-[#C9A961]",
+  ASSEMBLEIA: "bg-[#28A745]/10 text-[#28A745]",
 }
 
 const STATUS_BADGE: Record<string, string> = {
-  PENDENTE: "bg-amber-100 text-amber-700",
-  CUMPRIDO: "bg-emerald-100 text-emerald-700",
-  PERDIDO: "bg-red-100 text-red-700",
+  PENDENTE: "bg-[#C9A961]/10 text-[#C9A961]",
+  CUMPRIDO: "bg-[#28A745]/10 text-[#28A745]",
+  PERDIDO: "bg-[#DC3545]/10 text-[#DC3545]",
   CANCELADO: "bg-gray-100 text-gray-600",
 }
 
@@ -101,7 +108,7 @@ export function DeadlinesDashboard() {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Prazos</h1>
-          <p className="text-muted-foreground">{total} prazo(s) encontrado(s)</p>
+          <p className="text-[#666666]">{total} prazo(s) encontrado(s)</p>
         </div>
         <Button onClick={() => setNewDialogOpen(true)}>
           <Plus className="mr-2 size-4" />Novo Prazo
@@ -113,25 +120,25 @@ export function DeadlinesDashboard() {
         <KpiCard
           label="Hoje"
           value={stats?.today ?? 0}
-          bg="bg-red-600"
+          bg="bg-[#DC3545]"
           text="text-white"
         />
         <KpiCard
           label="Amanha"
           value={stats?.tomorrow ?? 0}
-          bg="bg-red-500"
+          bg="bg-[#DC3545]/90"
           text="text-white"
         />
         <KpiCard
           label="Esta Semana"
           value={stats?.thisWeek ?? 0}
-          bg="bg-amber-500"
+          bg="bg-[#C9A961]"
           text="text-white"
         />
         <KpiCard
           label="Proximos 30 dias"
           value={stats?.next30 ?? 0}
-          bg="bg-emerald-600"
+          bg="bg-[#28A745]"
           text="text-white"
         />
         <KpiCard
@@ -141,6 +148,40 @@ export function DeadlinesDashboard() {
           text="text-white"
           pulse={!!stats?.overdue && stats.overdue > 0}
         />
+      </div>
+
+      {/* Quick Status Filters */}
+      <div className="flex flex-wrap gap-2">
+        <Button
+          variant={statusFilter === "" ? "default" : "outline"}
+          size="sm"
+          onClick={() => setStatusFilter("")}
+        >
+          Todos
+        </Button>
+        <Button
+          variant={statusFilter === "PENDENTE" ? "default" : "outline"}
+          size="sm"
+          onClick={() => setStatusFilter(statusFilter === "PENDENTE" ? "" : "PENDENTE")}
+        >
+          Pendentes
+        </Button>
+        <Button
+          variant={statusFilter === "PERDIDO" ? "default" : "outline"}
+          size="sm"
+          className={statusFilter === "PERDIDO" ? "" : "text-[#DC3545] border-[#DC3545]/30"}
+          onClick={() => setStatusFilter(statusFilter === "PERDIDO" ? "" : "PERDIDO")}
+        >
+          Vencidos
+        </Button>
+        <Button
+          variant={statusFilter === "CUMPRIDO" ? "default" : "outline"}
+          size="sm"
+          className={statusFilter === "CUMPRIDO" ? "" : "text-[#28A745] border-[#28A745]/30"}
+          onClick={() => setStatusFilter(statusFilter === "CUMPRIDO" ? "" : "CUMPRIDO")}
+        >
+          Cumpridos
+        </Button>
       </div>
 
       {/* Tabs: Lista | Calendario */}
@@ -191,8 +232,9 @@ export function DeadlinesDashboard() {
         {/* List View */}
         <TabsContent value="lista" className="mt-4">
           <div className="rounded-lg border bg-white overflow-x-auto">
+            <div className="max-h-[calc(100vh-24rem)] overflow-y-auto">
             <Table>
-              <TableHeader>
+              <TableHeader className="sticky top-0 z-10 bg-white">
                 <TableRow>
                   <TableHead className="w-[4px] p-0" />
                   <TableHead>Tipo</TableHead>
@@ -202,7 +244,7 @@ export function DeadlinesDashboard() {
                   <TableHead>Responsavel</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Dias</TableHead>
-                  <TableHead className="w-[80px]" />
+                  <TableHead className="w-[100px]" />
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -212,7 +254,7 @@ export function DeadlinesDashboard() {
                   ))
                 ) : deadlines.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={9} className="h-32 text-center text-muted-foreground">
+                    <TableCell colSpan={9} className="h-32 text-center text-[#666666]">
                       Nenhum prazo encontrado.
                     </TableCell>
                   </TableRow>
@@ -221,6 +263,7 @@ export function DeadlinesDashboard() {
                 )}
               </TableBody>
             </Table>
+            </div>
           </div>
         </TabsContent>
 
@@ -257,6 +300,7 @@ function KpiCard({ label, value, bg, text, pulse }: {
 function DeadlineRow({ deadline: d }: { deadline: any }) {
   const days = daysUntil(d.data_limite)
   const utils = trpc.useUtils()
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
 
   const completeMutation = trpc.deadlines.complete.useMutation({
     onSuccess: () => {
@@ -265,7 +309,16 @@ function DeadlineRow({ deadline: d }: { deadline: any }) {
     },
   })
 
+  const deleteMutation = trpc.deadlines.delete.useMutation({
+    onSuccess: () => {
+      utils.deadlines.list.invalidate()
+      utils.deadlines.stats.invalidate()
+      setDeleteDialogOpen(false)
+    },
+  })
+
   return (
+    <>
     <TableRow>
       {/* Color bar */}
       <TableCell className={`p-0 w-1 border-l-4 ${TYPE_BORDER[d.tipo] || "border-l-gray-300"}`} />
@@ -281,7 +334,7 @@ function DeadlineRow({ deadline: d }: { deadline: any }) {
       <TableCell>
         <Link href={`/processos/${d.case_.id}`} className="hover:underline text-primary">
           <p className="text-sm font-mono">{formatCNJ(d.case_.numero_processo) || "—"}</p>
-          <p className="text-xs text-muted-foreground truncate max-w-[180px]">{d.case_.cliente.nome}</p>
+          <p className="text-xs text-[#666666] truncate max-w-[180px]">{d.case_.cliente.nome}</p>
         </Link>
       </TableCell>
 
@@ -317,7 +370,7 @@ function DeadlineRow({ deadline: d }: { deadline: any }) {
       {/* Days remaining */}
       <TableCell>
         {d.status === "PENDENTE" && (
-          <span className={`text-xs font-medium whitespace-nowrap ${days < 0 ? "text-red-600 font-bold" : days <= 2 ? "text-red-500" : days <= 5 ? "text-amber-600" : "text-emerald-600"}`}>
+          <span className={`text-xs font-medium whitespace-nowrap ${days < 0 ? "text-[#DC3545] font-bold" : days <= 2 ? "text-[#DC3545]" : days <= 5 ? "text-[#C9A961]" : "text-[#28A745]"}`}>
             {daysLabel(days)}
           </span>
         )}
@@ -325,18 +378,71 @@ function DeadlineRow({ deadline: d }: { deadline: any }) {
 
       {/* Actions */}
       <TableCell>
-        {d.status === "PENDENTE" && (
-          <Button
-            variant="outline" size="sm"
-            className="h-7 text-xs gap-1"
-            disabled={completeMutation.isPending}
-            onClick={() => completeMutation.mutate({ id: d.id })}
-          >
-            <Check className="size-3" />Cumprir
-          </Button>
-        )}
+        <div className="flex items-center gap-1">
+          {d.status === "PENDENTE" && (
+            <Button
+              variant="outline" size="sm"
+              className="h-7 text-xs gap-1"
+              disabled={completeMutation.isPending}
+              onClick={() => completeMutation.mutate({ id: d.id })}
+            >
+              <Check className="size-3" />Cumprir
+            </Button>
+          )}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="size-7">
+                <MoreHorizontal className="size-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem asChild>
+                <Link href={`/processos/${d.case_.id}`}>
+                  <ExternalLink className="mr-2 size-4" />
+                  Ver Processo
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => alert("Em desenvolvimento")}>
+                <Pencil className="mr-2 size-4" />
+                Editar
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                className="text-destructive focus:text-destructive"
+                onClick={() => setDeleteDialogOpen(true)}
+              >
+                <Trash2 className="mr-2 size-4" />
+                Excluir
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </TableCell>
     </TableRow>
+
+    {/* Delete confirmation */}
+    <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Confirmar exclusão</DialogTitle>
+          <DialogDescription>
+            Tem certeza? Esta ação não pode ser desfeita.
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
+            Cancelar
+          </Button>
+          <Button
+            variant="destructive"
+            disabled={deleteMutation.isPending}
+            onClick={() => deleteMutation.mutate({ id: d.id })}
+          >
+            {deleteMutation.isPending ? "Excluindo..." : "Excluir"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+    </>
   )
 }
 
@@ -430,7 +536,7 @@ function NewDeadlineDialog({ open, onOpenChange }: { open: boolean; onOpenChange
                   }
                 }}
               />
-              <p className="text-[10px] text-muted-foreground">Estimativa em dias corridos (o servidor calcula dias uteis).</p>
+              <p className="text-[10px] text-[#666666]">Estimativa em dias corridos (o servidor calcula dias uteis).</p>
             </div>
           </div>
         </div>

@@ -38,16 +38,24 @@ import { Switch } from "@/components/ui/switch"
 import { DOCUMENT_TYPE_LABELS } from "@/lib/constants"
 import { DOCUMENT_TYPE_GROUPS } from "@/types/documents"
 import {
-  Plus, Search, FileText, Download, Trash2, ExternalLink, Sparkles, X,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import {
+  Plus, Search, FileText, Download, Trash2, Sparkles, X,
+  MoreHorizontal, Pencil, Copy, Share2, Eye,
 } from "lucide-react"
 
 const TYPE_COLORS: Record<string, string> = {
-  Jurídicos: "bg-blue-50 text-blue-700",
-  Contratuais: "bg-purple-50 text-purple-700",
-  Financeiros: "bg-emerald-50 text-emerald-700",
-  Comunicação: "bg-amber-50 text-amber-700",
-  Técnicos: "bg-cyan-50 text-cyan-700",
-  IA: "bg-pink-50 text-pink-700",
+  Jurídicos: "bg-[#17A2B8]/10 text-[#17A2B8]",
+  Contratuais: "bg-[#C9A961]/10 text-[#C9A961]",
+  Financeiros: "bg-[#28A745]/10 text-[#28A745]",
+  Comunicação: "bg-[#C9A961]/10 text-[#C9A961]",
+  Técnicos: "bg-[#17A2B8]/10 text-[#17A2B8]",
+  IA: "bg-[#C9A961]/10 text-[#C9A961]",
   Outros: "bg-gray-50 text-gray-600",
 }
 
@@ -72,6 +80,8 @@ export function DocumentsPageClient() {
   const [projectFilter, setProjectFilter] = useState("")
   const [iaFilter, setIaFilter] = useState(false)
   const [uploadOpen, setUploadOpen] = useState(false)
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
+  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null)
 
   // Upload form state
   const [uploadTitulo, setUploadTitulo] = useState("")
@@ -144,10 +154,17 @@ export function DocumentsPageClient() {
           Upload
         </Button>
 
+        <Button variant="outline" size="sm" asChild>
+          <Link href="/confeccao">
+            <Sparkles className="size-4 mr-1" />
+            Gerar com Harvey Specter
+          </Link>
+        </Button>
+
         <div className="flex-1" />
 
         <div className="relative">
-          <Search className="absolute left-2.5 top-2.5 size-3.5 text-muted-foreground" />
+          <Search className="absolute left-2.5 top-2.5 size-3.5 text-[#666666]" />
           <Input
             placeholder="Buscar documentos..."
             value={search}
@@ -232,24 +249,25 @@ export function DocumentsPageClient() {
         </div>
       ) : items.length === 0 ? (
         <div className="text-center py-12 border rounded-lg border-dashed">
-          <FileText className="size-10 text-muted-foreground/30 mx-auto" />
-          <p className="text-sm text-muted-foreground mt-3">Nenhum documento encontrado.</p>
+          <FileText className="size-10 text-[#666666]/30 mx-auto" />
+          <p className="text-sm text-[#666666] mt-3">Nenhum documento encontrado.</p>
           <Button variant="outline" size="sm" className="mt-3" onClick={() => setUploadOpen(true)}>
             <Plus className="size-3 mr-1" />
             Upload de documento
           </Button>
         </div>
       ) : (
-        <div className="border rounded-lg">
+        <div className="border rounded-lg overflow-auto">
           <Table>
-            <TableHeader>
+            <TableHeader className="sticky top-0 bg-background z-10">
               <TableRow>
                 <TableHead className="w-[200px]">Tipo</TableHead>
                 <TableHead>Título</TableHead>
                 <TableHead>Vinculação</TableHead>
                 <TableHead className="w-[60px]">V.</TableHead>
+                <TableHead className="w-[80px]">Portal</TableHead>
                 <TableHead className="w-[100px]">Data</TableHead>
-                <TableHead className="w-[80px]">Ações</TableHead>
+                <TableHead className="w-[60px]">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -263,7 +281,7 @@ export function DocumentsPageClient() {
                         {DOCUMENT_TYPE_LABELS[doc.tipo] || doc.tipo}
                       </Badge>
                       {doc.gerado_por_ia && (
-                        <Sparkles className="inline-block size-3 text-pink-500 ml-1" />
+                        <Sparkles className="inline-block size-3 text-[#C9A961] ml-1" />
                       )}
                     </TableCell>
                     <TableCell>
@@ -271,54 +289,78 @@ export function DocumentsPageClient() {
                       {doc.tags.length > 0 && (
                         <div className="flex gap-1 mt-0.5">
                           {doc.tags.slice(0, 3).map((tag) => (
-                            <span key={tag} className="text-[10px] text-muted-foreground bg-muted px-1 rounded">{tag}</span>
+                            <span key={tag} className="text-[10px] text-[#666666] bg-muted px-1 rounded">{tag}</span>
                           ))}
                         </div>
                       )}
                     </TableCell>
-                    <TableCell className="text-xs text-muted-foreground">
+                    <TableCell className="text-xs text-[#666666]">
                       {doc.case_ && (
-                        <Link href={`/processos/${doc.case_.id}`} className="text-blue-600 hover:underline block">
+                        <Link href={`/processos/${doc.case_.id}`} className="text-[#17A2B8] hover:underline block">
                           {doc.case_.numero_processo}
                         </Link>
                       )}
                       {doc.project && (
-                        <Link href={`/projetos/${doc.project.id}`} className="text-indigo-600 hover:underline block">
+                        <Link href={`/projetos/${doc.project.id}`} className="text-[#C9A961] hover:underline block">
                           {doc.project.codigo}
                         </Link>
                       )}
                     </TableCell>
                     <TableCell className="text-xs text-center">{doc.versao}</TableCell>
-                    <TableCell className="text-xs text-muted-foreground">
+                    <TableCell>
+                      <Switch
+                        checked={doc.compartilhado_portal || false}
+                        onCheckedChange={() => alert("Em desenvolvimento")}
+                        className="scale-75"
+                      />
+                    </TableCell>
+                    <TableCell className="text-xs text-[#666666]">
                       {new Date(doc.created_at).toLocaleDateString("pt-BR")}
                     </TableCell>
                     <TableCell>
-                      <div className="flex gap-1">
-                        {doc.arquivo_url && (
-                          <Button variant="ghost" size="sm" className="h-7 w-7 p-0" asChild>
-                            <a href={doc.arquivo_url} target="_blank" rel="noopener noreferrer">
-                              <ExternalLink className="size-3" />
-                            </a>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="sm" className="h-7 w-7 p-0">
+                            <MoreHorizontal className="size-4" />
                           </Button>
-                        )}
-                        {doc.arquivo_url && (
-                          <Button variant="ghost" size="sm" className="h-7 w-7 p-0" asChild>
-                            <a href={doc.arquivo_url} download>
-                              <Download className="size-3" />
-                            </a>
-                          </Button>
-                        )}
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-7 w-7 p-0 text-red-500"
-                          onClick={() => {
-                            if (confirm("Excluir documento?")) deleteMutation.mutate({ id: doc.id })
-                          }}
-                        >
-                          <Trash2 className="size-3" />
-                        </Button>
-                      </div>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          {doc.arquivo_url && (
+                            <DropdownMenuItem asChild>
+                              <a href={doc.arquivo_url} target="_blank" rel="noopener noreferrer">
+                                <Eye className="size-3 mr-2" />Visualizar
+                              </a>
+                            </DropdownMenuItem>
+                          )}
+                          {doc.arquivo_url && (
+                            <DropdownMenuItem asChild>
+                              <a href={doc.arquivo_url} download>
+                                <Download className="size-3 mr-2" />Baixar
+                              </a>
+                            </DropdownMenuItem>
+                          )}
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem onClick={() => alert("Em desenvolvimento")}>
+                            <Pencil className="size-3 mr-2" />Editar metadados
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => alert("Em desenvolvimento")}>
+                            <Copy className="size-3 mr-2" />Nova Versão
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => alert("Em desenvolvimento")}>
+                            <Share2 className="size-3 mr-2" />Compartilhar no Portal
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            className="text-[#DC3545]"
+                            onClick={() => {
+                              setDeleteTargetId(doc.id)
+                              setDeleteConfirmOpen(true)
+                            }}
+                          >
+                            <Trash2 className="size-3 mr-2" />Excluir
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </TableCell>
                   </TableRow>
                 )
@@ -327,6 +369,35 @@ export function DocumentsPageClient() {
           </Table>
         </div>
       )}
+
+      {/* Delete confirmation dialog */}
+      <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Excluir Documento</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-[#666666]">
+            Tem certeza? Esta ação não pode ser desfeita.
+          </p>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteConfirmOpen(false)}>
+              Cancelar
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                if (deleteTargetId) {
+                  deleteMutation.mutate({ id: deleteTargetId })
+                }
+                setDeleteConfirmOpen(false)
+                setDeleteTargetId(null)
+              }}
+            >
+              Excluir
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Upload Dialog */}
       <Dialog open={uploadOpen} onOpenChange={setUploadOpen}>
@@ -338,11 +409,11 @@ export function DocumentsPageClient() {
             <div className="space-y-4 pb-4">
               {/* Drop zone placeholder */}
               <div className="border-2 border-dashed rounded-lg p-8 text-center">
-                <FileText className="size-8 text-muted-foreground/50 mx-auto" />
-                <p className="text-sm text-muted-foreground mt-2">
+                <FileText className="size-8 text-[#666666]/50 mx-auto" />
+                <p className="text-sm text-[#666666] mt-2">
                   Arraste ou clique para selecionar arquivo
                 </p>
-                <p className="text-xs text-muted-foreground mt-1">
+                <p className="text-xs text-[#666666] mt-1">
                   PDF, DOC, DOCX, XLS, XLSX, JPG, PNG (max 50MB)
                 </p>
               </div>

@@ -12,6 +12,9 @@ import {
   Plus,
   AlertTriangle,
   Target,
+  CheckCircle,
+  ExternalLink,
+  Users,
 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -35,6 +38,13 @@ function endOfWeek(d: Date): Date {
   r.setDate(r.getDate() + diff);
   r.setHours(23, 59, 59, 999);
   return r;
+}
+
+function getGreeting(): string {
+  const hour = new Date().getHours()
+  if (hour < 12) return "Bom dia"
+  if (hour < 18) return "Boa tarde"
+  return "Boa noite"
 }
 
 export default async function DashboardPage() {
@@ -134,40 +144,35 @@ export default async function DashboardPage() {
       value: String(prazosHoje),
       description: prazosHoje === 0 ? "Nenhum prazo hoje" : `${prazosHoje} prazo(s) vencem hoje`,
       icon: Clock,
-      color: "text-red-600",
-      bg: "bg-red-50",
+      borderColor: "border-t-[#DC3545]",
     },
     {
       title: "Prazos da Semana",
       value: String(prazosSemana),
       description: `Ate o fim da semana`,
       icon: CalendarDays,
-      color: "text-amber-600",
-      bg: "bg-amber-50",
+      borderColor: "border-t-[#FFC107]",
     },
     {
       title: "Movimentacoes Nao Lidas",
       value: String(movNaoLidas),
       description: movNaoLidas === 0 ? "Tudo em dia" : `${movNaoLidas} pendente(s)`,
       icon: FileText,
-      color: "text-blue-600",
-      bg: "bg-blue-50",
+      borderColor: "border-t-[#17A2B8]",
     },
     {
       title: "Processos Ativos",
       value: String(processosAtivos),
       description: "Em andamento",
       icon: Scale,
-      color: "text-primary",
-      bg: "bg-primary/5",
+      borderColor: "border-t-[#C9A961]",
     },
     {
       title: "Projetos Ativos",
       value: String(projetosAtivos),
       description: projetosComAcao.length > 0 ? `${projetosComAcao.length} com acao pendente` : "Todos em dia",
       icon: FolderKanban,
-      color: "text-indigo-600",
-      bg: "bg-indigo-50",
+      borderColor: "border-t-[#C9A961]",
     },
     {
       title: "Liberacoes em Andamento",
@@ -176,32 +181,38 @@ export default async function DashboardPage() {
         ? `${formatCurrency(liberacoesEmAndamento.reduce((acc, p) => acc + Number(p.valor_envolvido || 0), 0))} total`
         : "Nenhuma liberacao ativa",
       icon: Landmark,
-      color: "text-emerald-600",
-      bg: "bg-emerald-50",
+      borderColor: "border-t-[#28A745]",
     },
   ]
 
   return (
-    <div className="space-y-6">
+    <div className="h-full overflow-y-auto">
+      <div className="p-4 md:p-6 space-y-6">
       {/* Welcome + Quick Actions */}
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">
-            Bem-vindo, {firstName}
+          <h1 className="font-heading text-2xl font-bold tracking-tight text-[#2A2A2A]">
+            {getGreeting()}, {firstName}
           </h1>
-          <p className="text-muted-foreground capitalize">{dateStr}</p>
+          <p className="text-[#666666] capitalize">{dateStr}</p>
         </div>
         <div className="flex gap-2">
-          <Button asChild size="sm">
+          <Button asChild size="sm" className="bg-[#C9A961] text-[#2A2A2A] hover:bg-[#B8993F]">
             <Link href="/processos/novo">
               <Plus className="size-4 mr-1" />
               Novo Processo
             </Link>
           </Button>
-          <Button asChild size="sm" variant="outline">
+          <Button asChild size="sm" variant="outline" className="border-[#C9A961] text-[#C9A961] hover:bg-[#C9A961]/10">
             <Link href="/projetos/novo">
               <Plus className="size-4 mr-1" />
               Novo Projeto
+            </Link>
+          </Button>
+          <Button asChild size="sm" variant="outline" className="border-[#C9A961] text-[#C9A961] hover:bg-[#C9A961]/10">
+            <Link href="/pessoas/novo">
+              <Users className="size-4 mr-1" />
+              Nova Pessoa
             </Link>
           </Button>
         </div>
@@ -210,20 +221,20 @@ export default async function DashboardPage() {
       {/* KPI Grid */}
       <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
         {kpiCards.map((kpi) => (
-          <Card key={kpi.title} className="shadow-sm">
+          <Card key={kpi.title} className={`shadow-[0_2px_8px_rgba(0,0,0,0.08)] border-t-[3px] ${kpi.borderColor}`}>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
+              <CardTitle className="font-body text-sm font-medium text-[#666666]">
                 {kpi.title}
               </CardTitle>
-              <div className={`rounded-lg p-2 ${kpi.bg}`}>
-                <kpi.icon className={`size-4 ${kpi.color}`} />
+              <div className="rounded-lg p-2 bg-[#F7F3F1]">
+                <kpi.icon className="size-4 text-[#C9A961]" />
               </div>
             </CardHeader>
             <CardContent>
-              <div className={`text-3xl font-bold ${kpi.color}`}>
+              <div className="font-heading text-[32px] font-bold text-[#2A2A2A]">
                 {kpi.value}
               </div>
-              <p className="text-xs text-muted-foreground mt-1">
+              <p className="text-xs text-[#666666] mt-1">
                 {kpi.description}
               </p>
             </CardContent>
@@ -236,10 +247,10 @@ export default async function DashboardPage() {
         <div className="grid gap-4 grid-cols-1 lg:grid-cols-2">
           {/* Projects with pending action */}
           {projetosComAcao.length > 0 && (
-            <Card className="shadow-sm border-amber-200">
+            <Card className="shadow-[0_2px_8px_rgba(0,0,0,0.08)] border-[#C9A961]/30">
               <CardHeader className="flex flex-row items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <AlertTriangle className="size-4 text-amber-600" />
+                  <AlertTriangle className="size-4 text-[#C9A961]" />
                   <CardTitle className="text-base">Projetos com Acao Pendente</CardTitle>
                 </div>
                 <Link href="/projetos" className="text-xs text-primary hover:underline flex items-center gap-1">
@@ -259,20 +270,20 @@ export default async function DashboardPage() {
                       >
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-2">
-                            <span className="text-xs font-mono text-muted-foreground">{p.codigo}</span>
+                            <span className="text-xs font-mono text-[#666666]">{p.codigo}</span>
                             <Badge className={`text-[10px] ${PRIORITY_COLORS[p.prioridade] || ""}`}>
                               {PRIORITY_LABELS[p.prioridade] || p.prioridade}
                             </Badge>
                           </div>
                           <p className="text-sm font-medium truncate mt-0.5">{p.titulo}</p>
-                          <p className="text-xs text-muted-foreground truncate">{p.cliente.nome}</p>
+                          <p className="text-xs text-[#666666] truncate">{p.cliente.nome}</p>
                         </div>
                         <div className="ml-3 flex flex-col items-end gap-1">
                           {overdueTasks > 0 && (
-                            <span className="text-xs text-red-600">{overdueTasks} tarefa(s) atrasada(s)</span>
+                            <span className="text-xs text-[#DC3545]">{overdueTasks} tarefa(s) atrasada(s)</span>
                           )}
                           {overdueMilestones > 0 && (
-                            <span className="text-xs text-red-600">{overdueMilestones} marco(s) atrasado(s)</span>
+                            <span className="text-xs text-[#DC3545]">{overdueMilestones} marco(s) atrasado(s)</span>
                           )}
                         </div>
                       </Link>
@@ -285,10 +296,10 @@ export default async function DashboardPage() {
 
           {/* Liberações em andamento */}
           {liberacoesEmAndamento.length > 0 && (
-            <Card className="shadow-sm border-emerald-200">
+            <Card className="shadow-[0_2px_8px_rgba(0,0,0,0.08)] border-[#28A745]/30">
               <CardHeader className="flex flex-row items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <Landmark className="size-4 text-emerald-600" />
+                  <Landmark className="size-4 text-[#28A745]" />
                   <CardTitle className="text-base">Liberacoes em Andamento</CardTitle>
                 </div>
                 <Link href="/projetos?categoria=ALVARA_LIBERACAO" className="text-xs text-primary hover:underline flex items-center gap-1">
@@ -309,10 +320,10 @@ export default async function DashboardPage() {
                       >
                         <div className="min-w-0 flex-1">
                           <p className="text-sm font-medium truncate">{p.titulo}</p>
-                          <p className="text-xs text-muted-foreground truncate">{p.cliente.nome}</p>
+                          <p className="text-xs text-[#666666] truncate">{p.cliente.nome}</p>
                         </div>
                         <div className="ml-3 flex flex-col items-end gap-1">
-                          <span className="text-sm font-semibold text-emerald-600">
+                          <span className="text-sm font-semibold text-[#28A745]">
                             {formatCurrency(p.valor_envolvido)}
                           </span>
                           {statusLiberacao && (
@@ -334,7 +345,7 @@ export default async function DashboardPage() {
       {/* Bottom sections */}
       <div className="grid gap-4 grid-cols-1 lg:grid-cols-2">
         {/* Upcoming Deadlines */}
-        <Card className="shadow-sm">
+        <Card className="shadow-[0_2px_8px_rgba(0,0,0,0.08)]">
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="text-base">Proximos Prazos</CardTitle>
             <Link href="/prazos" className="text-xs text-primary hover:underline flex items-center gap-1">
@@ -343,18 +354,17 @@ export default async function DashboardPage() {
           </CardHeader>
           <CardContent>
             {upcomingDeadlines.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-4">Nenhum prazo proximo.</p>
+              <p className="text-sm text-[#666666] text-center py-4">Nenhum prazo proximo.</p>
             ) : (
               <div className="space-y-3">
                 {upcomingDeadlines.map((d) => (
-                  <Link
+                  <div
                     key={d.id}
-                    href={`/processos/${d.case_.id}`}
                     className="flex items-center justify-between rounded-lg border p-3 hover:bg-muted/50 transition-colors"
                   >
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-medium truncate">{d.descricao}</p>
-                      <p className="text-xs text-muted-foreground font-mono truncate">
+                      <p className="text-xs text-[#666666] font-mono truncate">
                         {formatCNJ(d.case_.numero_processo)} — {d.case_.cliente.nome}
                       </p>
                     </div>
@@ -365,8 +375,20 @@ export default async function DashboardPage() {
                       <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${deadlineColor(d.data_limite)}`}>
                         {new Date(d.data_limite).toLocaleDateString("pt-BR")}
                       </span>
+                      <Button asChild size="sm" variant="outline" className="h-7 text-xs gap-1">
+                        <Link href={`/prazos?cumprir=${d.id}`}>
+                          <CheckCircle className="size-3" />
+                          Cumprir
+                        </Link>
+                      </Button>
+                      <Button asChild size="sm" variant="ghost" className="h-7 text-xs gap-1">
+                        <Link href={`/processos/${d.case_.id}`}>
+                          <ExternalLink className="size-3" />
+                          Ver processo
+                        </Link>
+                      </Button>
                     </div>
-                  </Link>
+                  </div>
                 ))}
               </div>
             )}
@@ -374,13 +396,13 @@ export default async function DashboardPage() {
         </Card>
 
         {/* Recent Activity (now includes project activities) */}
-        <Card className="shadow-sm">
+        <Card className="shadow-[0_2px_8px_rgba(0,0,0,0.08)]">
           <CardHeader>
             <CardTitle className="text-base">Atividade Recente</CardTitle>
           </CardHeader>
           <CardContent>
             {recentActivities.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-4">Nenhuma atividade recente.</p>
+              <p className="text-sm text-[#666666] text-center py-4">Nenhuma atividade recente.</p>
             ) : (
               <div className="space-y-3">
                 {recentActivities.map((a) => {
@@ -393,7 +415,7 @@ export default async function DashboardPage() {
                       ? `/processos/${a.case_.id}`
                       : undefined
 
-                  const dotColor = isProjectActivity ? "bg-indigo-500" : "bg-primary"
+                  const dotColor = isProjectActivity ? "bg-[#17A2B8]" : "bg-[#C9A961]"
                   const typeLabel = ACTIVITY_TYPE_LABELS[a.tipo] || a.tipo
 
                   const content = (
@@ -402,14 +424,14 @@ export default async function DashboardPage() {
                       <div className="min-w-0 flex-1">
                         <p className="text-sm font-medium truncate">{a.descricao}</p>
                         <div className="flex items-center gap-2 mt-0.5">
-                          <span className="text-xs text-muted-foreground">por {a.user.name}</span>
+                          <span className="text-xs text-[#666666]">por {a.user.name}</span>
                           <Badge variant="outline" className="text-[9px] px-1 py-0">{typeLabel}</Badge>
                           {a.project && (
-                            <span className="text-[10px] text-indigo-600 font-mono">{a.project.codigo}</span>
+                            <span className="text-[10px] text-[#C9A961] font-mono">{a.project.codigo}</span>
                           )}
                         </div>
                       </div>
-                      <span className="text-xs text-muted-foreground whitespace-nowrap">
+                      <span className="text-xs text-[#666666] whitespace-nowrap">
                         {timeLabel}
                       </span>
                     </div>
@@ -425,6 +447,7 @@ export default async function DashboardPage() {
             )}
           </CardContent>
         </Card>
+      </div>
       </div>
     </div>
   )

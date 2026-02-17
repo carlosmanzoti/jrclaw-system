@@ -4,7 +4,7 @@ import { useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import {
-  Search, Plus, Filter, X, MoreHorizontal, Eye, Pencil,
+  Search, Plus, Filter, X, MoreHorizontal, Eye, Pencil, Trash2, Download,
   LayoutList, Columns3, BarChart3, FolderKanban,
   Briefcase, Clock, CheckCircle2, DollarSign,
 } from "lucide-react"
@@ -18,8 +18,11 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table"
 import {
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import {
+  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
+} from "@/components/ui/dialog"
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select"
@@ -32,9 +35,9 @@ type ViewMode = "lista" | "kanban" | "timeline"
 
 const KANBAN_COLUMNS = [
   { key: "PLANEJAMENTO", label: "Planejamento", color: "border-slate-300" },
-  { key: "EM_ANDAMENTO", label: "Em Andamento", color: "border-blue-400" },
-  { key: "AGUARDANDO_CLIENTE", label: "Aguardando", color: "border-amber-400" },
-  { key: "CONCLUIDO", label: "Concluído", color: "border-emerald-400" },
+  { key: "EM_ANDAMENTO", label: "Em Andamento", color: "border-[#17A2B8]" },
+  { key: "AGUARDANDO_CLIENTE", label: "Aguardando", color: "border-[#C9A961]" },
+  { key: "CONCLUIDO", label: "Concluído", color: "border-[#28A745]" },
 ]
 
 function calcProgress(tarefas: Array<{ status: string }>) {
@@ -53,6 +56,8 @@ export function ProjectsList() {
   const [prioridadeFilter, setPrioridadeFilter] = useState("")
   const [advogadoFilter, setAdvogadoFilter] = useState("")
   const [showFilters, setShowFilters] = useState(false)
+
+  const [deleteId, setDeleteId] = useState<string | null>(null)
 
   const [searchTimeout, setSearchTimeout] = useState<NodeJS.Timeout | null>(null)
   const handleSearch = (value: string) => {
@@ -86,9 +91,9 @@ export function ProjectsList() {
   }
 
   const kpiCards = [
-    { title: "Projetos Ativos", value: stats?.ativos ?? 0, icon: Briefcase, color: "text-blue-600", bg: "bg-blue-50" },
-    { title: "Aguardando Acao", value: stats?.aguardando ?? 0, icon: Clock, color: "text-amber-600", bg: "bg-amber-50" },
-    { title: "Concluidos no Mes", value: stats?.concluidosMes ?? 0, icon: CheckCircle2, color: "text-emerald-600", bg: "bg-emerald-50" },
+    { title: "Projetos Ativos", value: stats?.ativos ?? 0, icon: Briefcase, color: "text-[#17A2B8]", bg: "bg-[#17A2B8]/10" },
+    { title: "Aguardando Acao", value: stats?.aguardando ?? 0, icon: Clock, color: "text-[#C9A961]", bg: "bg-[#C9A961]/10" },
+    { title: "Concluidos no Mes", value: stats?.concluidosMes ?? 0, icon: CheckCircle2, color: "text-[#28A745]", bg: "bg-[#28A745]/10" },
     { title: "Valor Total", value: formatCurrency(stats?.valorTotal), icon: DollarSign, color: "text-primary", bg: "bg-primary/5", isText: true },
   ]
 
@@ -99,7 +104,7 @@ export function ProjectsList() {
         {kpiCards.map((kpi) => (
           <Card key={kpi.title} className="shadow-sm">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">{kpi.title}</CardTitle>
+              <CardTitle className="text-sm font-medium text-[#666666]">{kpi.title}</CardTitle>
               <div className={`rounded-lg p-2 ${kpi.bg}`}>
                 <kpi.icon className={`size-4 ${kpi.color}`} />
               </div>
@@ -117,7 +122,7 @@ export function ProjectsList() {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Projetos</h1>
-          <p className="text-muted-foreground">{total} {total === 1 ? "projeto" : "projetos"}</p>
+          <p className="text-[#666666]">{total} {total === 1 ? "projeto" : "projetos"}</p>
         </div>
         <div className="flex items-center gap-2">
           <div className="flex rounded-lg border bg-muted p-0.5">
@@ -131,6 +136,10 @@ export function ProjectsList() {
               <BarChart3 className="size-4" />
             </Button>
           </div>
+          <Button variant="outline" onClick={() => alert("Em desenvolvimento")}>
+            <Download className="mr-2 size-4" />
+            Exportar
+          </Button>
           <Button asChild>
             <Link href="/projetos/novo">
               <Plus className="mr-2 size-4" />
@@ -144,7 +153,7 @@ export function ProjectsList() {
       <div className="space-y-3">
         <div className="flex gap-2">
           <div className="relative flex-1">
-            <Search className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+            <Search className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-[#666666]" />
             <Input
               placeholder="Buscar por titulo, codigo ou cliente..."
               value={search}
@@ -194,9 +203,9 @@ export function ProjectsList() {
 
       {/* Views */}
       {view === "lista" && (
-        <div className="rounded-lg border bg-white overflow-x-auto">
+        <div className="rounded-lg border bg-white overflow-x-auto max-h-[calc(100vh-20rem)] overflow-y-auto">
           <Table>
-            <TableHeader>
+            <TableHeader className="sticky top-0 z-10 bg-white">
               <TableRow>
                 <TableHead className="w-[120px]">Codigo</TableHead>
                 <TableHead>Titulo</TableHead>
@@ -217,7 +226,7 @@ export function ProjectsList() {
                 ))
               ) : projects.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={10} className="h-32 text-center text-muted-foreground">
+                  <TableCell colSpan={10} className="h-32 text-center text-[#666666]">
                     {debouncedSearch || hasActiveFilters ? "Nenhum projeto encontrado." : "Nenhum projeto cadastrado."}
                   </TableCell>
                 </TableRow>
@@ -247,7 +256,7 @@ export function ProjectsList() {
                       <TableCell className="hidden lg:table-cell">
                         <div className="flex items-center gap-2">
                           <Progress value={progress} className="h-2 w-16" />
-                          <span className="text-xs text-muted-foreground">{progress}%</span>
+                          <span className="text-xs text-[#666666]">{progress}%</span>
                         </div>
                       </TableCell>
                       <TableCell className="hidden xl:table-cell text-sm">{p.advogado_responsavel.name}</TableCell>
@@ -267,6 +276,10 @@ export function ProjectsList() {
                             </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => router.push(`/projetos/${p.id}?edit=true`)}>
                               <Pencil className="mr-2 size-4" />Editar
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem className="text-[#DC3545] focus:text-[#DC3545]" onClick={(e) => { e.stopPropagation(); setDeleteId(p.id) }}>
+                              <Trash2 className="mr-2 size-4" />Excluir
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
@@ -298,7 +311,7 @@ export function ProjectsList() {
                 </div>
                 <div className="space-y-2">
                   {colProjects.length === 0 ? (
-                    <p className="text-xs text-muted-foreground text-center py-4">Nenhum projeto</p>
+                    <p className="text-xs text-[#666666] text-center py-4">Nenhum projeto</p>
                   ) : (
                     colProjects.map((p) => {
                       const progress = calcProgress(p.tarefas)
@@ -311,19 +324,19 @@ export function ProjectsList() {
                           <CardContent className="p-3 space-y-2">
                             <div className="flex items-start justify-between gap-2">
                               <div className="min-w-0 flex-1">
-                                <p className="text-xs text-muted-foreground font-mono">{p.codigo}</p>
+                                <p className="text-xs text-[#666666] font-mono">{p.codigo}</p>
                                 <p className="text-sm font-medium truncate">{p.titulo}</p>
                               </div>
                               <Badge variant="secondary" className={`shrink-0 text-[10px] ${PRIORITY_COLORS[p.prioridade] || ""}`}>
                                 {PRIORITY_LABELS[p.prioridade]}
                               </Badge>
                             </div>
-                            <p className="text-xs text-muted-foreground truncate">{p.cliente.nome}</p>
+                            <p className="text-xs text-[#666666] truncate">{p.cliente.nome}</p>
                             <div className="flex items-center gap-2">
                               <Progress value={progress} className="h-1.5 flex-1" />
-                              <span className="text-[10px] text-muted-foreground">{progress}%</span>
+                              <span className="text-[10px] text-[#666666]">{progress}%</span>
                             </div>
-                            <div className="flex items-center justify-between text-[10px] text-muted-foreground">
+                            <div className="flex items-center justify-between text-[10px] text-[#666666]">
                               <span>{p.advogado_responsavel.name}</span>
                               <span>{p._count.tarefas} tarefas</span>
                             </div>
@@ -342,6 +355,22 @@ export function ProjectsList() {
       {view === "timeline" && (
         <TimelineView projects={projects} />
       )}
+
+      {/* Delete confirmation dialog */}
+      <Dialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Excluir Projeto</DialogTitle>
+            <DialogDescription>
+              Tem certeza? Esta acao nao pode ser desfeita.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteId(null)}>Cancelar</Button>
+            <Button variant="destructive" onClick={() => { alert("Em desenvolvimento"); setDeleteId(null) }}>Excluir</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   )
 }
@@ -365,7 +394,7 @@ function TimelineView({ projects }: { projects: Array<{
   })
 
   if (allDates.length === 0) {
-    return <p className="text-center text-muted-foreground py-8">Nenhum projeto com datas definidas.</p>
+    return <p className="text-center text-[#666666] py-8">Nenhum projeto com datas definidas.</p>
   }
 
   const minDate = new Date(Math.min(...allDates.map((d) => d.getTime()), now.getTime()))
@@ -394,20 +423,20 @@ function TimelineView({ projects }: { projects: Array<{
 
   const STATUS_BAR_COLORS: Record<string, string> = {
     PLANEJAMENTO: "bg-slate-400",
-    EM_ANDAMENTO: "bg-blue-500",
-    AGUARDANDO_CLIENTE: "bg-amber-500",
-    AGUARDANDO_TERCEIRO: "bg-yellow-500",
+    EM_ANDAMENTO: "bg-[#17A2B8]",
+    AGUARDANDO_CLIENTE: "bg-[#C9A961]",
+    AGUARDANDO_TERCEIRO: "bg-[#C9A961]",
     AGUARDANDO_ORGAO: "bg-orange-500",
     PAUSADO: "bg-gray-400",
-    CONCLUIDO: "bg-emerald-500",
-    CANCELADO: "bg-red-400",
+    CONCLUIDO: "bg-[#28A745]",
+    CANCELADO: "bg-[#DC3545]",
   }
 
   return (
     <div className="rounded-lg border bg-white overflow-x-auto">
       <div className="min-w-[800px]">
         {/* Month headers */}
-        <div className="flex border-b bg-muted/30 text-xs text-muted-foreground">
+        <div className="flex border-b bg-muted/30 text-xs text-[#666666]">
           <div className="w-[250px] shrink-0 p-2 font-medium">Projeto</div>
           <div className="flex-1 flex relative">
             {months.map((m, i) => (
@@ -442,12 +471,12 @@ function TimelineView({ projects }: { projects: Array<{
             >
               <div className="w-[250px] shrink-0 p-2 text-sm">
                 <p className="font-medium truncate">{p.titulo}</p>
-                <p className="text-xs text-muted-foreground truncate">{p.codigo} - {p.cliente.nome}</p>
+                <p className="text-xs text-[#666666] truncate">{p.codigo} - {p.cliente.nome}</p>
               </div>
               <div className="flex-1 relative py-3 px-1">
                 {/* Today line */}
                 <div
-                  className="absolute top-0 bottom-0 w-px bg-red-400 z-10"
+                  className="absolute top-0 bottom-0 w-px bg-[#DC3545] z-10"
                   style={{ left: `${todayOffset}%` }}
                 />
                 {/* Bar */}

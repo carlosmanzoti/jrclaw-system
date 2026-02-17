@@ -33,7 +33,18 @@ import {
   Scale,
   FolderKanban,
   Clock,
+  Download,
+  ShieldCheck,
+  ShieldOff,
 } from "lucide-react"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import {
   PERSON_TYPE_LABELS,
   PERSON_SUBTYPE_LABELS,
@@ -98,6 +109,7 @@ export function PersonForm({ personId }: PersonFormProps) {
   const isEditing = !!personId
   const [activeTab, setActiveTab] = useState("dados")
   const [cepLoading, setCepLoading] = useState(false)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
 
   // Fetch existing person data
   const { data: person, isLoading: personLoading } = trpc.persons.getById.useQuery(
@@ -165,6 +177,13 @@ export function PersonForm({ personId }: PersonFormProps) {
     onSuccess: () => {
       utils.persons.list.invalidate()
       utils.persons.getById.invalidate({ id: personId! })
+    },
+  })
+
+  const deleteMutation = trpc.persons.delete.useMutation({
+    onSuccess: () => {
+      utils.persons.list.invalidate()
+      router.push("/pessoas")
     },
   })
 
@@ -238,7 +257,7 @@ export function PersonForm({ personId }: PersonFormProps) {
   if (isEditing && personLoading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <Loader2 className="size-6 animate-spin text-muted-foreground" />
+        <Loader2 className="size-6 animate-spin text-[#666666]" />
       </div>
     )
   }
@@ -247,7 +266,7 @@ export function PersonForm({ personId }: PersonFormProps) {
   const isPJ = watchedSubtipo === "PESSOA_JURIDICA"
 
   return (
-    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 max-h-[calc(100vh-8rem)] overflow-y-auto pr-1">
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
@@ -258,19 +277,58 @@ export function PersonForm({ personId }: PersonFormProps) {
             <h1 className="text-2xl font-bold tracking-tight">
               {isEditing ? person?.nome || "Editar Pessoa" : "Nova Pessoa"}
             </h1>
-            <p className="text-muted-foreground">
+            <p className="text-[#666666]">
               {isEditing ? "Editar dados cadastrais" : "Preencha os dados da pessoa"}
             </p>
           </div>
         </div>
-        <Button type="submit" disabled={isPending}>
-          {isPending ? (
-            <Loader2 className="mr-2 size-4 animate-spin" />
-          ) : (
-            <Save className="mr-2 size-4" />
+        <div className="flex items-center gap-2">
+          {isEditing && (
+            <>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  const currentAccess = form.getValues("portal_access")
+                  form.setValue("portal_access", !currentAccess)
+                }}
+              >
+                {form.watch("portal_access") ? (
+                  <>
+                    <ShieldOff className="mr-2 size-4" />
+                    Desabilitar Portal
+                  </>
+                ) : (
+                  <>
+                    <ShieldCheck className="mr-2 size-4" />
+                    Habilitar Portal
+                  </>
+                )}
+              </Button>
+              <Button
+                type="button"
+                variant="destructive"
+                size="sm"
+                onClick={() => setDeleteDialogOpen(true)}
+              >
+                <Trash2 className="mr-2 size-4" />
+                Excluir
+              </Button>
+            </>
           )}
-          {isEditing ? "Salvar Alterações" : "Cadastrar"}
-        </Button>
+          <Button type="button" variant="outline" onClick={() => router.back()}>
+            Cancelar
+          </Button>
+          <Button type="submit" disabled={isPending}>
+            {isPending ? (
+              <Loader2 className="mr-2 size-4 animate-spin" />
+            ) : (
+              <Save className="mr-2 size-4" />
+            )}
+            {isEditing ? "Salvar Alterações" : "Cadastrar"}
+          </Button>
+        </div>
       </div>
 
       {mutation.error && (
@@ -280,7 +338,7 @@ export function PersonForm({ personId }: PersonFormProps) {
       )}
 
       {updateMutation.isSuccess && (
-        <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-700">
+        <div className="rounded-lg border border-[#28A745]/20 bg-[#28A745]/10 p-3 text-sm text-[#28A745]">
           Dados salvos com sucesso!
         </div>
       )}
@@ -476,7 +534,7 @@ export function PersonForm({ personId }: PersonFormProps) {
                 />
                 <div>
                   <Label>Acesso ao Portal do Cliente</Label>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-xs text-[#666666]">
                     Permite que esta pessoa acesse o portal para visualizar processos e documentos
                   </p>
                 </div>
@@ -668,6 +726,47 @@ export function PersonForm({ personId }: PersonFormProps) {
           </TabsContent>
         )}
       </Tabs>
+
+      {/* Delete confirmation dialog */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirmar exclusão</DialogTitle>
+            <DialogDescription>
+              Tem certeza? Esta ação não pode ser desfeita.
+              {person && (
+                <>
+                  {((person.cases_as_client as unknown[]) ?? []).length > 0 ||
+                  ((person.case_parties as unknown[]) ?? []).length > 0 ||
+                  ((person.projects_as_client as unknown[]) ?? []).length > 0 ||
+                  ((person.project_stakeholders as unknown[]) ?? []).length > 0 ? (
+                    <span className="block mt-2 text-destructive font-medium">
+                      Atenção: Esta pessoa possui vínculos com processos ou projetos. A exclusão poderá afetar esses registros.
+                    </span>
+                  ) : null}
+                </>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
+              Cancelar
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={deleteMutation.isPending}
+              onClick={() => personId && deleteMutation.mutate({ id: personId })}
+            >
+              {deleteMutation.isPending ? "Excluindo..." : "Excluir"}
+            </Button>
+          </DialogFooter>
+          {deleteMutation.error && (
+            <p className="text-sm text-destructive">
+              {deleteMutation.error.message}
+            </p>
+          )}
+        </DialogContent>
+      </Dialog>
     </form>
   )
 }
@@ -780,7 +879,7 @@ function PersonDocumentsTab({ personId, documents }: PersonDocumentsTabProps) {
                     ) : (
                       <Upload className="size-4" />
                     )}
-                    Upload
+                    Enviar Documento
                   </div>
                 </Label>
                 <input
@@ -803,10 +902,10 @@ function PersonDocumentsTab({ personId, documents }: PersonDocumentsTabProps) {
                     className="flex items-center justify-between rounded-lg border p-3"
                   >
                     <div className="flex items-center gap-3 min-w-0">
-                      <FileText className="size-5 text-muted-foreground shrink-0" />
+                      <FileText className="size-5 text-[#666666] shrink-0" />
                       <div className="min-w-0">
                         <p className="text-sm font-medium truncate">{doc.titulo}</p>
-                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <div className="flex items-center gap-2 text-xs text-[#666666]">
                           <Badge variant="secondary" className="text-xs">
                             {PERSON_DOC_TYPE_LABELS[doc.tipo] || doc.tipo}
                           </Badge>
@@ -818,15 +917,21 @@ function PersonDocumentsTab({ personId, documents }: PersonDocumentsTabProps) {
                       </div>
                     </div>
                     <div className="flex items-center gap-1 shrink-0">
-                      <Button variant="ghost" size="icon" className="size-8" asChild>
+                      <Button variant="ghost" size="icon" className="size-8" title="Visualizar" asChild>
                         <a href={doc.arquivo_url} target="_blank" rel="noopener noreferrer">
                           <ExternalLink className="size-4" />
+                        </a>
+                      </Button>
+                      <Button variant="ghost" size="icon" className="size-8" title="Baixar" asChild>
+                        <a href={doc.arquivo_url} download>
+                          <Download className="size-4" />
                         </a>
                       </Button>
                       <Button
                         variant="ghost"
                         size="icon"
                         className="size-8 text-destructive hover:text-destructive"
+                        title="Excluir"
                         onClick={() => removeDocMutation.mutate({ id: doc.id })}
                         disabled={removeDocMutation.isPending}
                       >
@@ -837,13 +942,13 @@ function PersonDocumentsTab({ personId, documents }: PersonDocumentsTabProps) {
                 ))}
               </div>
             ) : (
-              <p className="text-center text-sm text-muted-foreground py-8">
+              <p className="text-center text-sm text-[#666666] py-8">
                 Nenhum documento anexado ainda.
               </p>
             )}
           </>
         ) : (
-          <p className="text-center text-sm text-muted-foreground py-8">
+          <p className="text-center text-sm text-[#666666] py-8">
             Salve o cadastro primeiro para anexar documentos.
           </p>
         )}
@@ -905,7 +1010,7 @@ function PersonCasesTab({ person }: { person: any }) {
                   <p className="text-sm font-medium font-mono truncate">
                     {c.numero_processo || "Sem número"}
                   </p>
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
+                  <div className="flex items-center gap-2 text-xs text-[#666666] mt-0.5">
                     <Badge variant="secondary" className="text-xs">
                       {CASE_TYPE_LABELS[c.tipo] || c.tipo}
                     </Badge>
@@ -913,7 +1018,7 @@ function PersonCasesTab({ person }: { person: any }) {
                       variant="outline"
                       className={
                         c.status === "ATIVO"
-                          ? "border-emerald-300 text-emerald-700"
+                          ? "border-[#28A745]/30 text-[#28A745]"
                           : "border-gray-300 text-gray-600"
                       }
                     >
@@ -926,7 +1031,7 @@ function PersonCasesTab({ person }: { person: any }) {
             ))}
           </div>
         ) : (
-          <p className="text-center text-sm text-muted-foreground py-8">
+          <p className="text-center text-sm text-[#666666] py-8">
             Nenhum processo vinculado a esta pessoa.
           </p>
         )}
@@ -983,7 +1088,7 @@ function PersonProjectsTab({ person }: { person: any }) {
               >
                 <div className="min-w-0">
                   <p className="text-sm font-medium truncate">{p.titulo}</p>
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
+                  <div className="flex items-center gap-2 text-xs text-[#666666] mt-0.5">
                     <span className="font-mono">{p.codigo}</span>
                     <Badge variant="secondary" className="text-xs">
                       {PROJECT_CATEGORY_LABELS[p.categoria] || p.categoria}
@@ -992,7 +1097,7 @@ function PersonProjectsTab({ person }: { person: any }) {
                       variant="outline"
                       className={
                         p.status === "EM_ANDAMENTO"
-                          ? "border-emerald-300 text-emerald-700"
+                          ? "border-[#28A745]/30 text-[#28A745]"
                           : "border-gray-300 text-gray-600"
                       }
                     >
@@ -1005,7 +1110,7 @@ function PersonProjectsTab({ person }: { person: any }) {
             ))}
           </div>
         ) : (
-          <p className="text-center text-sm text-muted-foreground py-8">
+          <p className="text-center text-sm text-[#666666] py-8">
             Nenhum projeto vinculado a esta pessoa.
           </p>
         )}
@@ -1033,11 +1138,11 @@ function PersonHistoryTab({ person }: { person: any }) {
           <div className="flex items-center justify-between rounded-lg border p-3">
             <div>
               <p className="text-sm font-medium">Cadastro criado</p>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-xs text-[#666666]">
                 {person.created_by ? `por ${(person.created_by as { name: string }).name}` : "Sistema"}
               </p>
             </div>
-            <span className="text-xs text-muted-foreground">
+            <span className="text-xs text-[#666666]">
               {new Date(person.created_at as string).toLocaleDateString("pt-BR", {
                 day: "2-digit",
                 month: "2-digit",
@@ -1051,7 +1156,7 @@ function PersonHistoryTab({ person }: { person: any }) {
             <div>
               <p className="text-sm font-medium">Última atualização</p>
             </div>
-            <span className="text-xs text-muted-foreground">
+            <span className="text-xs text-[#666666]">
               {new Date(person.updated_at as string).toLocaleDateString("pt-BR", {
                 day: "2-digit",
                 month: "2-digit",
@@ -1065,11 +1170,11 @@ function PersonHistoryTab({ person }: { person: any }) {
             <div className="flex items-center justify-between rounded-lg border p-3">
               <div>
                 <p className="text-sm font-medium">Documentos anexados</p>
-                <p className="text-xs text-muted-foreground">
+                <p className="text-xs text-[#666666]">
                   {(person.person_documents as unknown[]).length} documento(s)
                 </p>
               </div>
-              <span className="text-xs text-muted-foreground">
+              <span className="text-xs text-[#666666]">
                 Último:{" "}
                 {new Date((person.person_documents as Array<{ uploaded_at: string }>)[0].uploaded_at).toLocaleDateString("pt-BR")}
               </span>

@@ -5,6 +5,7 @@ import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
 import { buildDocumentPrompt } from "@/lib/ai-prompt-builder"
 import type { PromptContext } from "@/lib/ai-prompts"
+import { Prisma } from "@prisma/client"
 
 export const maxDuration = 120
 
@@ -27,6 +28,8 @@ export async function POST(req: Request) {
     incluirDoutrina = false,
     incluirTutela = false,
     forceOpus = false,
+    referenceDocs = [],
+    bibliotecaEntryIds = [],
   } = body
 
   const startTime = Date.now()
@@ -40,7 +43,6 @@ export async function POST(req: Request) {
   // Load context
   let processo = null
   let projeto = null
-  let biblioteca: any[] = []
 
   if (caseId) {
     processo = await db.case.findUnique({
@@ -64,18 +66,80 @@ export async function POST(req: Request) {
     })
   }
 
-  // Auto-search library
+  // Smart Biblioteca search
   const areas: string[] = []
   if (processo?.tipo) areas.push(processo.tipo)
   if (projeto?.categoria) areas.push(projeto.categoria)
 
-  if (incluirJurisprudencia && areas.length > 0) {
-    biblioteca = await db.libraryEntry.findMany({
-      where: { area: { in: areas as any } },
-      orderBy: { relevancia: "desc" },
-      take: 5,
+  // Build search conditions
+  const searchConditions: Prisma.LibraryEntryWhereInput[] = []
+
+  // Area match
+  if (areas.length > 0) {
+    searchConditions.push({ area: { in: areas as any } })
+  }
+
+  // Favorites of matching areas
+  if (areas.length > 0) {
+    searchConditions.push({ favorito: true, area: { in: areas as any } })
+  }
+
+  // Case/project linked entries
+  if (caseId) {
+    searchConditions.push({
+      OR: [
+        { case_id: caseId },
+        { utilizado_em_casos: { some: { id: caseId } } },
+      ],
     })
   }
+  if (projectId) {
+    searchConditions.push({
+      utilizado_em_projetos: { some: { id: projectId } },
+    })
+  }
+
+  // Text-based search from document type and case tags
+  const searchTerms: string[] = []
+  if (tipoDocumento) searchTerms.push(tipoDocumento.replace(/_/g, " ").toLowerCase())
+  if (processo?.tags) searchTerms.push(...processo.tags)
+  if (searchTerms.length > 0) {
+    searchConditions.push({
+      OR: searchTerms.flatMap((term) => [
+        { titulo: { contains: term, mode: "insensitive" as Prisma.QueryMode } },
+        { tags: { hasSome: [term] } },
+      ]),
+    })
+  }
+
+  // User-selected entries
+  let userSelectedEntries: any[] = []
+  if (bibliotecaEntryIds.length > 0) {
+    userSelectedEntries = await db.libraryEntry.findMany({
+      where: { id: { in: bibliotecaEntryIds } },
+    })
+  }
+
+  // Auto-search entries (fill remaining slots up to 10)
+  const autoSearchLimit = Math.max(0, 10 - userSelectedEntries.length)
+  let autoSearchEntries: any[] = []
+
+  if (autoSearchLimit > 0 && searchConditions.length > 0) {
+    autoSearchEntries = await db.libraryEntry.findMany({
+      where: {
+        OR: searchConditions,
+        id: { notIn: bibliotecaEntryIds },
+      },
+      orderBy: [{ favorito: "desc" }, { relevancia: "desc" }],
+      take: autoSearchLimit,
+    })
+  }
+
+  const biblioteca = [...userSelectedEntries, ...autoSearchEntries]
+  const bibliotecaRefIds = biblioteca.map((e) => e.id)
+
+  // Build search query string for logging
+  const searchQuery = [tipoDocumento, ...areas, ...(processo?.tags || [])].join(" ")
 
   const context: PromptContext = {
     tipoDocumento,
@@ -89,6 +153,7 @@ export async function POST(req: Request) {
     incluirJurisprudencia,
     incluirDoutrina,
     incluirTutela,
+    referenceDocs,
   }
 
   const systemPrompt = buildDocumentPrompt(context)
@@ -120,6 +185,37 @@ export async function POST(req: Request) {
           projectId: projectId || null,
         },
       })
+
+      // Log Biblioteca search
+      if (biblioteca.length > 0) {
+        await db.librarySearchLog.create({
+          data: {
+            user_id: session.user!.id!,
+            query: searchQuery,
+            results_count: biblioteca.length,
+            entries_used: bibliotecaRefIds,
+            context: "DOCUMENTO",
+          },
+        }).catch(() => {}) // non-critical
+      }
+
+      // Connect used entries to case/project
+      if (bibliotecaRefIds.length > 0) {
+        for (const entryId of bibliotecaRefIds) {
+          if (caseId) {
+            await db.libraryEntry.update({
+              where: { id: entryId },
+              data: { utilizado_em_casos: { connect: { id: caseId } } },
+            }).catch(() => {})
+          }
+          if (projectId) {
+            await db.libraryEntry.update({
+              where: { id: entryId },
+              data: { utilizado_em_projetos: { connect: { id: projectId } } },
+            }).catch(() => {})
+          }
+        }
+      }
     },
   }
 
@@ -137,6 +233,7 @@ export async function POST(req: Request) {
   // Add model info headers
   response.headers.set("X-AI-Model", config.model)
   response.headers.set("X-AI-Tier", config.tier)
+  response.headers.set("X-Biblioteca-Refs", JSON.stringify(bibliotecaRefIds))
 
   return response
 }

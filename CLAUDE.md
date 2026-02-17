@@ -2,7 +2,7 @@
 
 ## Visão Geral
 Sistema web completo de gestão para escritório de advocacia empresarial especializado em
-recuperação judicial, reestruturação de dívidas e passivos, direito agrário e processos
+recuperação judicial, reestruturação de dívidas e passivos, agronegócio e processos
 empresariais complexos. Inclui gestão interna (advogados/equipe) e externa (portal clientes),
 assistente IA jurídico, módulo de negociação de credores, biblioteca jurídica, gestão de
 projetos gerenciais, e integrações com Microsoft 365, WhatsApp e tribunais.
@@ -150,7 +150,7 @@ Cadastro central que alimenta TODOS os módulos.
 ### Case (Processo judicial)
 - id
 - numero_processo (formato CNJ: NNNNNNN-DD.AAAA.J.TR.OOOO)
-- tipo: RECUPERACAO_JUDICIAL | FALENCIA | EXECUCAO | COBRANCA | REESTRUTURACAO_EXTRAJUDICIAL | AGRARIO | TRABALHISTA | TRIBUTARIO | SOCIETARIO | CONTRATUAL | OUTRO
+- tipo: RECUPERACAO_JUDICIAL | FALENCIA | EXECUCAO | COBRANCA | REESTRUTURACAO_EXTRAJUDICIAL | AGRONEGOCIO | TRABALHISTA | TRIBUTARIO | SOCIETARIO | CONTRATUAL | OUTRO
 - status: ATIVO | SUSPENSO | ARQUIVADO | ENCERRADO
 - fase_processual: text
 - vara, comarca, tribunal, uf

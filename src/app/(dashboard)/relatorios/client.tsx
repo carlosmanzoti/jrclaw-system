@@ -54,9 +54,15 @@ import {
   Share2,
   ArrowRight,
   ArrowLeft,
+  Mail,
+  MessageCircle,
 } from "lucide-react"
 import { formatCurrency, CASE_TYPE_LABELS, ACTIVITY_TYPE_LABELS } from "@/lib/constants"
-import { downloadReportPDF } from "@/lib/pdf/generate-report-pdf"
+// Lazy import to avoid SSR issues with @react-pdf/renderer
+const lazyDownloadReportPDF = async (...args: Parameters<typeof import("@/lib/pdf/generate-report-pdf")["downloadReportPDF"]>) => {
+  const { downloadReportPDF } = await import("@/lib/pdf/generate-report-pdf")
+  return downloadReportPDF(...args)
+}
 import type { ReportData } from "@/types/reports"
 
 const STEPS = ["Cliente", "Período", "Preview", "Exportar"]
@@ -69,13 +75,13 @@ function StepIndicator({ current }: { current: number }) {
         <div key={step} className="flex items-center gap-2">
           <div
             className={`flex items-center justify-center size-8 rounded-full text-xs font-medium ${
-              i <= current ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
+              i <= current ? "bg-primary text-primary-foreground" : "bg-muted text-[#666666]"
             }`}
           >
             {i + 1}
           </div>
-          <span className={`text-sm ${i <= current ? "font-medium" : "text-muted-foreground"}`}>{step}</span>
-          {i < STEPS.length - 1 && <ArrowRight className="size-4 text-muted-foreground mx-1" />}
+          <span className={`text-sm ${i <= current ? "font-medium" : "text-[#666666]"}`}>{step}</span>
+          {i < STEPS.length - 1 && <ArrowRight className="size-4 text-[#666666] mx-1" />}
         </div>
       ))}
     </div>
@@ -98,7 +104,7 @@ function KPICard({ icon: Icon, label, value, format }: { icon: React.ComponentTy
           </div>
           <div>
             <p className="text-2xl font-bold">{formatted}</p>
-            <p className="text-xs text-muted-foreground">{label}</p>
+            <p className="text-xs text-[#666666]">{label}</p>
           </div>
         </div>
       </CardContent>
@@ -165,7 +171,7 @@ export function ReportsPageClient() {
     : 0
 
   return (
-    <div>
+    <div className="space-y-4">
       <StepIndicator current={step} />
 
       {/* STEP 1: Select Client */}
@@ -249,7 +255,7 @@ export function ReportsPageClient() {
               <div className="flex items-center justify-between">
                 <div>
                   <h3 className="font-semibold">{selectedClient?.nome}</h3>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-xs text-[#666666]">
                     {new Date(dateFrom).toLocaleDateString("pt-BR")} — {new Date(dateTo).toLocaleDateString("pt-BR")}
                   </p>
                 </div>
@@ -283,7 +289,7 @@ export function ReportsPageClient() {
                       if (!reportData || !selectedClient) return
                       setPdfLoading(true)
                       try {
-                        await downloadReportPDF({
+                        await lazyDownloadReportPDF({
                           data: reportData,
                           clientName: selectedClient.nome,
                           periodLabel: `${new Date(dateFrom).toLocaleDateString("pt-BR")} — ${new Date(dateTo).toLocaleDateString("pt-BR")}`,
@@ -297,6 +303,30 @@ export function ReportsPageClient() {
                   >
                     <Download className="size-3 mr-1" />
                     {pdfLoading ? "Gerando..." : "Gerar PDF"}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => alert("Em desenvolvimento")}
+                  >
+                    <Share2 className="size-3 mr-1" />
+                    Compartilhar no Portal
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => alert("Em desenvolvimento")}
+                  >
+                    <Mail className="size-3 mr-1" />
+                    Enviar por E-mail
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => alert("Em desenvolvimento")}
+                  >
+                    <MessageCircle className="size-3 mr-1" />
+                    Enviar por WhatsApp
                   </Button>
                 </div>
               </div>
@@ -357,7 +387,7 @@ export function ReportsPageClient() {
                             </BarChart>
                           </ResponsiveContainer>
                         ) : (
-                          <p className="text-sm text-muted-foreground text-center py-8">Sem dados no período</p>
+                          <p className="text-sm text-[#666666] text-center py-8">Sem dados no período</p>
                         )}
                       </CardContent>
                     </Card>
@@ -377,7 +407,7 @@ export function ReportsPageClient() {
                             </AreaChart>
                           </ResponsiveContainer>
                         ) : (
-                          <p className="text-sm text-muted-foreground text-center py-8">Sem dados no período</p>
+                          <p className="text-sm text-[#666666] text-center py-8">Sem dados no período</p>
                         )}
                       </CardContent>
                     </Card>
@@ -406,7 +436,7 @@ export function ReportsPageClient() {
                             </PieChart>
                           </ResponsiveContainer>
                         ) : (
-                          <p className="text-sm text-muted-foreground text-center py-8">Sem dados</p>
+                          <p className="text-sm text-[#666666] text-center py-8">Sem dados</p>
                         )}
                       </CardContent>
                     </Card>
@@ -435,7 +465,7 @@ export function ReportsPageClient() {
                             </PieChart>
                           </ResponsiveContainer>
                         ) : (
-                          <p className="text-sm text-muted-foreground text-center py-8">Sem dados de risco</p>
+                          <p className="text-sm text-[#666666] text-center py-8">Sem dados de risco</p>
                         )}
                       </CardContent>
                     </Card>
@@ -445,7 +475,7 @@ export function ReportsPageClient() {
                 {/* PROCESSOS */}
                 <TabsContent value="processos" className="space-y-4 mt-4">
                   {reportData.processos.length === 0 ? (
-                    <p className="text-sm text-muted-foreground text-center py-8">Nenhum processo ativo no período.</p>
+                    <p className="text-sm text-[#666666] text-center py-8">Nenhum processo ativo no período.</p>
                   ) : (
                     reportData.processos.map((proc) => (
                       <Card key={proc.id}>
@@ -453,7 +483,7 @@ export function ReportsPageClient() {
                           <div className="flex items-center justify-between">
                             <div>
                               <p className="font-mono text-sm font-medium">{proc.numero}</p>
-                              <p className="text-xs text-muted-foreground">
+                              <p className="text-xs text-[#666666]">
                                 {CASE_TYPE_LABELS[proc.tipo] || proc.tipo} — {proc.vara}
                               </p>
                             </div>
@@ -463,28 +493,28 @@ export function ReportsPageClient() {
                             </div>
                           </div>
                           {proc.fase && (
-                            <p className="text-xs"><span className="text-muted-foreground">Fase:</span> {proc.fase}</p>
+                            <p className="text-xs"><span className="text-[#666666]">Fase:</span> {proc.fase}</p>
                           )}
                           <div className="grid grid-cols-3 gap-2 text-center">
                             <div className="p-2 bg-muted rounded">
                               <p className="text-lg font-bold">{proc.movimentacoes_count}</p>
-                              <p className="text-[10px] text-muted-foreground">Movimentações</p>
+                              <p className="text-[10px] text-[#666666]">Movimentações</p>
                             </div>
                             <div className="p-2 bg-muted rounded">
                               <p className="text-lg font-bold">{proc.prazos_cumpridos}/{proc.prazos_total}</p>
-                              <p className="text-[10px] text-muted-foreground">Prazos</p>
+                              <p className="text-[10px] text-[#666666]">Prazos</p>
                             </div>
                             <div className="p-2 bg-muted rounded">
                               <p className="text-lg font-bold">{proc.atividades.length}</p>
-                              <p className="text-[10px] text-muted-foreground">Atividades</p>
+                              <p className="text-[10px] text-[#666666]">Atividades</p>
                             </div>
                           </div>
                           {proc.atividades.length > 0 && (
                             <div className="space-y-1">
-                              <p className="text-xs font-medium text-muted-foreground">Atividades no período:</p>
+                              <p className="text-xs font-medium text-[#666666]">Atividades no período:</p>
                               {proc.atividades.map((a) => (
                                 <div key={a.id} className="flex items-center gap-2 text-xs py-1 border-b last:border-b-0">
-                                  <span className="text-muted-foreground font-mono w-20 shrink-0">
+                                  <span className="text-[#666666] font-mono w-20 shrink-0">
                                     {new Date(a.data).toLocaleDateString("pt-BR")}
                                   </span>
                                   <Badge variant="outline" className="text-[10px] shrink-0">
@@ -505,7 +535,7 @@ export function ReportsPageClient() {
                 {/* PROJETOS */}
                 <TabsContent value="projetos" className="space-y-4 mt-4">
                   {reportData.projetos.length === 0 ? (
-                    <p className="text-sm text-muted-foreground text-center py-8">Nenhum projeto no período.</p>
+                    <p className="text-sm text-[#666666] text-center py-8">Nenhum projeto no período.</p>
                   ) : (
                     reportData.projetos.map((proj) => (
                       <Card key={proj.id}>
@@ -523,12 +553,12 @@ export function ReportsPageClient() {
                             </div>
                             <Progress value={proj.progresso} className="h-2" />
                           </div>
-                          <p className="text-xs text-muted-foreground">
+                          <p className="text-xs text-[#666666]">
                             Tarefas concluídas no período: {proj.tarefas_concluidas}/{proj.tarefas_total}
                           </p>
                           {proj.marcos.length > 0 && (
                             <div className="space-y-1">
-                              <p className="text-xs font-medium text-muted-foreground">Marcos:</p>
+                              <p className="text-xs font-medium text-[#666666]">Marcos:</p>
                               {proj.marcos.map((m, i) => (
                                 <div key={i} className="flex items-center gap-2 text-xs">
                                   <span>
@@ -536,7 +566,7 @@ export function ReportsPageClient() {
                                   </span>
                                   <span>{m.nome}</span>
                                   {m.data && (
-                                    <span className="text-muted-foreground">
+                                    <span className="text-[#666666]">
                                       ({new Date(m.data).toLocaleDateString("pt-BR")})
                                     </span>
                                   )}
@@ -556,25 +586,25 @@ export function ReportsPageClient() {
                     <Card>
                       <CardContent className="p-4 text-center">
                         <p className="text-2xl font-bold">{formatCurrency(reportData.kpis.valor_disputas)}</p>
-                        <p className="text-xs text-muted-foreground">Total em Disputas</p>
+                        <p className="text-xs text-[#666666]">Total em Disputas</p>
                       </CardContent>
                     </Card>
                     <Card>
                       <CardContent className="p-4 text-center">
-                        <p className="text-2xl font-bold text-emerald-600">{formatCurrency(reportData.kpis.liberacoes)}</p>
-                        <p className="text-xs text-muted-foreground">Já Liberado</p>
+                        <p className="text-2xl font-bold text-[#28A745]">{formatCurrency(reportData.kpis.liberacoes)}</p>
+                        <p className="text-xs text-[#666666]">Já Liberado</p>
                       </CardContent>
                     </Card>
                     <Card>
                       <CardContent className="p-4 text-center">
-                        <p className="text-2xl font-bold text-amber-600">
+                        <p className="text-2xl font-bold text-[#C9A961]">
                           {formatCurrency(
                             reportData.valores
                               .filter((v) => v.status !== "LIBERADO" && v.status !== "CANCELADO")
                               .reduce((sum, v) => sum + v.valor, 0)
                           )}
                         </p>
-                        <p className="text-xs text-muted-foreground">Pendente</p>
+                        <p className="text-xs text-[#666666]">Pendente</p>
                       </CardContent>
                     </Card>
                   </div>
@@ -601,15 +631,15 @@ export function ReportsPageClient() {
                                 <Badge
                                   variant="secondary"
                                   className={
-                                    v.status === "LIBERADO" ? "bg-emerald-50 text-emerald-700" :
-                                    v.status === "PENDENTE" ? "bg-amber-50 text-amber-700" :
-                                    v.status === "BLOQUEADO" ? "bg-red-50 text-red-700" : ""
+                                    v.status === "LIBERADO" ? "bg-[#28A745]/10 text-[#28A745]" :
+                                    v.status === "PENDENTE" ? "bg-[#C9A961]/10 text-[#C9A961]" :
+                                    v.status === "BLOQUEADO" ? "bg-[#DC3545]/10 text-[#DC3545]" : ""
                                   }
                                 >
                                   {v.status}
                                 </Badge>
                               </TableCell>
-                              <TableCell className="text-xs text-muted-foreground">
+                              <TableCell className="text-xs text-[#666666]">
                                 {v.data_prevista ? new Date(v.data_prevista).toLocaleDateString("pt-BR") : "—"}
                               </TableCell>
                             </TableRow>
@@ -618,7 +648,7 @@ export function ReportsPageClient() {
                       </Table>
                     </div>
                   ) : (
-                    <p className="text-sm text-muted-foreground text-center py-8">Nenhuma liberação financeira registrada.</p>
+                    <p className="text-sm text-[#666666] text-center py-8">Nenhuma liberação financeira registrada.</p>
                   )}
                 </TabsContent>
 
@@ -628,25 +658,25 @@ export function ReportsPageClient() {
                     <Card>
                       <CardContent className="p-3 text-center">
                         <p className="text-xl font-bold">{reportData.kpis.emails_enviados}</p>
-                        <p className="text-[10px] text-muted-foreground">E-mails</p>
+                        <p className="text-[10px] text-[#666666]">E-mails</p>
                       </CardContent>
                     </Card>
                     <Card>
                       <CardContent className="p-3 text-center">
                         <p className="text-xl font-bold">{reportData.kpis.relatorios_entregues}</p>
-                        <p className="text-[10px] text-muted-foreground">Relatórios</p>
+                        <p className="text-[10px] text-[#666666]">Relatórios</p>
                       </CardContent>
                     </Card>
                     <Card>
                       <CardContent className="p-3 text-center">
                         <p className="text-xl font-bold">{reportData.kpis.reunioes}</p>
-                        <p className="text-[10px] text-muted-foreground">Reuniões</p>
+                        <p className="text-[10px] text-[#666666]">Reuniões</p>
                       </CardContent>
                     </Card>
                     <Card>
                       <CardContent className="p-3 text-center">
                         <p className="text-xl font-bold">{reportData.kpis.comunicados}</p>
-                        <p className="text-[10px] text-muted-foreground">Comunicados</p>
+                        <p className="text-[10px] text-[#666666]">Comunicados</p>
                       </CardContent>
                     </Card>
                   </div>
@@ -655,7 +685,7 @@ export function ReportsPageClient() {
                     <div className="space-y-2">
                       {reportData.comunicacoes.map((com) => (
                         <div key={com.id} className="flex items-start gap-3 p-3 border rounded-lg">
-                          <div className="text-xs text-muted-foreground font-mono w-20 shrink-0 pt-0.5">
+                          <div className="text-xs text-[#666666] font-mono w-20 shrink-0 pt-0.5">
                             {new Date(com.data).toLocaleDateString("pt-BR")}
                           </div>
                           <div className="flex-1 min-w-0">
@@ -666,7 +696,7 @@ export function ReportsPageClient() {
                             </div>
                             <p className="text-sm mt-1">{com.title}</p>
                             {com.recipients.length > 0 && (
-                              <p className="text-xs text-muted-foreground mt-0.5">
+                              <p className="text-xs text-[#666666] mt-0.5">
                                 Para: {com.recipients.join(", ")}
                               </p>
                             )}
@@ -675,7 +705,7 @@ export function ReportsPageClient() {
                       ))}
                     </div>
                   ) : (
-                    <p className="text-sm text-muted-foreground text-center py-8">Nenhuma comunicação no período.</p>
+                    <p className="text-sm text-[#666666] text-center py-8">Nenhuma comunicação no período.</p>
                   )}
                 </TabsContent>
               </Tabs>
@@ -701,13 +731,16 @@ export function ReportsPageClient() {
       {step === 3 && (
         <Card>
           <CardContent className="p-8 text-center space-y-4">
-            <CheckCircle className="size-12 text-emerald-500 mx-auto" />
+            <CheckCircle className="size-12 text-[#28A745] mx-auto" />
             <h3 className="text-lg font-semibold">Relatório Salvo</h3>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-[#666666]">
               O relatório de {selectedClient?.nome} foi salvo com sucesso.
             </p>
-            <div className="flex justify-center gap-3">
-              <Button variant="outline" disabled>
+            <div className="flex flex-wrap justify-center gap-3">
+              <Button
+                variant="outline"
+                onClick={() => alert("Em desenvolvimento")}
+              >
                 <Share2 className="size-4 mr-1" />
                 Compartilhar no Portal
               </Button>
@@ -717,7 +750,7 @@ export function ReportsPageClient() {
                   if (!reportData || !selectedClient) return
                   setPdfLoading(true)
                   try {
-                    await downloadReportPDF({
+                    await lazyDownloadReportPDF({
                       data: reportData,
                       clientName: selectedClient.nome,
                       periodLabel: `${new Date(dateFrom).toLocaleDateString("pt-BR")} — ${new Date(dateTo).toLocaleDateString("pt-BR")}`,
@@ -731,6 +764,20 @@ export function ReportsPageClient() {
               >
                 <Download className="size-4 mr-1" />
                 {pdfLoading ? "Gerando..." : "Gerar PDF"}
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => alert("Em desenvolvimento")}
+              >
+                <Mail className="size-4 mr-1" />
+                Enviar por E-mail
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => alert("Em desenvolvimento")}
+              >
+                <MessageCircle className="size-4 mr-1" />
+                Enviar por WhatsApp
               </Button>
               <Button variant="outline" onClick={() => { setStep(0); setSelectedClientId(""); }}>
                 Novo Relatório

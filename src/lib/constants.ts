@@ -52,7 +52,7 @@ export const CASE_TYPE_LABELS: Record<string, string> = {
   EXECUCAO: "Execução",
   COBRANCA: "Cobrança",
   REESTRUTURACAO_EXTRAJUDICIAL: "Reestruturação Extrajudicial",
-  AGRARIO: "Agrário",
+  AGRONEGOCIO: "Agronegócio",
   TRABALHISTA: "Trabalhista",
   TRIBUTARIO: "Tributário",
   SOCIETARIO: "Societário",

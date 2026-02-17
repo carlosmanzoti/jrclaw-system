@@ -7,8 +7,28 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-body), 'Inter', sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+  --font-heading: var(--font-heading), 'Playfair Display', serif;
+  --font-body: var(--font-body), 'Inter', sans-serif;
+
+  /* Design system colors */
+  --color-gold: #C9A961;
+  --color-gold-light: rgba(201, 169, 97, 0.15);
+  --color-gold-lighter: rgba(201, 169, 97, 0.1);
+  --color-neon: #00FF00;
+  --color-bg-alt: #F7F3F1;
+  --color-bg-card: #F2F2F2;
+  --color-text-primary: #2A2A2A;
+  --color-text-secondary: #666666;
+  --color-text-muted: #999999;
+  --color-border-light: #E5E5E5;
+  --color-success: #28A745;
+  --color-error: #DC3545;
+  --color-warning: #FFC107;
+  --color-info: #17A2B8;
+
+  /* Sidebar */
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -17,6 +37,8 @@
   --color-sidebar-primary: var(--sidebar-primary);
   --color-sidebar-foreground: var(--sidebar-foreground);
   --color-sidebar: var(--sidebar);
+
+  /* shadcn mapped colors */
   --color-chart-5: var(--chart-5);
   --color-chart-4: var(--chart-4);
   --color-chart-3: var(--chart-3);
@@ -38,6 +60,8 @@
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
+
+  /* Radii */
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
@@ -45,84 +69,186 @@
   --radius-2xl: calc(var(--radius) + 8px);
   --radius-3xl: calc(var(--radius) + 12px);
   --radius-4xl: calc(var(--radius) + 16px);
+
+  /* Shadows */
+  --shadow-subtle: 0 2px 8px rgba(0, 0, 0, 0.08);
+  --shadow-medium: 0 4px 12px rgba(0, 0, 0, 0.12);
+  --shadow-strong: 0 8px 24px rgba(0, 0, 0, 0.16);
 }
 
 :root {
-  --radius: 0.625rem;
-  --background: oklch(0.985 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  /* Azul marinho #1a365d */
-  --primary: oklch(0.295 0.066 262);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.965 0.005 262);
-  --secondary-foreground: oklch(0.295 0.066 262);
-  --muted: oklch(0.965 0 0);
-  --muted-foreground: oklch(0.50 0 0);
-  --accent: oklch(0.955 0.008 262);
-  --accent-foreground: oklch(0.295 0.066 262);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.905 0 0);
-  --input: oklch(0.905 0 0);
-  --ring: oklch(0.295 0.066 262);
-  --chart-1: oklch(0.295 0.066 262);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.646 0.222 41.116);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
-  /* Sidebar: azul marinho dark */
-  --sidebar: oklch(0.255 0.060 262);
-  --sidebar-foreground: oklch(0.92 0 0);
-  --sidebar-primary: oklch(0.92 0 0);
-  --sidebar-primary-foreground: oklch(0.255 0.060 262);
-  --sidebar-accent: oklch(0.32 0.065 262);
-  --sidebar-accent-foreground: oklch(0.95 0 0);
-  --sidebar-border: oklch(0.35 0.060 262);
-  --sidebar-ring: oklch(0.50 0.06 262);
+  --radius: 0.5rem;
+  /* Background & foreground — JRC Design System */
+  --background: #FFFFFF;
+  --foreground: #2A2A2A;
+  --card: #FFFFFF;
+  --card-foreground: #2A2A2A;
+  --popover: #FFFFFF;
+  --popover-foreground: #2A2A2A;
+
+  /* Primary = Gold #C9A961 */
+  --primary: #C9A961;
+  --primary-foreground: #2A2A2A;
+
+  /* Secondary = Bege #F7F3F1 */
+  --secondary: #F7F3F1;
+  --secondary-foreground: #2A2A2A;
+
+  /* Muted = Cinza claro #F2F2F2 */
+  --muted: #F2F2F2;
+  --muted-foreground: #666666;
+
+  /* Accent */
+  --accent: #F7F3F1;
+  --accent-foreground: #2A2A2A;
+
+  /* Destructive */
+  --destructive: #DC3545;
+
+  /* Borders & inputs */
+  --border: #CCCCCC;
+  --input: #CCCCCC;
+
+  /* Ring = Gold focus */
+  --ring: #C9A961;
+
+  /* Chart palette */
+  --chart-1: #C9A961;
+  --chart-2: #2A2A2A;
+  --chart-3: #28A745;
+  --chart-4: #17A2B8;
+  --chart-5: #DC3545;
+
+  /* Sidebar — Cinza Chumbo escuro */
+  --sidebar: #2A2A2A;
+  --sidebar-foreground: rgba(255, 255, 255, 0.85);
+  --sidebar-primary: #C9A961;
+  --sidebar-primary-foreground: #2A2A2A;
+  --sidebar-accent: rgba(201, 169, 97, 0.15);
+  --sidebar-accent-foreground: #FFFFFF;
+  --sidebar-border: rgba(255, 255, 255, 0.1);
+  --sidebar-ring: #C9A961;
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.55 0.12 262);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  --background: #1a1a1a;
+  --foreground: #F2F2F2;
+  --card: #2A2A2A;
+  --card-foreground: #F2F2F2;
+  --popover: #2A2A2A;
+  --popover-foreground: #F2F2F2;
+  --primary: #C9A961;
+  --primary-foreground: #2A2A2A;
+  --secondary: #333333;
+  --secondary-foreground: #F2F2F2;
+  --muted: #333333;
+  --muted-foreground: #999999;
+  --accent: #333333;
+  --accent-foreground: #F2F2F2;
+  --destructive: #DC3545;
+  --border: rgba(255, 255, 255, 0.1);
+  --input: rgba(255, 255, 255, 0.15);
+  --ring: #C9A961;
+  --chart-1: #C9A961;
+  --chart-2: #666666;
+  --chart-3: #28A745;
+  --chart-4: #17A2B8;
+  --chart-5: #DC3545;
+  --sidebar: #1a1a1a;
+  --sidebar-foreground: rgba(255, 255, 255, 0.85);
+  --sidebar-primary: #C9A961;
+  --sidebar-primary-foreground: #1a1a1a;
+  --sidebar-accent: rgba(201, 169, 97, 0.15);
+  --sidebar-accent-foreground: #FFFFFF;
+  --sidebar-border: rgba(255, 255, 255, 0.1);
+  --sidebar-ring: #C9A961;
 }
 
 @layer base {
   * {
     @apply border-border outline-ring/50;
   }
+  html, body {
+    height: 100%;
+    overflow: hidden;
+  }
   body {
     @apply bg-background text-foreground;
+    font-family: var(--font-body), 'Inter', sans-serif;
+    color: #2A2A2A;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-heading), 'Playfair Display', serif;
+  }
+}
+
+/* === SCROLL GLOBAL FIX === */
+
+/* Scrollbar sutil */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(102, 102, 102, 0.3);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(102, 102, 102, 0.5);
+}
+
+/* Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(102, 102, 102, 0.3) transparent;
+}
+
+/* Scrollbar gutter stable para evitar layout shift */
+.overflow-y-auto,
+.overflow-x-auto,
+.overflow-auto {
+  scrollbar-gutter: stable;
+}
+
+/* Utility classes for the JRC design system */
+@layer utilities {
+  .font-heading {
+    font-family: var(--font-heading), 'Playfair Display', serif;
+  }
+  .font-body {
+    font-family: var(--font-body), 'Inter', sans-serif;
+  }
+  .shadow-subtle {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  }
+  .shadow-medium {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+  }
+  .shadow-strong {
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.16);
+  }
+  .text-gold {
+    color: #C9A961;
+  }
+  .bg-gold {
+    background-color: #C9A961;
+  }
+  .border-gold {
+    border-color: #C9A961;
+  }
+  .ring-gold {
+    --tw-ring-color: #C9A961;
+  }
+  .bg-bg-alt {
+    background-color: #F7F3F1;
+  }
+  .bg-bg-card {
+    background-color: #F2F2F2;
   }
 }
