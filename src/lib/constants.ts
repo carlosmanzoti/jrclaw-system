@@ -300,6 +300,46 @@ export const EXPENSE_CATEGORY_LABELS: Record<string, string> = {
   OUTRO: "Outro",
 };
 
+export const CALENDAR_EVENT_TYPE_LABELS: Record<string, string> = {
+  REUNIAO: "Reunião",
+  AUDIENCIA: "Audiência",
+  SUSTENTACAO_ORAL: "Sustentação Oral",
+  DESPACHO_ORAL: "Despacho Oral",
+  PESQUISA_JURIDICA: "Pesquisa Jurídica",
+  ANALISE_CASO: "Análise de Caso",
+  PRAZO_ANTECIPADO: "Prazo Antecipado",
+  PRAZO_FATAL: "Prazo Fatal",
+  RETORNO_EMAIL: "Retorno de E-mail",
+  ATIVIDADE_GERAL: "Atividade Geral",
+};
+
+export const CALENDAR_EVENT_TYPE_COLORS: Record<string, string> = {
+  REUNIAO: "#3b82f6",
+  AUDIENCIA: "#a855f7",
+  SUSTENTACAO_ORAL: "#ec4899",
+  DESPACHO_ORAL: "#f97316",
+  PESQUISA_JURIDICA: "#0891b2",
+  ANALISE_CASO: "#7c3aed",
+  PRAZO_ANTECIPADO: "#f59e0b",
+  PRAZO_FATAL: "#dc2626",
+  RETORNO_EMAIL: "#06b6d4",
+  ATIVIDADE_GERAL: "#6b7280",
+};
+
+export const CALENDAR_EVENT_STATUS_LABELS: Record<string, string> = {
+  AGENDADO: "Agendado",
+  EM_ANDAMENTO: "Em Andamento",
+  CONCLUIDO: "Concluído",
+  CANCELADO: "Cancelado",
+};
+
+export const CALENDAR_EVENT_STATUS_COLORS: Record<string, string> = {
+  AGENDADO: "bg-blue-100 text-blue-700",
+  EM_ANDAMENTO: "bg-indigo-100 text-indigo-700",
+  CONCLUIDO: "bg-emerald-100 text-emerald-700",
+  CANCELADO: "bg-red-100 text-red-700",
+};
+
 export const ESTADOS_BRASIL = [
   "AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO",
   "MA", "MT", "MS", "MG", "PA", "PB", "PR", "PE", "PI",

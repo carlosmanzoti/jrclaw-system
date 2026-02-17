@@ -1,0 +1,35 @@
+export type ActivityType =
+  | 'PETICAO' | 'AUDIENCIA' | 'JULGAMENTO' | 'DESPACHO' | 'CUMPRIMENTO_PRAZO' | 'DILIGENCIA' | 'PROTOCOLO'
+  | 'REUNIAO_CLIENTE' | 'REUNIAO_INTERNA' | 'REUNIAO_CONTRAPARTE' | 'EMAIL_ENVIADO' | 'COMUNICADO' | 'RELATORIO_ENTREGUE'
+  | 'LIBERACAO_ALVARA' | 'EXPEDICAO_RPV' | 'PAGAMENTO_RECEBIDO'
+  | 'TAREFA_CONCLUIDA' | 'MARCO_ATINGIDO' | 'DECISAO_ESTRATEGICA'
+  | 'NOTA' | 'OUTRO';
+
+export const ACTIVITY_TYPE_LABELS_V2: Record<string, string> = {
+  PETICAO: 'Petição', AUDIENCIA: 'Audiência', JULGAMENTO: 'Julgamento',
+  DESPACHO: 'Despacho', CUMPRIMENTO_PRAZO: 'Cumprimento de Prazo', DILIGENCIA: 'Diligência', PROTOCOLO: 'Protocolo',
+  REUNIAO_CLIENTE: 'Reunião com Cliente', REUNIAO_INTERNA: 'Reunião Interna',
+  REUNIAO_CONTRAPARTE: 'Reunião com Contraparte', EMAIL_ENVIADO: 'Email Enviado',
+  COMUNICADO: 'Comunicado', RELATORIO_ENTREGUE: 'Relatório Entregue',
+  LIBERACAO_ALVARA: 'Liberação de Alvará', EXPEDICAO_RPV: 'Expedição de RPV', PAGAMENTO_RECEBIDO: 'Pagamento Recebido',
+  TAREFA_CONCLUIDA: 'Tarefa Concluída', MARCO_ATINGIDO: 'Marco Atingido', DECISAO_ESTRATEGICA: 'Decisão Estratégica',
+  NOTA: 'Nota', OUTRO: 'Outro',
+};
+
+export const ACTIVITY_TYPE_ICONS: Record<string, string> = {
+  PETICAO: 'FileText', AUDIENCIA: 'Gavel', JULGAMENTO: 'Scale', DESPACHO: 'FileCheck',
+  CUMPRIMENTO_PRAZO: 'CheckCircle', DILIGENCIA: 'Search', PROTOCOLO: 'Upload',
+  REUNIAO_CLIENTE: 'Users', REUNIAO_INTERNA: 'Users', REUNIAO_CONTRAPARTE: 'UserPlus',
+  EMAIL_ENVIADO: 'Mail', COMUNICADO: 'MessageSquare', RELATORIO_ENTREGUE: 'BarChart',
+  LIBERACAO_ALVARA: 'DollarSign', EXPEDICAO_RPV: 'DollarSign', PAGAMENTO_RECEBIDO: 'Banknote',
+  TAREFA_CONCLUIDA: 'CheckSquare', MARCO_ATINGIDO: 'Flag', DECISAO_ESTRATEGICA: 'Zap',
+  NOTA: 'StickyNote', OUTRO: 'Circle',
+};
+
+export const ACTIVITY_TYPE_GROUPS: Record<string, string[]> = {
+  'Jurídicas': ['PETICAO','AUDIENCIA','JULGAMENTO','DESPACHO','CUMPRIMENTO_PRAZO','DILIGENCIA','PROTOCOLO'],
+  'Comunicação': ['REUNIAO_CLIENTE','REUNIAO_INTERNA','REUNIAO_CONTRAPARTE','EMAIL_ENVIADO','COMUNICADO','RELATORIO_ENTREGUE'],
+  'Financeiras': ['LIBERACAO_ALVARA','EXPEDICAO_RPV','PAGAMENTO_RECEBIDO'],
+  'Gerenciais': ['TAREFA_CONCLUIDA','MARCO_ATINGIDO','DECISAO_ESTRATEGICA'],
+  'Outras': ['NOTA','OUTRO'],
+};

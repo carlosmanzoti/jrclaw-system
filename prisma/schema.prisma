@@ -384,6 +384,8 @@ model User {
   project_notes        ProjectNote[]
   persons_created      Person[]              @relation("PersonCreator")
   person_docs_uploaded PersonDocument[]
+  financial_releases_created FinancialRelease[] @relation("FinancialReleaseCreator")
+  reports_created      ReportSnapshot[]       @relation("ReportCreator")
 
   @@map("users")
 }
@@ -446,6 +448,9 @@ model Person {
   negotiations         Negotiation[]       @relation("NegotiationPerson")
   projects_as_client   Project[]           @relation("ProjectClient")
   project_stakeholders ProjectStakeholder[]
+  activities           Activity[]
+  financial_releases   FinancialRelease[]
+  report_snapshots     ReportSnapshot[]
 
   @@map("persons")
 }
@@ -504,7 +509,8 @@ model Case {
   credores      Creditor[]
   negociacoes   Negotiation[]
   calendar_events CalendarEvent[]
-  library_entries LibraryEntry[] @relation("LibraryCases")
+  library_entries     LibraryEntry[]      @relation("LibraryCases")
+  financial_releases  FinancialRelease[]
 
   @@map("cases")
 }
@@ -710,9 +716,12 @@ model Activity {
   task              ProjectTask?  @relation(fields: [task_id], references: [id])
   calendar_event_id String?
   calendar_event    CalendarEvent? @relation(fields: [calendar_event_id], references: [id])
+  person_id         String?
+  person            Person?       @relation(fields: [person_id], references: [id])
   user_id           String
   user              User          @relation(fields: [user_id], references: [id])
   tipo              ActivityType
+  subtipo           String?
   descricao         String        @db.Text
   data              DateTime
   duracao_minutos   Int?
@@ -720,9 +729,68 @@ model Activity {
   visivel_portal    Boolean       @default(false)
   faturavel         Boolean       @default(true)
   valor_hora        Decimal?      @db.Decimal(10, 2)
+  include_in_report Boolean       @default(true)
+  report_priority   Int           @default(0)
+  communication_type String?
+  recipients        String[]      @default([])
+  financial_impact  Decimal?      @db.Decimal(15, 2)
+  financial_type    String?
   created_at        DateTime      @default(now())
+  updated_at        DateTime      @updatedAt
 
+  @@index([case_id])
+  @@index([project_id])
+  @@index([person_id])
+  @@index([tipo])
+  @@index([created_at(sort: Desc)])
   @@map("activities")
+}
+
+model FinancialRelease {
+  id               String   @id @default(cuid())
+  tipo             String   // ALVARA, RPV, PRECATORIO
+  numero_referencia String
+  case_id          String?
+  case_            Case?    @relation(fields: [case_id], references: [id])
+  person_id        String?
+  person           Person?  @relation(fields: [person_id], references: [id])
+  valor            Decimal  @db.Decimal(15, 2)
+  status           String   @default("PENDENTE") // PENDENTE, EXPEDIDO, LIBERADO, BLOQUEADO, CANCELADO
+  data_prevista    DateTime? @db.Date
+  data_liberacao   DateTime? @db.Date
+  observacoes      String?  @db.Text
+  activity_id      String?
+  created_by_id    String?
+  created_by       User?    @relation("FinancialReleaseCreator", fields: [created_by_id], references: [id])
+  created_at       DateTime @default(now())
+  updated_at       DateTime @updatedAt
+
+  @@index([person_id])
+  @@index([case_id])
+  @@index([status])
+  @@map("financial_releases")
+}
+
+model ReportSnapshot {
+  id              String   @id @default(cuid())
+  person_id       String
+  person          Person   @relation(fields: [person_id], references: [id], onDelete: Cascade)
+  period_start    DateTime @db.Date
+  period_end      DateTime @db.Date
+  executive_summary String? @db.Text
+  next_steps      String?  @db.Text
+  kpis_data       Json?
+  report_data     Json?
+  pdf_path        String?
+  shared_with_client Boolean @default(false)
+  shared_at       DateTime?
+  created_by_id   String?
+  created_by      User?    @relation("ReportCreator", fields: [created_by_id], references: [id])
+  created_at      DateTime @default(now())
+
+  @@index([person_id])
+  @@index([period_start, period_end])
+  @@map("report_snapshots")
 }
 
 model LibraryEntry {

@@ -1,4 +1,4 @@
-import { Calendar } from "lucide-react"
+import { CalendarPageClient } from "./client"
 
 export default function CalendarioPage() {
   return (
@@ -9,13 +9,7 @@ export default function CalendarioPage() {
           Calendário unificado com audiências, reuniões e prazos.
         </p>
       </div>
-      <div className="flex flex-col items-center justify-center rounded-lg border border-dashed p-12">
-        <Calendar className="size-12 text-muted-foreground/50" />
-        <h3 className="mt-4 text-lg font-semibold">Em construção</h3>
-        <p className="mt-2 text-sm text-muted-foreground text-center">
-          O calendário será implementado na próxima fase.
-        </p>
-      </div>
+      <CalendarPageClient />
     </div>
   )
 }

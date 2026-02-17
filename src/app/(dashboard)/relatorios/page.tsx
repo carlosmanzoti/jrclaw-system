@@ -1,4 +1,4 @@
-import { BarChart3 } from "lucide-react"
+import { ReportsPageClient } from "./client"
 
 export default function RelatoriosPage() {
   return (
@@ -6,16 +6,10 @@ export default function RelatoriosPage() {
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Relatórios</h1>
         <p className="text-muted-foreground">
-          Geração de relatórios ao cliente e relatórios internos.
+          Geração de relatórios ao cliente com KPIs, gráficos e exportação PDF.
         </p>
       </div>
-      <div className="flex flex-col items-center justify-center rounded-lg border border-dashed p-12">
-        <BarChart3 className="size-12 text-muted-foreground/50" />
-        <h3 className="mt-4 text-lg font-semibold">Em construção</h3>
-        <p className="mt-2 text-sm text-muted-foreground text-center">
-          O módulo de relatórios será implementado na próxima fase.
-        </p>
-      </div>
+      <ReportsPageClient />
     </div>
   )
 }

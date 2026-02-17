@@ -46,6 +46,7 @@ import {
   formatCurrency, formatCNJ, daysUntil, deadlineColor,
 } from "@/lib/constants"
 import { TiptapEditor, TiptapViewer } from "@/components/ui/tiptap-editor"
+import { ActivityTimeline } from "@/components/atividades/activity-timeline"
 
 interface ProjectDetailProps {
   projectId: string
@@ -245,28 +246,7 @@ export function ProjectDetail({ projectId }: ProjectDetailProps) {
 
         {/* ─── ATIVIDADES ──────────────────────────────────── */}
         <TabsContent value="atividades">
-          <Card>
-            <CardHeader><CardTitle className="text-sm">Atividades Recentes</CardTitle></CardHeader>
-            <CardContent>
-              {project.atividades.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-4">Nenhuma atividade registrada.</p>
-              ) : (
-                <div className="space-y-3">
-                  {project.atividades.map((a) => (
-                    <div key={a.id} className="flex items-start gap-3 rounded border p-3">
-                      <div className="mt-0.5 size-2 rounded-full bg-primary shrink-0" />
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm">{a.descricao}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {a.user.name} - {new Date(a.data).toLocaleDateString("pt-BR")}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+          <ActivityTimeline projectId={projectId} showFilters groupByDate />
         </TabsContent>
       </Tabs>
     </div>

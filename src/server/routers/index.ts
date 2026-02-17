@@ -4,6 +4,10 @@ import { casesRouter } from "./cases";
 import { projectsRouter } from "./projects";
 import { personsRouter } from "./persons";
 import { deadlinesRouter } from "./deadlines";
+import { calendarRouter } from "./calendar";
+import { activitiesRouter } from "./activities";
+import { documentsRouter } from "./documents";
+import { reportsRouter } from "./reports";
 
 export const appRouter = router({
   users: usersRouter,
@@ -11,6 +15,10 @@ export const appRouter = router({
   projects: projectsRouter,
   persons: personsRouter,
   deadlines: deadlinesRouter,
+  calendar: calendarRouter,
+  activities: activitiesRouter,
+  documents: documentsRouter,
+  reports: reportsRouter,
 });
 
 export type AppRouter = typeof appRouter;

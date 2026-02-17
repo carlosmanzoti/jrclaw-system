@@ -1,0 +1,35 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git commit:*)",
+      "Bash(git add:*)",
+      "Bash(npm install:*)",
+      "Bash(npx prisma generate:*)",
+      "Bash(npm run build:*)",
+      "Bash(ls:*)",
+      "Bash(npx shadcn@latest add:*)",
+      "Bash(npx prisma db push)",
+      "Bash(wc:*)",
+      "Bash(vercel login:*)",
+      "Bash(vercel:*)",
+      "Bash(npx prisma db seed:*)",
+      "Bash(DATABASE_URL=\"postgresql://postgres:JrcLaw2026%21SecureDB%2399@db.akiagtrtrwvbqmdtcdgk.supabase.co:5432/postgres\" npx prisma db push:*)",
+      "Bash(DATABASE_URL=\"postgresql://postgres:JrcLaw2026%21SecureDB%2399@db.akiagtrtrwvbqmdtcdgk.supabase.co:5432/postgres\" npx tsx:*)",
+      "Bash(DATABASE_URL=\"postgresql://postgres:JrcLaw2026%21SecureDB%2399@db.akiagtrtrwvbqmdtcdgk.supabase.co:5432/postgres\" npx tsx -e:*)",
+      "WebFetch(domain:jrclaw-system.vercel.app)",
+      "Bash(curl -s -X POST \"https://jrclaw-system.vercel.app/api/auth/callback/credentials\" -H \"Content-Type: application/x-www-form-urlencoded\" -d \"email=admin@jrclaw.com.br&password=JrcLaw2026!\" -D -)",
+      "Bash(curl -s -X POST \"https://jrclaw-system.vercel.app/api/auth/callback/credentials\" -H \"Content-Type: application/x-www-form-urlencoded\" -d \"email=admin@jrclaw.com.br&password=JrcLaw2026!\" -D /dev/stdout -o /dev/null)",
+      "Bash(curl:*)",
+      "Bash(npm ls:*)",
+      "Bash(npx next build:*)",
+      "Bash(printf 'postgresql://postgres.akiagtrtrwvbqmdtcdgk:JrcLaw2026%%21SecureDB%%2399@aws-0-sa-east-1.pooler.supabase.com:6543/postgres?pgbouncer=true')",
+      "Bash(printf:*)",
+      "Bash(DATABASE_URL=\"postgresql://postgres.akiagtrtrwvbqmdtcdgk:JrcLaw2026%21SecureDB%2399@aws-0-sa-east-1.pooler.supabase.com:6543/postgres?pgbouncer=true\" npx tsx -e \"\nconst { PrismaClient } = require\\(''@prisma/client''\\);\nconst db = new PrismaClient\\(\\);\ndb.$queryRaw\\\\`SELECT 1 as ok\\\\`.then\\(r => { console.log\\(''OK:'', r\\); db.$disconnect\\(\\); }\\).catch\\(e => { console.error\\(''ERROR:'', e.message\\); db.$disconnect\\(\\); }\\);\n\")",
+      "Bash(DATABASE_URL=\"postgresql://postgres.akiagtrtrwvbqmdtcdgk:JrcLaw2026%21SecureDB%2399@aws-0-sa-east-1.pooler.supabase.com:6543/postgres?pgbouncer=true\" npx tsx:*)",
+      "Bash(npx tsx:*)",
+      "Bash(nslookup:*)",
+      "Bash(find:*)",
+      "Bash(npx prisma validate:*)"
+    ]
+  }
+}

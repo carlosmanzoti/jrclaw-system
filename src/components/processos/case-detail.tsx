@@ -26,6 +26,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { PersonCombobox } from "@/components/pessoas/person-combobox"
+import { ActivityTimeline } from "@/components/atividades/activity-timeline"
 import {
   CASE_TYPE_LABELS, CASE_STATUS_LABELS, CASE_PARTY_ROLE_LABELS,
   CASE_TEAM_ROLE_LABELS, DEADLINE_TYPE_LABELS, DEADLINE_STATUS_LABELS,
@@ -170,7 +171,7 @@ export function CaseDetail({ caseId }: { caseId: string }) {
         </TabsContent>
 
         <TabsContent value="atividades" className="mt-6">
-          <AtividadesTab caso={caso} />
+          <ActivityTimeline caseId={caseId} showFilters groupByDate />
         </TabsContent>
 
         {isRJ && (
@@ -940,54 +941,7 @@ function EquipeTab({
   )
 }
 
-// ─── Atividades Tab ──────────────────────────────────────────────
-
-function AtividadesTab({ caso }: { caso: CaseData }) {
-  return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h3 className="text-sm font-medium text-muted-foreground">
-          {(caso.atividades as CaseData[]).length} atividade(s)
-        </h3>
-      </div>
-
-      {(caso.atividades as CaseData[]).length === 0 ? (
-        <p className="text-sm text-muted-foreground py-8 text-center">Nenhuma atividade registrada.</p>
-      ) : (
-        <div className="space-y-0">
-          {(caso.atividades as CaseData[]).map((a: CaseData, i: number) => (
-            <div key={a.id} className="flex gap-4">
-              <div className="flex flex-col items-center">
-                <div className="size-3 rounded-full bg-muted-foreground/30 border-2 border-background mt-1.5" />
-                {i < (caso.atividades as CaseData[]).length - 1 && (
-                  <div className="w-px flex-1 bg-border" />
-                )}
-              </div>
-              <div className="pb-5 min-w-0 flex-1">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-xs text-muted-foreground font-mono">
-                    {new Date(a.data).toLocaleDateString("pt-BR")}
-                  </span>
-                  <Badge variant="secondary" className="text-[10px]">
-                    {ACTIVITY_TYPE_LABELS[a.tipo] || a.tipo}
-                  </Badge>
-                  {a.user && <span className="text-xs text-muted-foreground">por {a.user.name}</span>}
-                  {a.duracao_minutos && (
-                    <span className="text-xs text-muted-foreground">{a.duracao_minutos}min</span>
-                  )}
-                </div>
-                <p className="text-sm mt-0.5">{a.descricao}</p>
-                {a.resultado && (
-                  <p className="text-xs text-muted-foreground mt-1">Resultado: {a.resultado}</p>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  )
-}
+// AtividadesTab replaced by ActivityTimeline component
 
 // ─── Placeholder Tab ─────────────────────────────────────────────
 
