@@ -386,6 +386,8 @@ model User {
   person_docs_uploaded PersonDocument[]
   financial_releases_created FinancialRelease[] @relation("FinancialReleaseCreator")
   reports_created      ReportSnapshot[]       @relation("ReportCreator")
+  chat_messages        ChatMessage[]
+  ai_usage_logs        AIUsageLog[]           @relation("AIUsageLogs")
 
   @@map("users")
 }
@@ -511,6 +513,7 @@ model Case {
   calendar_events CalendarEvent[]
   library_entries     LibraryEntry[]      @relation("LibraryCases")
   financial_releases  FinancialRelease[]
+  chat_messages       ChatMessage[]       @relation("ChatMessageCase")
 
   @@map("cases")
 }
@@ -857,6 +860,7 @@ model Project {
   negociacoes     Negotiation[]
   calendar_events CalendarEvent[]
   library_entries LibraryEntry[] @relation("LibraryProjects")
+  chat_messages   ChatMessage[]  @relation("ChatMessageProject")
 
   @@map("projects")
 }
@@ -1036,4 +1040,50 @@ model ProjectTemplate {
   created_at   DateTime        @default(now())
 
   @@map("project_templates")
+}
+
+// ============================================================
+// AI / CONFECÇÃO MODULE MODELS
+// ============================================================
+
+model ChatMessage {
+  id        String   @id @default(cuid())
+  sessionId String
+  role      String   // 'user' | 'assistant' | 'system'
+  content   String   @db.Text
+  metadata  Json?
+
+  caseId    String?
+  case_     Case?    @relation("ChatMessageCase", fields: [caseId], references: [id])
+  projectId String?
+  project   Project? @relation("ChatMessageProject", fields: [projectId], references: [id])
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@index([sessionId])
+  @@index([caseId])
+  @@index([userId])
+  @@map("chat_messages")
+}
+
+model AIUsageLog {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation("AIUsageLogs", fields: [userId], references: [id])
+  actionType String   // 'chat' | 'generate' | 'review'
+  docType    String?
+  tokensIn   Int      @default(0)
+  tokensOut  Int      @default(0)
+  model         String
+  durationMs    Int      @default(0)
+  costEstimated Decimal  @default(0) @db.Decimal(10, 6)
+  caseId        String?
+  projectId     String?
+  createdAt     DateTime @default(now())
+
+  @@index([userId])
+  @@index([createdAt])
+  @@map("ai_usage_logs")
 }

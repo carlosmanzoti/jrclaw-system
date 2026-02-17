@@ -29,7 +29,11 @@
       "Bash(npx tsx:*)",
       "Bash(nslookup:*)",
       "Bash(find:*)",
-      "Bash(npx prisma validate:*)"
+      "Bash(npx prisma validate:*)",
+      "Bash(node -e:*)",
+      "Bash(tasklist:*)",
+      "Bash(npx prisma db execute:*)",
+      "Bash(npx tsc:*)"
     ]
   }
 }

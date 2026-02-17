@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { Settings, FolderKanban, Users, Building, ChevronRight } from "lucide-react"
+import { Settings, FolderKanban, Users, Building, ChevronRight, Brain } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 
 const sections = [
@@ -10,6 +10,14 @@ const sections = [
     href: "/configuracoes/templates-projeto",
     color: "text-indigo-600",
     bg: "bg-indigo-50",
+  },
+  {
+    title: "Uso de IA",
+    description: "Dashboard de consumo de IA: chamadas, tokens, custos estimados e breakdown por modelo (Sonnet/Opus).",
+    icon: Brain,
+    href: "/configuracoes/uso-ia",
+    color: "text-purple-600",
+    bg: "bg-purple-50",
   },
   {
     title: "Usuários",
