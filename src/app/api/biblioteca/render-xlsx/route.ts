@@ -1,5 +1,25 @@
 import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
+import fs from "fs"
+import path from "path"
+
+async function fetchFileBuffer(url: string): Promise<Buffer> {
+  // Local file path (starts with /uploads/)
+  if (url.startsWith("/uploads/")) {
+    const filePath = path.join(process.cwd(), "public", url)
+    if (!fs.existsSync(filePath)) {
+      throw new Error("File not found")
+    }
+    return fs.readFileSync(filePath)
+  }
+
+  // Remote URL
+  const res = await fetch(url)
+  if (!res.ok) {
+    throw new Error("Failed to fetch file")
+  }
+  return Buffer.from(await res.arrayBuffer())
+}
 
 export async function GET(req: NextRequest) {
   const session = await auth()
@@ -13,13 +33,7 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const res = await fetch(url)
-    if (!res.ok) {
-      return NextResponse.json({ error: "Failed to fetch file" }, { status: 502 })
-    }
-
-    const arrayBuffer = await res.arrayBuffer()
-    const buffer = Buffer.from(arrayBuffer)
+    const buffer = await fetchFileBuffer(url)
 
     const XLSX = await import("xlsx")
     const workbook = XLSX.read(buffer, { type: "buffer" })

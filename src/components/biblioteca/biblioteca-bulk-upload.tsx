@@ -244,6 +244,8 @@ export function BibliotecaBulkUpload({ open, onOpenChange }: BibliotecaBulkUploa
           area: files[i].area && files[i].area !== "none" ? files[i].area : undefined,
           tags,
           arquivo_url: uploadData.url,
+          arquivo_tipo: files[i].file.name.split(".").pop() || undefined,
+          arquivo_tamanho: files[i].file.size || undefined,
         })
 
         if (!uploadData.text || uploadData.extractionFailed) {

@@ -93,6 +93,7 @@ export function BibliotecaForm({ open, onOpenChange, entryId, prefill }: Bibliot
   const [tags, setTags] = useState("")
   const [relevancia, setRelevancia] = useState(0)
   const [extracting, setExtracting] = useState(false)
+  const [uploadError, setUploadError] = useState("")
 
   // File upload state
   const [arquivoUrl, setArquivoUrl] = useState("")
@@ -174,6 +175,7 @@ export function BibliotecaForm({ open, onOpenChange, entryId, prefill }: Bibliot
       setArea(prefill?.area || "")
       setTags(prefill?.tags?.join(", ") || "")
       setRelevancia(0)
+      setUploadError("")
       setArquivoUrl("")
       setArquivoTipo("")
       setArquivoTamanho(0)
@@ -195,6 +197,7 @@ export function BibliotecaForm({ open, onOpenChange, entryId, prefill }: Bibliot
 
   const handleFileUpload = async (file: File) => {
     setUploading(true)
+    setUploadError("")
     try {
       const formData = new FormData()
       formData.append("file", file)
@@ -205,9 +208,16 @@ export function BibliotecaForm({ open, onOpenChange, entryId, prefill }: Bibliot
         body: formData,
       })
 
-      if (!res.ok) throw new Error("Upload failed")
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}))
+        throw new Error(errData.error || `Upload falhou (${res.status})`)
+      }
 
       const data = await res.json()
+      if (!data.url) {
+        throw new Error("Servidor nao retornou URL do arquivo")
+      }
+
       setArquivoUrl(data.url)
       setArquivoTipo(file.name.split(".").pop() || "")
       setArquivoTamanho(file.size)
@@ -221,8 +231,8 @@ export function BibliotecaForm({ open, onOpenChange, entryId, prefill }: Bibliot
       if (!titulo) {
         setTitulo(file.name.replace(/\.[^/.]+$/, "").replace(/[_-]/g, " "))
       }
-    } catch {
-      // Silent
+    } catch (err: any) {
+      setUploadError(err.message || "Erro ao fazer upload do arquivo")
     } finally {
       setUploading(false)
     }
@@ -560,6 +570,9 @@ export function BibliotecaForm({ open, onOpenChange, entryId, prefill }: Bibliot
                     }}
                   />
                 </div>
+              )}
+              {uploadError && (
+                <p className="text-xs text-[#DC3545] mt-1">{uploadError}</p>
               )}
             </div>
 
