@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import { generateObject } from "ai"
+import { generateText } from "ai"
 import { z } from "zod"
 import { anthropic, MODEL_CONFIGS } from "@/lib/ai"
 import { buildFieldDescriptionForAI, type ImportEntityTypeKey } from "@/lib/import-constants"
@@ -55,33 +55,73 @@ Rules:
 - Return a confidence score (0.0 to 1.0) for each row based on how well the data matched
 - If the text appears to be tabular (CSV, spreadsheet), each row is typically one record
 - If the text is a legal document (PDF), identify distinct entities mentioned
-- Always return the fieldMapping showing which source column/pattern maps to which target field`
+- Always return the fieldMapping showing which source column/pattern maps to which target field
 
-    const result = await generateObject({
+IMPORTANT: You MUST respond with ONLY a valid JSON object (no markdown, no explanation, no code fences).
+The JSON must follow this exact structure:
+{
+  "rows": [
+    {
+      "data": { "fieldName": "value", ... },
+      "confidence": 0.95,
+      "warnings": ["optional warning message"]
+    }
+  ],
+  "overallConfidence": 0.9,
+  "warnings": ["optional global warning"],
+  "fieldMapping": { "sourceColumn": "targetField", ... },
+  "recordsFound": 5
+}`
+
+    const result = await generateText({
       model: anthropic(config.model),
       maxOutputTokens: config.maxOutputTokens,
       temperature: config.temperature,
       system: systemPrompt,
       prompt: `Extract structured ${entityType} records from the following text:\n\n${text.slice(0, 50000)}`,
-      schema: z.object({
-        rows: z.array(
-          z.object({
-            data: z.record(z.string(), z.unknown()),
-            confidence: z.number().min(0).max(1),
-            warnings: z.array(z.string()),
-          })
-        ),
-        overallConfidence: z.number().min(0).max(1),
-        warnings: z.array(z.string()),
-        fieldMapping: z.record(z.string(), z.string()),
-        recordsFound: z.number(),
-      }),
     })
 
-    const mappedRows = result.object.rows.map((row, index) => ({
+    // Parse JSON from AI response (handle possible markdown code fences)
+    let jsonText = result.text.trim()
+    // Strip markdown code fences if present
+    if (jsonText.startsWith("```")) {
+      jsonText = jsonText.replace(/^```(?:json)?\s*\n?/, "").replace(/\n?```\s*$/, "")
+    }
+
+    let aiResult: {
+      rows: { data: Record<string, unknown>; confidence: number; warnings: string[] }[]
+      overallConfidence: number
+      warnings: string[]
+      fieldMapping: Record<string, string>
+      recordsFound: number
+    }
+
+    try {
+      aiResult = JSON.parse(jsonText)
+    } catch {
+      // Try to find JSON object in the response
+      const jsonMatch = jsonText.match(/\{[\s\S]*\}/)
+      if (!jsonMatch) {
+        return NextResponse.json(
+          { error: "IA não retornou JSON válido. Tente novamente." },
+          { status: 500 }
+        )
+      }
+      aiResult = JSON.parse(jsonMatch[0])
+    }
+
+    // Validate minimal structure
+    if (!Array.isArray(aiResult.rows)) {
+      return NextResponse.json(
+        { error: "Resposta da IA não contém registros válidos." },
+        { status: 500 }
+      )
+    }
+
+    const mappedRows = aiResult.rows.map((row, index) => ({
       _rowIndex: index + 1,
-      _confidence: row.confidence,
-      _warnings: row.warnings,
+      _confidence: row.confidence ?? 0.5,
+      _warnings: row.warnings ?? [],
       _errors: [] as string[],
       _selected: true,
       ...row.data,
@@ -89,10 +129,10 @@ Rules:
 
     return NextResponse.json({
       rows: mappedRows,
-      confidence: result.object.overallConfidence,
-      warnings: result.object.warnings,
-      fieldMapping: result.object.fieldMapping,
-      recordsFound: result.object.recordsFound,
+      confidence: aiResult.overallConfidence ?? 0.5,
+      warnings: aiResult.warnings ?? [],
+      fieldMapping: aiResult.fieldMapping ?? {},
+      recordsFound: aiResult.recordsFound ?? mappedRows.length,
     })
   } catch (err: unknown) {
     console.error("Error in AI import analysis:", err)

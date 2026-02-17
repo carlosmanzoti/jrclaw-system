@@ -20,6 +20,20 @@ async function main() {
   await prisma.document.deleteMany();
   await prisma.negotiation.deleteMany();
   await prisma.creditor.deleteMany();
+  // RJ module cleanup (cascades from JudicialRecoveryCase, but be explicit)
+  await prisma.negotiationCreditor.deleteMany();
+  await prisma.negotiationActivity.deleteMany();
+  await prisma.negotiationTemplate.deleteMany();
+  await prisma.rJNegotiation.deleteMany();
+  await prisma.paymentInstallment.deleteMany();
+  await prisma.creditorDocument.deleteMany();
+  await prisma.creditorChallenge.deleteMany();
+  await prisma.rJCreditor.deleteMany();
+  await prisma.creditorSubclass.deleteMany();
+  await prisma.creditorTableVersion.deleteMany();
+  await prisma.votingScenario.deleteMany();
+  await prisma.financialProjection.deleteMany();
+  await prisma.judicialRecoveryCase.deleteMany();
   await prisma.deadline.deleteMany();
   await prisma.caseMovement.deleteMany();
   await prisma.caseParty.deleteMany();
@@ -510,12 +524,159 @@ async function main() {
 
   console.log("💳 Created 10 creditors (5 per RJ)");
 
-  // ============================================================
-  // 6. DEADLINES (15 total)
-  // ============================================================
+  // Helper: date utilities (used by multiple sections below)
   const now = new Date();
   const addDays = (d: Date, n: number) => new Date(d.getTime() + n * 86400000);
 
+  // ============================================================
+  // 5b. JUDICIAL RECOVERY CASES (RJ module)
+  // ============================================================
+  // Create an Administrador Judicial person
+  const adminJudicial = await prisma.person.create({
+    data: {
+      tipo: "ADMINISTRADOR_JUDICIAL",
+      subtipo: "PESSOA_JURIDICA",
+      nome: "Deloitte Consultores Ltda — Administração Judicial",
+      cpf_cnpj: "49.928.567/0001-15",
+      cidade: "São Paulo",
+      estado: "SP",
+      segmento: "SERVICOS",
+      created_by_id: admin.id,
+    },
+  });
+
+  // JudicialRecoveryCase for caso1_rj (Armazéns Grão Dourado)
+  const jrc1 = await prisma.judicialRecoveryCase.create({
+    data: {
+      case_id: caso1_rj.id,
+      status_rj: "AGC_PENDENTE",
+      data_pedido: addDays(now, -120),
+      data_deferimento: addDays(now, -90),
+      data_agc: addDays(now, 45),
+      administrador_judicial_id: adminJudicial.id,
+      total_credores: 5,
+      total_credito: BigInt(3349500000), // R$ 33.495.000,00 in centavos
+      total_classe_i: BigInt(9500000),     // R$ 95.000,00
+      total_classe_ii: BigInt(2270000000), // R$ 22.700.000,00
+      total_classe_iii: BigInt(970000000), // R$ 9.700.000,00
+      total_classe_iv: BigInt(0),
+      plano_versao: 1,
+      plano_aprovado: false,
+      observacoes: "Empresa de armazenagem de grãos em Maringá/PR. Plano prevê pagamento em 12 anos com carência de 2 anos.",
+    },
+  });
+
+  // JudicialRecoveryCase for caso2_rj (Grupo Cerrado)
+  const jrc2 = await prisma.judicialRecoveryCase.create({
+    data: {
+      case_id: caso2_rj.id,
+      status_rj: "VERIFICACAO_CREDITOS",
+      data_pedido: addDays(now, -60),
+      data_deferimento: addDays(now, -30),
+      administrador_judicial_id: adminJudicial.id,
+      total_credores: 5,
+      total_credito: BigInt(6010000000), // R$ 60.100.000,00 in centavos
+      total_classe_i: BigInt(0),
+      total_classe_ii: BigInt(4500000000), // R$ 45.000.000,00
+      total_classe_iii: BigInt(1470000000), // R$ 14.700.000,00
+      total_classe_iv: BigInt(40000000),   // R$ 400.000,00
+      plano_versao: 0,
+      plano_aprovado: false,
+      observacoes: "Grupo agrícola no cerrado maranhense. Fase de verificação de créditos em andamento.",
+    },
+  });
+
+  // RJ Creditors for jrc1 (Armazéns Grão Dourado) — mirrors the old Creditor data but in RJCreditor table
+  await prisma.rJCreditor.createMany({
+    data: [
+      {
+        jrc_id: jrc1.id, person_id: credor1.id, nome: "Banco do Brasil S.A.", cpf_cnpj: "00.000.000/0001-91",
+        classe: "CLASSE_II_GARANTIA_REAL", natureza: "HIPOTECA", status: "HABILITADO",
+        valor_original: BigInt(1200000000), valor_atualizado: BigInt(1350000000),
+        valor_garantia: BigInt(1350000000), tipo_garantia: "HIPOTECA",
+        descricao_garantia: "Hipoteca sobre imóvel rural - Matrícula 12.345 CRI Maringá",
+        matricula_imovel: "12.345", valor_avaliacao_garantia: BigInt(1800000000),
+        voto: "FAVOR", presente_agc: true, ordem: 1,
+      },
+      {
+        jrc_id: jrc1.id, person_id: credor2.id, nome: "Sicredi Cooperativa de Crédito", cpf_cnpj: "01.181.521/0001-55",
+        classe: "CLASSE_II_GARANTIA_REAL", natureza: "PENHOR", status: "HABILITADO",
+        valor_original: BigInt(800000000), valor_atualizado: BigInt(920000000),
+        valor_garantia: BigInt(920000000), tipo_garantia: "PENHOR",
+        descricao_garantia: "Penhor de safra de soja 2025/2026",
+        valor_avaliacao_garantia: BigInt(1000000000),
+        voto: "FAVOR", presente_agc: true, ordem: 2,
+      },
+      {
+        jrc_id: jrc1.id, person_id: credor5.id, nome: "Bunge Alimentos S.A.", cpf_cnpj: "84.046.101/0001-93",
+        classe: "CLASSE_III_QUIROGRAFARIO", natureza: "QUIROGRAFARIO", status: "HABILITADO",
+        valor_original: BigInt(550000000), valor_atualizado: BigInt(610000000),
+        voto: "CONTRA", presente_agc: true, ordem: 3,
+      },
+      {
+        jrc_id: jrc1.id, person_id: credor6.id, nome: "Syngenta Proteção de Cultivos Ltda", cpf_cnpj: "60.744.463/0001-00",
+        classe: "CLASSE_III_QUIROGRAFARIO", natureza: "QUIROGRAFARIO", status: "HABILITADO",
+        valor_original: BigInt(320000000), valor_atualizado: BigInt(360000000),
+        ordem: 4,
+      },
+      {
+        jrc_id: jrc1.id, person_id: credor8.id, nome: "João Marcos Pereira", cpf_cnpj: "999.888.777-66",
+        pessoa_fisica: true,
+        classe: "CLASSE_I_TRABALHISTA", natureza: "TRABALHISTA", status: "HABILITADO",
+        valor_original: BigInt(8500000), valor_atualizado: BigInt(9500000),
+        valor_trabalhista_150sm: BigInt(9500000),
+        voto: "FAVOR", presente_agc: true, ordem: 5,
+      },
+    ],
+  });
+
+  // RJ Creditors for jrc2 (Grupo Cerrado)
+  await prisma.rJCreditor.createMany({
+    data: [
+      {
+        jrc_id: jrc2.id, person_id: credor1.id, nome: "Banco do Brasil S.A.", cpf_cnpj: "00.000.000/0001-91",
+        classe: "CLASSE_II_GARANTIA_REAL", natureza: "HIPOTECA", status: "HABILITADO",
+        valor_original: BigInt(2500000000), valor_atualizado: BigInt(2800000000),
+        valor_garantia: BigInt(2800000000), tipo_garantia: "HIPOTECA",
+        descricao_garantia: "Hipoteca sobre fazendas Cerrado I e II — Balsas/MA",
+        valor_avaliacao_garantia: BigInt(3500000000),
+        ordem: 1,
+      },
+      {
+        jrc_id: jrc2.id, person_id: credor3.id, nome: "BNDES — Banco Nacional de Desenvolvimento", cpf_cnpj: "33.657.248/0001-89",
+        classe: "CLASSE_II_GARANTIA_REAL", natureza: "ALIENACAO_FIDUCIARIA_IMOVEL", status: "HABILITADO",
+        valor_original: BigInt(1500000000), valor_atualizado: BigInt(1700000000),
+        valor_garantia: BigInt(1700000000), tipo_garantia: "ALIENACAO_FIDUCIARIA",
+        descricao_garantia: "Alienação fiduciária de imóvel rural — Fazenda Cerrado III",
+        valor_avaliacao_garantia: BigInt(2200000000),
+        ordem: 2,
+      },
+      {
+        jrc_id: jrc2.id, person_id: credor4.id, nome: "Cargill Agrícola S.A.", cpf_cnpj: "60.498.706/0001-09",
+        classe: "CLASSE_III_QUIROGRAFARIO", natureza: "QUIROGRAFARIO", status: "HABILITADO",
+        valor_original: BigInt(800000000), valor_atualizado: BigInt(950000000),
+        ordem: 3,
+      },
+      {
+        jrc_id: jrc2.id, person_id: credor7.id, nome: "Yara Brasil Fertilizantes S.A.", cpf_cnpj: "92.660.604/0001-82",
+        classe: "CLASSE_III_QUIROGRAFARIO", natureza: "QUIROGRAFARIO", status: "IMPUGNADO",
+        valor_original: BigInt(450000000), valor_atualizado: BigInt(520000000),
+        ordem: 4,
+      },
+      {
+        jrc_id: jrc2.id, person_id: credor5.id, nome: "Bunge Alimentos S.A.", cpf_cnpj: "84.046.101/0001-93",
+        classe: "CLASSE_IV_ME_EPP", natureza: "ME_EPP", status: "HABILITADO",
+        valor_original: BigInt(35000000), valor_atualizado: BigInt(40000000),
+        ordem: 5,
+      },
+    ],
+  });
+
+  console.log("⚖️  Created 2 JudicialRecoveryCases + 10 RJ creditors");
+
+  // ============================================================
+  // 6. DEADLINES (15 total)
+  // ============================================================
   await prisma.deadline.createMany({
     data: [
       // Caso 1 - RJ
