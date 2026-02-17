@@ -27,6 +27,7 @@ import {
   CALENDAR_EVENT_TYPE_LABELS,
   CALENDAR_EVENT_TYPE_COLORS,
 } from "@/lib/constants"
+import { Save, Trash2, Loader2 } from "lucide-react"
 import { EventTypeFields } from "./event-type-fields"
 
 type CamposEspecificos = Record<string, unknown>
@@ -218,7 +219,7 @@ export function CalendarEventModal({
           </DialogTitle>
         </DialogHeader>
 
-        <ScrollArea className="flex-1 -mx-6 px-6">
+        <ScrollArea className="flex-1 min-h-0 -mx-6 px-6">
           <div className="space-y-4 pb-4">
             {/* Event Type */}
             <div className="space-y-1.5">
@@ -414,7 +415,7 @@ export function CalendarEventModal({
           </div>
         </ScrollArea>
 
-        <DialogFooter className="gap-2 sm:gap-0">
+        <DialogFooter className="gap-2 sm:gap-0 border-t pt-4">
           {isEdit && (
             <Button
               variant="ghost"
@@ -422,6 +423,7 @@ export function CalendarEventModal({
               onClick={() => setDeleteConfirmOpen(true)}
               disabled={deleteMutation.isPending}
             >
+              <Trash2 className="size-4 mr-1" />
               Excluir Evento
             </Button>
           )}
@@ -432,7 +434,11 @@ export function CalendarEventModal({
             onClick={handleSubmit}
             disabled={!tipoEvento || !titulo || !dataInicio || isLoading}
           >
-            {isLoading ? "Salvando..." : isEdit ? "Salvar" : "Criar"}
+            {isLoading ? (
+              <><Loader2 className="size-4 mr-1 animate-spin" />Salvando...</>
+            ) : (
+              <><Save className="size-4 mr-1" />{isEdit ? "Salvar Evento" : "Criar Evento"}</>
+            )}
           </Button>
         </DialogFooter>
       </DialogContent>

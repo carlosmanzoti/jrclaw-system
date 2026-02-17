@@ -184,8 +184,8 @@ export default function CalendarDashboard() {
     <div className="space-y-4">
       {/* Filter bar */}
       <div className="flex flex-wrap items-center gap-2">
-        <Button onClick={handleNewEvent} size="sm">
-          <Plus className="size-4 mr-1" />
+        <Button onClick={handleNewEvent}>
+          <Plus className="size-4 mr-1.5" />
           Novo Evento
         </Button>
 
