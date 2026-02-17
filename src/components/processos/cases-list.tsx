@@ -3,7 +3,8 @@
 import { useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { Search, Plus, Filter, X, MoreHorizontal, Eye, Pencil, Trash2, Download } from "lucide-react"
+import { Search, Plus, Filter, X, MoreHorizontal, Eye, Pencil, Trash2, Download, Loader2 } from "lucide-react"
+import * as XLSX from "xlsx"
 import { trpc } from "@/lib/trpc"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -91,7 +92,28 @@ export function CasesList() {
           </p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={() => alert("Exportação em desenvolvimento")}>
+          <Button
+            variant="outline"
+            disabled={cases.length === 0}
+            onClick={() => {
+              const data = cases.map((c) => ({
+                "Nº Processo": c.numero_processo || "Sem número",
+                "Tipo": CASE_TYPE_LABELS[c.tipo] || c.tipo,
+                "Cliente": c.cliente.nome,
+                "Status": CASE_STATUS_LABELS[c.status] || c.status,
+                "Vara": c.vara || "",
+                "Comarca": c.comarca || "",
+                "UF": c.uf || "",
+                "Valor da Causa": c.valor_causa != null ? Number(c.valor_causa) : "",
+                "Advogado": c.advogado_responsavel.name,
+                "Próx. Prazo": c.prazos[0] ? new Date(c.prazos[0].data_limite).toLocaleDateString("pt-BR") : "",
+              }))
+              const ws = XLSX.utils.json_to_sheet(data)
+              const wb = XLSX.utils.book_new()
+              XLSX.utils.book_append_sheet(wb, ws, "Processos")
+              XLSX.writeFile(wb, `processos_${new Date().toISOString().slice(0, 10)}.xlsx`)
+            }}
+          >
             <Download className="mr-2 size-4" />
             Exportar
           </Button>
@@ -187,7 +209,7 @@ export function CasesList() {
                 return (
                   <TableRow key={caso.id} className="cursor-pointer" onClick={() => router.push(`/processos/${caso.id}`)}>
                     <TableCell className="font-mono text-sm whitespace-nowrap">
-                      {formatCNJ(caso.numero_processo)}
+                      {caso.numero_processo ? formatCNJ(caso.numero_processo) : <span className="text-[#999999] italic font-sans">Sem número</span>}
                     </TableCell>
                     <TableCell>
                       <Badge variant="secondary" className={TYPE_COLORS[caso.tipo] || ""}>
@@ -201,10 +223,10 @@ export function CasesList() {
                       </Badge>
                     </TableCell>
                     <TableCell className="hidden lg:table-cell text-sm">
-                      {[caso.vara, caso.comarca, caso.uf].filter(Boolean).join(" / ") || "—"}
+                      {[caso.vara, caso.comarca, caso.uf].filter(Boolean).join(" / ") || <span className="text-[#999999] italic">—</span>}
                     </TableCell>
                     <TableCell className="hidden lg:table-cell text-right font-mono text-sm">
-                      {formatCurrency(caso.valor_causa)}
+                      {caso.valor_causa != null ? formatCurrency(caso.valor_causa) : <span className="text-[#999999] italic">—</span>}
                     </TableCell>
                     <TableCell className="hidden xl:table-cell text-sm">{caso.advogado_responsavel.name}</TableCell>
                     <TableCell className="hidden xl:table-cell">

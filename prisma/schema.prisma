@@ -1839,3 +1839,64 @@ model NegotiationTemplate {
 
   @@map("negotiation_templates")
 }
+
+// ===== IMPORTAÇÃO INTELIGENTE =====
+
+enum ImportEntityType {
+  PERSON
+  CASE
+  DEADLINE
+  CASE_MOVEMENT
+  RJ_CREDITOR
+}
+
+enum ImportStatus {
+  PENDENTE
+  PROCESSANDO
+  CONCLUIDO
+  CONCLUIDO_PARCIAL
+  ERRO
+  REVERTIDO
+}
+
+model ImportTemplate {
+  id              String           @id @default(cuid())
+  nome            String
+  descricao       String?
+  entity_type     ImportEntityType
+  field_mapping   Json             // { sourceField: targetField }
+  ai_prompt_hint  String?          @db.Text
+  ativo           Boolean          @default(true)
+
+  created_at      DateTime         @default(now())
+  updated_at      DateTime         @updatedAt
+  created_by_id   String?
+
+  import_logs     ImportLog[]
+
+  @@map("import_templates")
+}
+
+model ImportLog {
+  id              String           @id @default(cuid())
+  entity_type     ImportEntityType
+  status          ImportStatus     @default(PENDENTE)
+  arquivo_nome    String
+  arquivo_tipo    String
+  total_linhas    Int              @default(0)
+  importados      Int              @default(0)
+  erros           Int              @default(0)
+  ignorados       Int              @default(0)
+  detalhes        Json?            // { errors: [], warnings: [], created_ids: [] }
+  ai_analysis     Json?
+  template_id     String?
+  template        ImportTemplate?  @relation(fields: [template_id], references: [id])
+  revertido       Boolean          @default(false)
+
+  created_at      DateTime         @default(now())
+  created_by_id   String?
+
+  @@index([entity_type])
+  @@index([created_at])
+  @@map("import_logs")
+}

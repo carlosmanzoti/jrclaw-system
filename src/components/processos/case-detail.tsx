@@ -1,12 +1,13 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useRef, useCallback } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import {
   ArrowLeft, Scale, Users, FileText, Clock, FolderOpen, UserCog,
   Activity, Landmark, Handshake, Plus, Trash2, Check, X, AlertTriangle,
-  ChevronRight, Archive, Pencil, Download, Eye, Wand2,
+  ChevronRight, Archive, Pencil, Download, Eye, Wand2, Upload,
+  ExternalLink, FileUp,
 } from "lucide-react"
 import { trpc } from "@/lib/trpc"
 import { Button } from "@/components/ui/button"
@@ -30,7 +31,7 @@ import { ActivityTimeline } from "@/components/atividades/activity-timeline"
 import {
   CASE_TYPE_LABELS, CASE_STATUS_LABELS, CASE_PARTY_ROLE_LABELS,
   CASE_TEAM_ROLE_LABELS, DEADLINE_TYPE_LABELS, DEADLINE_STATUS_LABELS,
-  MOVEMENT_TYPE_LABELS, DOCUMENT_TYPE_LABELS, ACTIVITY_TYPE_LABELS,
+  MOVEMENT_TYPE_LABELS, DOCUMENT_TYPE_LABELS,
   formatCurrency, formatCNJ, daysUntil, deadlineColor,
 } from "@/lib/constants"
 
@@ -56,8 +57,46 @@ const DEADLINE_STATUS_COLORS: Record<string, string> = {
   CANCELADO: "bg-gray-100 text-gray-600",
 }
 
+const CREDITOR_CLASS_LABELS: Record<string, string> = {
+  I_TRABALHISTA: "I - Trabalhista",
+  II_GARANTIA_REAL: "II - Garantia Real",
+  III_QUIROGRAFARIO: "III - Quirografário",
+  IV_ME_EPP: "IV - ME/EPP",
+}
+
+const CREDITOR_STATUS_LABELS: Record<string, string> = {
+  PENDENTE: "Pendente",
+  HABILITADO: "Habilitado",
+  IMPUGNADO: "Impugnado",
+  RETIFICADO: "Retificado",
+  EXCLUIDO: "Excluído",
+}
+
+const CREDITOR_STATUS_COLORS: Record<string, string> = {
+  PENDENTE: "bg-[#C9A961]/10 text-[#C9A961]",
+  HABILITADO: "bg-[#28A745]/10 text-[#28A745]",
+  IMPUGNADO: "bg-[#DC3545]/10 text-[#DC3545]",
+  RETIFICADO: "bg-[#17A2B8]/10 text-[#17A2B8]",
+  EXCLUIDO: "bg-gray-100 text-gray-600",
+}
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type CaseData = any
+
+function displayValue(value: unknown, fallback = "Não informado"): React.ReactNode {
+  if (value == null || value === "" || value === "—") {
+    return <span className="text-[#999999] italic">{fallback}</span>
+  }
+  return String(value)
+}
+
+function displayCurrency(value: unknown): React.ReactNode {
+  const formatted = formatCurrency(value)
+  if (formatted === "—") {
+    return <span className="text-[#999999] italic">Não informado</span>
+  }
+  return formatted
+}
 
 export function CaseDetail({ caseId }: { caseId: string }) {
   const router = useRouter()
@@ -66,6 +105,10 @@ export function CaseDetail({ caseId }: { caseId: string }) {
   const utils = trpc.useUtils()
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [archiveOpen, setArchiveOpen] = useState(false)
+
+  const updateCase = trpc.cases.update.useMutation({
+    onSuccess: () => utils.cases.getById.invalidate({ id: caseId }),
+  })
 
   if (isLoading) {
     return (
@@ -80,7 +123,7 @@ export function CaseDetail({ caseId }: { caseId: string }) {
     return (
       <div className="flex flex-col items-center justify-center py-12">
         <Scale className="size-12 text-[#666666]/50" />
-        <h3 className="mt-4 text-lg font-semibold">Processo nao encontrado</h3>
+        <h3 className="mt-4 text-lg font-semibold">Processo não encontrado</h3>
         <Button variant="outline" className="mt-4" onClick={() => router.push("/processos")}>
           Voltar para lista
         </Button>
@@ -93,14 +136,14 @@ export function CaseDetail({ caseId }: { caseId: string }) {
   const tabItems = [
     { value: "resumo", label: "Resumo", icon: Scale },
     { value: "partes", label: "Partes", icon: Users },
-    { value: "movimentacoes", label: "Movimentacoes", icon: Activity },
+    { value: "movimentacoes", label: "Movimentações", icon: Activity },
     { value: "prazos", label: "Prazos", icon: Clock },
     { value: "documentos", label: "Documentos", icon: FolderOpen },
     { value: "equipe", label: "Equipe", icon: UserCog },
     { value: "atividades", label: "Atividades", icon: FileText },
     ...(isRJ ? [
       { value: "credores", label: "Credores", icon: Landmark },
-      { value: "negociacoes", label: "Negociacoes", icon: Handshake },
+      { value: "negociacoes", label: "Negociações", icon: Handshake },
     ] : []),
   ]
 
@@ -115,7 +158,7 @@ export function CaseDetail({ caseId }: { caseId: string }) {
           <div>
             <div className="flex items-center gap-2 flex-wrap">
               <h1 className="text-2xl font-bold tracking-tight font-mono">
-                {formatCNJ(caso.numero_processo) || "Sem número"}
+                {formatCNJ(caso.numero_processo) || <span className="text-[#999999] italic text-lg font-sans font-normal">Sem número</span>}
               </h1>
               <Badge variant="secondary" className={TYPE_COLORS[caso.tipo] || ""}>
                 {CASE_TYPE_LABELS[caso.tipo] || caso.tipo}
@@ -137,7 +180,10 @@ export function CaseDetail({ caseId }: { caseId: string }) {
             <Pencil className="mr-2 size-4" />
             Editar
           </Button>
-          <Button variant="outline" onClick={() => setArchiveOpen(true)}>
+          <Button
+            variant="outline"
+            onClick={() => setArchiveOpen(true)}
+          >
             <Archive className="mr-2 size-4" />
             Arquivar
           </Button>
@@ -176,7 +222,7 @@ export function CaseDetail({ caseId }: { caseId: string }) {
         </TabsContent>
 
         <TabsContent value="documentos" className="mt-6 overflow-y-auto max-h-[calc(100vh-16rem)]">
-          <DocumentosTab caso={caso} caseId={caseId} />
+          <DocumentosTab caso={caso} caseId={caseId} utils={utils} />
         </TabsContent>
 
         <TabsContent value="equipe" className="mt-6 overflow-y-auto max-h-[calc(100vh-16rem)]">
@@ -184,33 +230,18 @@ export function CaseDetail({ caseId }: { caseId: string }) {
         </TabsContent>
 
         <TabsContent value="atividades" className="mt-6 overflow-y-auto max-h-[calc(100vh-16rem)]">
-          <div className="space-y-4">
-            <div className="flex items-center justify-end">
-              <Button size="sm" onClick={() => alert("Registro de atividade manual em desenvolvimento")}>
-                <Plus className="mr-1 size-3.5" />Registrar Atividade Manual
-              </Button>
-            </div>
-            <ActivityTimeline caseId={caseId} showFilters groupByDate />
-          </div>
+          <ActivityTimeline caseId={caseId} showFilters groupByDate />
         </TabsContent>
 
         {isRJ && (
           <TabsContent value="credores" className="mt-6 overflow-y-auto max-h-[calc(100vh-16rem)]">
-            <PlaceholderTab
-              icon={Landmark}
-              title="Quadro de Credores"
-              description="O módulo de credores será implementado no módulo de Recuperação Judicial."
-            />
+            <CredoresTab caso={caso} caseId={caseId} />
           </TabsContent>
         )}
 
         {isRJ && (
           <TabsContent value="negociacoes" className="mt-6 overflow-y-auto max-h-[calc(100vh-16rem)]">
-            <PlaceholderTab
-              icon={Handshake}
-              title="Negociações"
-              description="O módulo de negociações será implementado no módulo de Recuperação Judicial."
-            />
+            <NegociacoesTab caseId={caseId} />
           </TabsContent>
         )}
       </Tabs>
@@ -251,12 +282,15 @@ export function CaseDetail({ caseId }: { caseId: string }) {
           <DialogFooter>
             <Button variant="outline" onClick={() => setArchiveOpen(false)}>Cancelar</Button>
             <Button
+              disabled={updateCase.isPending}
               onClick={() => {
-                alert("Arquivamento em desenvolvimento")
-                setArchiveOpen(false)
+                updateCase.mutate(
+                  { id: caseId, status: "ARQUIVADO" },
+                  { onSuccess: () => setArchiveOpen(false) }
+                )
               }}
             >
-              Arquivar
+              {updateCase.isPending ? "Arquivando..." : "Arquivar"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -278,26 +312,28 @@ function ResumoTab({ caso }: { caso: CaseData }) {
         <Card>
           <CardContent className="pt-4 pb-4">
             <p className="text-xs text-[#666666]">Valor da Causa</p>
-            <p className="text-lg font-bold font-mono">{formatCurrency(caso.valor_causa)}</p>
+            <p className="text-lg font-bold font-mono">{displayCurrency(caso.valor_causa)}</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="pt-4 pb-4">
             <p className="text-xs text-[#666666]">Valor de Risco</p>
-            <p className="text-lg font-bold font-mono">{formatCurrency(caso.valor_risco)}</p>
+            <p className="text-lg font-bold font-mono">{displayCurrency(caso.valor_risco)}</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="pt-4 pb-4">
             <p className="text-xs text-[#666666]">Advogado Responsável</p>
-            <p className="text-sm font-medium">{caso.advogado_responsavel.name}</p>
+            <p className="text-sm font-medium">{displayValue(caso.advogado_responsavel?.name)}</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="pt-4 pb-4">
             <p className="text-xs text-[#666666]">Vara / Comarca</p>
             <p className="text-sm font-medium">
-              {[caso.vara, caso.comarca, caso.uf].filter(Boolean).join(" / ") || "—"}
+              {[caso.vara, caso.comarca, caso.uf].filter(Boolean).join(" / ") || (
+                <span className="text-[#999999] italic">Não informado</span>
+              )}
             </p>
           </CardContent>
         </Card>
@@ -352,11 +388,11 @@ function ResumoTab({ caso }: { caso: CaseData }) {
         {/* Recent Movements */}
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-[#666666]">Ultimas Movimentacoes</CardTitle>
+            <CardTitle className="text-sm font-medium text-[#666666]">Últimas Movimentações</CardTitle>
           </CardHeader>
           <CardContent>
             {recentMovements.length === 0 ? (
-              <p className="text-sm text-[#666666]">Nenhuma movimentacao registrada.</p>
+              <p className="text-sm text-[#666666]">Nenhuma movimentação registrada.</p>
             ) : (
               <div className="space-y-3">
                 {recentMovements.map((m: CaseData) => (
@@ -450,12 +486,20 @@ function PartesTab({ caso, caseId, utils }: { caso: CaseData; caseId: string; ut
                       {p.person.nome}
                     </Link>
                   </TableCell>
-                  <TableCell className="font-mono text-sm">{p.person.cpf_cnpj || "—"}</TableCell>
+                  <TableCell className="font-mono text-sm">{p.person.cpf_cnpj || <span className="text-[#999999] italic">Não informado</span>}</TableCell>
                   <TableCell>
                     <Badge variant="secondary">{CASE_PARTY_ROLE_LABELS[p.role] || p.role}</Badge>
                   </TableCell>
                   <TableCell>
-                    <Button variant="ghost" size="icon" className="size-7" onClick={() => removeParty.mutate({ id: p.id })}>
+                    <Button
+                      variant="ghost" size="icon" className="size-7"
+                      disabled={removeParty.isPending}
+                      onClick={() => {
+                        if (confirm("Remover esta parte do processo?")) {
+                          removeParty.mutate({ id: p.id })
+                        }
+                      }}
+                    >
                       <Trash2 className="size-3.5 text-[#DC3545]" />
                     </Button>
                   </TableCell>
@@ -499,7 +543,7 @@ function PartesTab({ caso, caseId, utils }: { caso: CaseData; caseId: string; ut
               disabled={!selectedPerson || !selectedRole || addParty.isPending}
               onClick={() => addParty.mutate({ case_id: caseId, person_id: selectedPerson, role: selectedRole })}
             >
-              Adicionar
+              {addParty.isPending ? "Adicionando..." : "Adicionar"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -508,7 +552,7 @@ function PartesTab({ caso, caseId, utils }: { caso: CaseData; caseId: string; ut
   )
 }
 
-// ─── Movimentacoes Tab ───────────────────────────────────────────
+// ─── Movimentações Tab ───────────────────────────────────────────
 
 function MovimentacoesTab({ caso, caseId, utils }: { caso: CaseData; caseId: string; utils: ReturnType<typeof trpc.useUtils> }) {
   const [dialogOpen, setDialogOpen] = useState(false)
@@ -526,17 +570,17 @@ function MovimentacoesTab({ caso, caseId, utils }: { caso: CaseData; caseId: str
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-medium text-[#666666]">
-          {(caso.movimentacoes as CaseData[]).length} movimentacao(oes)
+          {(caso.movimentacoes as CaseData[]).length} movimentação(ões)
         </h3>
         <Button size="sm" onClick={() => setDialogOpen(true)}>
-          <Plus className="mr-1 size-3.5" />Nova Movimentacao
+          <Plus className="mr-1 size-3.5" />Nova Movimentação
         </Button>
       </div>
 
       {/* Timeline */}
       <div className="space-y-0">
         {(caso.movimentacoes as CaseData[]).length === 0 ? (
-          <p className="text-sm text-[#666666] py-8 text-center">Nenhuma movimentacao registrada.</p>
+          <p className="text-sm text-[#666666] py-8 text-center">Nenhuma movimentação registrada.</p>
         ) : (
           (caso.movimentacoes as CaseData[]).map((m: CaseData, i: number) => (
             <div key={m.id} className="flex gap-4">
@@ -560,7 +604,7 @@ function MovimentacoesTab({ caso, caseId, utils }: { caso: CaseData; caseId: str
                 {m.conteudo_integral && (
                   <details className="mt-2">
                     <summary className="text-xs text-primary cursor-pointer hover:underline">
-                      Ver conteudo integral
+                      Ver conteúdo integral
                     </summary>
                     <pre className="mt-2 text-xs bg-muted/50 p-3 rounded-md whitespace-pre-wrap max-h-60 overflow-y-auto">
                       {m.conteudo_integral}
@@ -577,7 +621,7 @@ function MovimentacoesTab({ caso, caseId, utils }: { caso: CaseData; caseId: str
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>Nova Movimentacao</DialogTitle>
+            <DialogTitle>Nova Movimentação</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
@@ -606,12 +650,12 @@ function MovimentacoesTab({ caso, caseId, utils }: { caso: CaseData; caseId: str
               />
             </div>
             <div className="space-y-2">
-              <Label>Conteudo Integral</Label>
+              <Label>Conteúdo Integral</Label>
               <Textarea
                 value={movData.conteudo_integral}
                 onChange={(e) => setMovData({ ...movData, conteudo_integral: e.target.value })}
                 rows={5}
-                placeholder="Cole o conteudo completo da movimentacao..."
+                placeholder="Cole o conteúdo completo da movimentação..."
               />
             </div>
           </div>
@@ -627,7 +671,7 @@ function MovimentacoesTab({ caso, caseId, utils }: { caso: CaseData; caseId: str
                 conteudo_integral: movData.conteudo_integral || null,
               })}
             >
-              Salvar
+              {addMovement.isPending ? "Salvando..." : "Salvar"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -713,7 +757,7 @@ function PrazosTab({
                       </Badge>
                     </TableCell>
                     <TableCell className="max-w-[250px] truncate">{p.descricao}</TableCell>
-                    <TableCell className="text-sm">{p.responsavel?.name || "—"}</TableCell>
+                    <TableCell className="text-sm">{p.responsavel?.name || <span className="text-[#999999] italic">Não atribuído</span>}</TableCell>
                     <TableCell>
                       <Badge variant="secondary" className={DEADLINE_STATUS_COLORS[p.status] || ""}>
                         {DEADLINE_STATUS_LABELS[p.status]}
@@ -807,7 +851,7 @@ function PrazosTab({
                 responsavel_id: prazoData.responsavel_id,
               })}
             >
-              Salvar
+              {addDeadline.isPending ? "Salvando..." : "Salvar"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -818,8 +862,76 @@ function PrazosTab({
 
 // ─── Documentos Tab ──────────────────────────────────────────────
 
-function DocumentosTab({ caso, caseId }: { caso: CaseData; caseId: string }) {
+function DocumentosTab({ caso, caseId, utils }: { caso: CaseData; caseId: string; utils: ReturnType<typeof trpc.useUtils> }) {
   const router = useRouter()
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [uploadOpen, setUploadOpen] = useState(false)
+  const [deleteId, setDeleteId] = useState<string | null>(null)
+  const [uploading, setUploading] = useState(false)
+  const [uploadFile, setUploadFile] = useState<File | null>(null)
+  const [docTitle, setDocTitle] = useState("")
+  const [docType, setDocType] = useState("")
+  const [docTags, setDocTags] = useState("")
+
+  const createDoc = trpc.documents.create.useMutation({
+    onSuccess: () => {
+      utils.cases.getById.invalidate({ id: caseId })
+      resetUploadForm()
+    },
+  })
+
+  const deleteDoc = trpc.documents.delete.useMutation({
+    onSuccess: () => {
+      utils.cases.getById.invalidate({ id: caseId })
+      setDeleteId(null)
+    },
+  })
+
+  const resetUploadForm = () => {
+    setUploadOpen(false)
+    setUploadFile(null)
+    setDocTitle("")
+    setDocType("")
+    setDocTags("")
+    setUploading(false)
+  }
+
+  const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      setUploadFile(file)
+      if (!docTitle) {
+        setDocTitle(file.name.replace(/\.[^/.]+$/, ""))
+      }
+    }
+  }, [docTitle])
+
+  const handleUpload = async () => {
+    if (!uploadFile || !docTitle || !docType) return
+    setUploading(true)
+
+    try {
+      const formData = new FormData()
+      formData.append("file", uploadFile)
+      formData.append("folder", `processos/${caseId}`)
+
+      const res = await fetch("/api/upload", { method: "POST", body: formData })
+      if (!res.ok) throw new Error("Falha no upload do arquivo")
+      const { url } = await res.json()
+
+      await createDoc.mutateAsync({
+        titulo: docTitle,
+        tipo: docType,
+        arquivo_url: url,
+        case_id: caseId,
+        tags: docTags ? docTags.split(",").map((t) => t.trim()).filter(Boolean) : [],
+      })
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Erro ao fazer upload"
+      alert(message)
+      setUploading(false)
+    }
+  }
 
   return (
     <div className="space-y-4">
@@ -831,7 +943,7 @@ function DocumentosTab({ caso, caseId }: { caso: CaseData; caseId: string }) {
           <Button size="sm" variant="outline" onClick={() => router.push(`/confeccao?case_id=${caseId}`)}>
             <Wand2 className="mr-1 size-3.5" />Gerar com Harvey Specter
           </Button>
-          <Button size="sm" onClick={() => alert("Upload em desenvolvimento")}>
+          <Button size="sm" onClick={() => setUploadOpen(true)}>
             <Plus className="mr-1 size-3.5" />Upload
           </Button>
         </div>
@@ -841,7 +953,7 @@ function DocumentosTab({ caso, caseId }: { caso: CaseData; caseId: string }) {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Titulo</TableHead>
+              <TableHead>Título</TableHead>
               <TableHead>Tipo</TableHead>
               <TableHead>Criado por</TableHead>
               <TableHead>Data</TableHead>
@@ -864,7 +976,7 @@ function DocumentosTab({ caso, caseId }: { caso: CaseData; caseId: string }) {
                       {DOCUMENT_TYPE_LABELS[d.tipo] || d.tipo}
                     </Badge>
                   </TableCell>
-                  <TableCell className="text-sm">{d.criado_por?.name || "—"}</TableCell>
+                  <TableCell className="text-sm">{d.criado_por?.name || <span className="text-[#999999] italic">Não informado</span>}</TableCell>
                   <TableCell className="text-sm text-[#666666]">
                     {new Date(d.created_at).toLocaleDateString("pt-BR")}
                   </TableCell>
@@ -876,10 +988,9 @@ function DocumentosTab({ caso, caseId }: { caso: CaseData; caseId: string }) {
                         onClick={() => {
                           if (d.arquivo_url) {
                             window.open(d.arquivo_url, "_blank")
-                          } else {
-                            alert("Arquivo não disponível")
                           }
                         }}
+                        disabled={!d.arquivo_url}
                       >
                         <Eye className="size-3.5" />
                       </Button>
@@ -892,17 +1003,16 @@ function DocumentosTab({ caso, caseId }: { caso: CaseData; caseId: string }) {
                             link.href = d.arquivo_url
                             link.download = d.titulo || "documento"
                             link.click()
-                          } else {
-                            alert("Arquivo não disponível para download")
                           }
                         }}
+                        disabled={!d.arquivo_url}
                       >
                         <Download className="size-3.5" />
                       </Button>
                       <Button
                         variant="ghost" size="icon" className="size-7"
                         title="Excluir"
-                        onClick={() => alert("Exclusão de documento em desenvolvimento")}
+                        onClick={() => setDeleteId(d.id)}
                       >
                         <Trash2 className="size-3.5 text-[#DC3545]" />
                       </Button>
@@ -914,6 +1024,110 @@ function DocumentosTab({ caso, caseId }: { caso: CaseData; caseId: string }) {
           </TableBody>
         </Table>
       </div>
+
+      {/* Upload Dialog */}
+      <Dialog open={uploadOpen} onOpenChange={(open) => { if (!open) resetUploadForm() }}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Upload de Documento</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            {/* File drop zone */}
+            <div
+              className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed p-8 cursor-pointer hover:border-[#C9A961] hover:bg-[#C9A961]/5 transition-colors"
+              onClick={() => fileInputRef.current?.click()}
+              onDragOver={(e) => { e.preventDefault(); e.stopPropagation() }}
+              onDrop={(e) => {
+                e.preventDefault()
+                e.stopPropagation()
+                const file = e.dataTransfer.files?.[0]
+                if (file) {
+                  setUploadFile(file)
+                  if (!docTitle) setDocTitle(file.name.replace(/\.[^/.]+$/, ""))
+                }
+              }}
+            >
+              <input
+                ref={fileInputRef}
+                type="file"
+                className="hidden"
+                onChange={handleFileChange}
+                accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,.rtf,.png,.jpg,.jpeg,.gif"
+              />
+              {uploadFile ? (
+                <div className="flex items-center gap-3">
+                  <FileUp className="size-8 text-[#C9A961]" />
+                  <div>
+                    <p className="text-sm font-medium">{uploadFile.name}</p>
+                    <p className="text-xs text-[#666666]">{(uploadFile.size / 1024).toFixed(1)} KB</p>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <Upload className="size-8 text-[#666666]/50 mb-2" />
+                  <p className="text-sm text-[#666666]">Clique ou arraste um arquivo aqui</p>
+                  <p className="text-xs text-[#999999] mt-1">PDF, Word, Excel, CSV, imagens, etc.</p>
+                </>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label>Título *</Label>
+              <Input value={docTitle} onChange={(e) => setDocTitle(e.target.value)} placeholder="Nome do documento" />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Tipo *</Label>
+              <Select value={docType} onValueChange={setDocType}>
+                <SelectTrigger><SelectValue placeholder="Selecionar tipo" /></SelectTrigger>
+                <SelectContent>
+                  {Object.entries(DOCUMENT_TYPE_LABELS).map(([v, l]) => (
+                    <SelectItem key={v} value={v}>{l}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Tags (separadas por vírgula)</Label>
+              <Input value={docTags} onChange={(e) => setDocTags(e.target.value)} placeholder="Ex: urgente, minuta, versão final" />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={resetUploadForm} disabled={uploading}>Cancelar</Button>
+            <Button
+              disabled={!uploadFile || !docTitle || !docType || uploading}
+              onClick={handleUpload}
+            >
+              {uploading ? "Enviando..." : "Enviar Documento"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Excluir Documento</DialogTitle>
+            <DialogDescription>
+              Tem certeza que deseja excluir este documento? Esta ação não pode ser desfeita.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteId(null)}>Cancelar</Button>
+            <Button
+              variant="destructive"
+              disabled={deleteDoc.isPending}
+              onClick={() => {
+                if (deleteId) deleteDoc.mutate({ id: deleteId })
+              }}
+            >
+              {deleteDoc.isPending ? "Excluindo..." : "Excluir"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
@@ -995,7 +1209,15 @@ function EquipeTab({
                     <Badge variant="secondary">{CASE_TEAM_ROLE_LABELS[m.role] || m.role}</Badge>
                   </TableCell>
                   <TableCell>
-                    <Button variant="ghost" size="icon" className="size-7" onClick={() => removeMember.mutate({ id: m.id })}>
+                    <Button
+                      variant="ghost" size="icon" className="size-7"
+                      disabled={removeMember.isPending}
+                      onClick={() => {
+                        if (confirm("Remover este membro da equipe?")) {
+                          removeMember.mutate({ id: m.id })
+                        }
+                      }}
+                    >
                       <Trash2 className="size-3.5 text-[#DC3545]" />
                     </Button>
                   </TableCell>
@@ -1014,9 +1236,9 @@ function EquipeTab({
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label>Usuario</Label>
+              <Label>Usuário</Label>
               <Select value={selectedUser} onValueChange={setSelectedUser}>
-                <SelectTrigger><SelectValue placeholder="Selecionar usuario" /></SelectTrigger>
+                <SelectTrigger><SelectValue placeholder="Selecionar usuário" /></SelectTrigger>
                 <SelectContent>
                   {users?.map((u) => (
                     <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>
@@ -1042,7 +1264,7 @@ function EquipeTab({
               disabled={!selectedUser || !selectedRole || addMember.isPending}
               onClick={() => addMember.mutate({ case_id: caseId, user_id: selectedUser, role: selectedRole })}
             >
-              Adicionar
+              {addMember.isPending ? "Adicionando..." : "Adicionar"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1051,24 +1273,102 @@ function EquipeTab({
   )
 }
 
-// AtividadesTab replaced by ActivityTimeline component
+// ─── Credores Tab ────────────────────────────────────────────────
 
-// ─── Placeholder Tab ─────────────────────────────────────────────
+function CredoresTab({ caso, caseId }: { caso: CaseData; caseId: string }) {
+  const credores = (caso.credores as CaseData[]) || []
 
-function PlaceholderTab({
-  icon: Icon,
-  title,
-  description,
-}: {
-  icon: React.ElementType
-  title: string
-  description: string
-}) {
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h3 className="text-sm font-medium text-[#666666]">
+          {credores.length} credor(es)
+        </h3>
+        <Button size="sm" variant="outline" asChild>
+          <Link href="/recuperacao-judicial/quadro-credores">
+            <ExternalLink className="mr-1 size-3.5" />Gerenciar no Módulo RJ
+          </Link>
+        </Button>
+      </div>
+
+      {credores.length === 0 ? (
+        <div className="flex flex-col items-center justify-center rounded-lg border border-dashed p-12">
+          <Landmark className="size-12 text-[#666666]/50" />
+          <h3 className="mt-4 text-lg font-semibold">Nenhum credor cadastrado</h3>
+          <p className="mt-2 text-sm text-[#666666] text-center max-w-md">
+            Gerencie o quadro de credores completo no módulo de Recuperação Judicial.
+          </p>
+          <Button className="mt-4" variant="outline" asChild>
+            <Link href="/recuperacao-judicial/quadro-credores">
+              <ExternalLink className="mr-2 size-4" />Ir para Quadro de Credores
+            </Link>
+          </Button>
+        </div>
+      ) : (
+        <div className="rounded-lg border bg-white">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Credor</TableHead>
+                <TableHead>Classe</TableHead>
+                <TableHead className="text-right">Valor Original</TableHead>
+                <TableHead className="text-right">Valor Atualizado</TableHead>
+                <TableHead>Status</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {credores.map((c: CaseData) => (
+                <TableRow key={c.id}>
+                  <TableCell>
+                    {c.person ? (
+                      <Link href={`/pessoas/${c.person.id}`} className="text-primary hover:underline">
+                        {c.person.nome}
+                      </Link>
+                    ) : (
+                      <span className="text-[#999999] italic">Sem pessoa vinculada</span>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant="secondary" className="text-[10px]">
+                      {CREDITOR_CLASS_LABELS[c.classe] || c.classe}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-right font-mono text-sm">
+                    {displayCurrency(c.valor_original)}
+                  </TableCell>
+                  <TableCell className="text-right font-mono text-sm">
+                    {displayCurrency(c.valor_atualizado)}
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant="secondary" className={CREDITOR_STATUS_COLORS[c.status_credito] || ""}>
+                      {CREDITOR_STATUS_LABELS[c.status_credito] || c.status_credito}
+                    </Badge>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ─── Negociações Tab ─────────────────────────────────────────────
+
+function NegociacoesTab({ caseId }: { caseId: string }) {
   return (
     <div className="flex flex-col items-center justify-center rounded-lg border border-dashed p-12">
-      <Icon className="size-12 text-[#666666]/50" />
-      <h3 className="mt-4 text-lg font-semibold">{title}</h3>
-      <p className="mt-2 text-sm text-[#666666] text-center max-w-md">{description}</p>
+      <Handshake className="size-12 text-[#666666]/50" />
+      <h3 className="mt-4 text-lg font-semibold">Negociações com Credores</h3>
+      <p className="mt-2 text-sm text-[#666666] text-center max-w-md">
+        Gerencie as rodadas de negociação, propostas e contrapropostas no módulo de Recuperação Judicial.
+      </p>
+      <Button className="mt-4" variant="outline" asChild>
+        <Link href="/recuperacao-judicial/negociacoes">
+          <ExternalLink className="mr-2 size-4" />Ir para Negociações
+        </Link>
+      </Button>
     </div>
   )
 }

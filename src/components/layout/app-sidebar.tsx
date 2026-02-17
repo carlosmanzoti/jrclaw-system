@@ -19,6 +19,7 @@ import {
   MessageCircle,
   Mail,
   BarChart3,
+  Upload,
   Settings,
   ChevronDown,
 } from "lucide-react"
@@ -149,6 +150,11 @@ const navAdmin = [
     title: "Relatórios",
     url: "/relatorios",
     icon: BarChart3,
+  },
+  {
+    title: "Importar Dados",
+    url: "/importar",
+    icon: Upload,
   },
   {
     title: "Configurações",
