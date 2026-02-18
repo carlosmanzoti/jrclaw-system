@@ -28,6 +28,7 @@ import { NegTabParceiro } from "./neg-tab-parceiro";
 import { NegTabComunicacoes } from "./neg-tab-comunicacoes";
 import { NegTabMediacao } from "./neg-tab-mediacao";
 import { NegTabComparativo } from "./neg-tab-comparativo";
+import { CRJCreateWizard } from "./crj-create-wizard";
 import {
   Plus,
   Download,
@@ -41,6 +42,7 @@ export function NegLayout() {
   const [activeTab, setActiveTab] = useState("dashboard");
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [importing, setImporting] = useState(false);
+  const [wizardOpen, setWizardOpen] = useState(false);
 
   const { data: cases, isLoading: loadingCases } = trpc.rj.cases.list.useQuery();
 
@@ -156,7 +158,7 @@ export function NegLayout() {
               variant="outline"
               size="sm"
               className="h-8 text-xs"
-              onClick={() => setActiveTab("individuais")}
+              onClick={() => setWizardOpen(true)}
             >
               <Plus className="mr-1 h-3.5 w-3.5" />
               Nova Negociação
@@ -296,6 +298,15 @@ export function NegLayout() {
             {jrc.plano_aprovado ? "Aprovado" : "Pendente"}
           </span>
         </div>
+      )}
+
+      {/* Create Wizard */}
+      {jrcId && (
+        <CRJCreateWizard
+          open={wizardOpen}
+          onOpenChange={setWizardOpen}
+          jrcId={jrcId}
+        />
       )}
     </div>
   );
