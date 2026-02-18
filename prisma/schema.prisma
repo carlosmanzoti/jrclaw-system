@@ -546,6 +546,11 @@ model User {
   ai_usage_logs        AIUsageLog[]           @relation("AIUsageLogs")
   library_search_logs  LibrarySearchLog[]     @relation("LibrarySearchLogs")
   strat_neg_responsavel StratNegotiation[] @relation("StratNegResponsavel")
+  recovery_cases_responsavel CreditRecoveryCase[] @relation("RecoveryResponsavel")
+  recovery_investigations    PatrimonialInvestigation[] @relation("InvestigationResponsavel")
+  recovery_actions           CollectionAction[] @relation("CollectionActionResponsavel")
+  recovery_agreements        RecoveryAgreement[] @relation("AgreementResponsavel")
+  recovery_events            RecoveryEvent[] @relation("RecoveryEventResponsavel")
 
   @@map("users")
 }
@@ -615,6 +620,8 @@ model Person {
   rj_admin_cases       JudicialRecoveryCase[]   @relation("RJAdminJudicial")
   extraconcursal_creditors ExtraconcursalCreditor[] @relation("ExtraconcursalPerson")
   strat_negotiations StratNegotiation[]    @relation("StratNegPerson")
+  recovery_cases_debtor      CreditRecoveryCase[] @relation("RecoveryDebtor")
+  joint_debtor_entries       JointDebtor[] @relation("JointDebtorPerson")
 
   @@map("persons")
 }
@@ -679,6 +686,7 @@ model Case {
   chat_messages       ChatMessage[]       @relation("ChatMessageCase")
   judicialRecoveryCase JudicialRecoveryCase?
   strat_negotiations  StratNegotiation[]    @relation("StratNegCase")
+  recovery_cases             CreditRecoveryCase[] @relation("CaseRecovery")
 
   @@map("cases")
 }
@@ -2469,4 +2477,517 @@ model NegAIInsight {
   @@index([tipo])
   @@index([created_at])
   @@map("neg_ai_insights")
+}
+
+// ============================================================
+// MÓDULO DE RECUPERAÇÃO DE CRÉDITO
+// ============================================================
+
+model CreditRecoveryCase {
+  id                    String   @id @default(cuid())
+  case_id               String?
+  person_id             String?
+
+  codigo                String   @unique
+  titulo                String
+  tipo                  String   // CUMPRIMENTO_SENTENCA, EXECUCAO_TITULO_EXTRAJUDICIAL, EXECUCAO_FISCAL, MONITORIA, BUSCA_APREENSAO, COBRANCA_EXTRAJUDICIAL
+  fase                  String   // INVESTIGACAO, PRE_JUDICIAL, EXECUCAO, PENHORA, EXPROPRIACAO, ACORDO, ENCERRADO
+  status                String   // ATIVO, SUSPENSO, ACORDO_PARCIAL, ACORDO_TOTAL, PRESCRITO, FRUSTRADO, ENCERRADO_SATISFEITO, ENCERRADO_INSATISFEITO
+  prioridade            String   // CRITICA, ALTA, MEDIA, BAIXA
+
+  valor_original        Float
+  valor_atualizado      Float?
+  valor_honorarios      Float?
+  valor_custas          Float?
+  valor_total_execucao  Float?
+  valor_recuperado      Float?
+  valor_bloqueado       Float?
+  valor_penhorado       Float?
+  percentual_recuperado Float?
+
+  titulo_tipo           String?  // SENTENCA, CHEQUE, NOTA_PROMISSORIA, DUPLICATA, ESCRITURA_PUBLICA, CONTRATO, CDA, CCB, CPR, DEBENTURE
+  titulo_numero         String?
+  titulo_data_vencimento DateTime?
+  titulo_data_prescricao DateTime?
+
+  devedor_nome          String?
+  devedor_cpf_cnpj      String?
+  devedor_tipo          String?  // PF, PJ
+  devedor_endereco      String?
+  devedor_telefone      String?
+  devedor_email         String?
+  devedor_atividade     String?
+
+  score_recuperacao     Int?
+  score_fatores         Json?
+  risco_prescricao      String?
+  risco_insolvencia     String?
+  estrategia_ia         String?  @db.Text
+
+  data_constituicao     DateTime?
+  data_vencimento       DateTime?
+  data_distribuicao     DateTime?
+  data_citacao          DateTime?
+  data_penhora          DateTime?
+  data_acordo           DateTime?
+  data_encerramento     DateTime?
+  data_proxima_acao     DateTime?
+  proxima_acao          String?
+
+  responsavel_id        String?
+  observacoes           String?  @db.Text
+
+  created_at            DateTime @default(now())
+  updated_at            DateTime @updatedAt
+
+  case_                 Case?    @relation("CaseRecovery", fields: [case_id], references: [id])
+  person                Person?  @relation("RecoveryDebtor", fields: [person_id], references: [id])
+  responsavel           User?    @relation("RecoveryResponsavel", fields: [responsavel_id], references: [id])
+  investigacoes         PatrimonialInvestigation[]
+  bens                  AssetFound[]
+  acoes_cobranca        CollectionAction[]
+  penhoras              Penhora[]
+  acordos               RecoveryAgreement[]
+  incidentes_desconsidera DesconsideracaoIncident[]
+  monitoramentos        DebtorMonitoring[]
+  eventos               RecoveryEvent[]
+  devedores_solidarios  JointDebtor[]
+
+  @@index([case_id])
+  @@index([person_id])
+  @@index([fase])
+  @@index([status])
+  @@map("credit_recovery_cases")
+}
+
+model PatrimonialInvestigation {
+  id                    String   @id @default(cuid())
+  recovery_case_id      String
+
+  codigo                String   @unique
+  tipo                  String   // COMPLETA, COMPLEMENTAR, ATUALIZACAO, URGENTE
+  status                String   // SOLICITADA, EM_ANDAMENTO, CONCLUIDA, CANCELADA
+  fase                  String   // PLANEJAMENTO, BUSCA_PUBLICA, BUSCA_JUDICIAL, BUSCA_PRIVADA, OSINT, ANALISE, RELATORIO
+
+  investigar_imoveis    Boolean  @default(true)
+  investigar_veiculos   Boolean  @default(true)
+  investigar_contas     Boolean  @default(true)
+  investigar_empresas   Boolean  @default(true)
+  investigar_socios     Boolean  @default(true)
+  investigar_grupo_eco  Boolean  @default(true)
+  investigar_crypto     Boolean  @default(false)
+  investigar_exterior   Boolean  @default(false)
+  investigar_osint      Boolean  @default(false)
+
+  total_bens_encontrados Int?
+  valor_total_estimado  Float?
+  valor_penhoravel_estimado Float?
+  patrimonio_visivel    Float?
+  patrimonio_oculto_est Float?
+
+  red_flags             Json?
+  indicio_fraude        Boolean  @default(false)
+  indicio_ocultacao     Boolean  @default(false)
+  indicio_grupo_eco     Boolean  @default(false)
+
+  data_solicitacao      DateTime
+  data_inicio           DateTime?
+  data_conclusao        DateTime?
+  prazo_estimado        DateTime?
+
+  responsavel_id        String?
+  relatorio_doc_id      String?
+  observacoes           String?  @db.Text
+
+  created_at            DateTime @default(now())
+  updated_at            DateTime @updatedAt
+
+  recovery_case         CreditRecoveryCase @relation(fields: [recovery_case_id], references: [id], onDelete: Cascade)
+  responsavel           User?    @relation("InvestigationResponsavel", fields: [responsavel_id], references: [id])
+  buscas                AssetSearch[]
+  bens                  AssetFound[]
+
+  @@index([recovery_case_id])
+  @@map("patrimonial_investigations")
+}
+
+model AssetSearch {
+  id                    String   @id @default(cuid())
+  investigation_id      String
+  recovery_case_id      String?
+
+  sistema               String   // SISBAJUD, RENAJUD, INFOJUD, SNIPER, CNIB, CRI, JUNTA_COMERCIAL, DETRAN, RECEITA_FEDERAL, SERASA, BOA_VISTA, NEOWAY, CNIS_INSS, TSE, ANAC, TRIB_MARITIMO, CCS_BACEN, CENSEC, OSINT_SOCIAL, OSINT_GOOGLE, CRIPTOJUD
+  tipo_consulta         String   // INFORMACAO, BLOQUEIO, DESBLOQUEIO, TRANSFERENCIA, RESTRICAO, PENHORA_REGISTRO, TEIMOSINHA
+
+  cpf_cnpj_consultado   String
+  nome_consultado       String?
+  data_consulta         DateTime
+  data_resposta         DateTime?
+
+  status                String   // SOLICITADA, PENDENTE, RESPONDIDA, SEM_RESULTADO, ERRO, PARCIAL
+  resultado_resumo      String?  @db.Text
+  resultado_detalhado   Json?
+  valor_encontrado      Float?
+  valor_bloqueado       Float?
+  qtd_resultados        Int?
+
+  numero_processo       String?
+  numero_ordem_judicial String?
+  juizo                 String?
+
+  teimosinha_ativa      Boolean  @default(false)
+  teimosinha_dias       Int?
+  teimosinha_inicio     DateTime?
+  teimosinha_fim        DateTime?
+  teimosinha_reiteracoes Int?
+
+  observacoes           String?  @db.Text
+  created_at            DateTime @default(now())
+
+  investigation         PatrimonialInvestigation @relation(fields: [investigation_id], references: [id], onDelete: Cascade)
+
+  @@index([investigation_id])
+  @@index([sistema])
+  @@map("asset_searches")
+}
+
+model AssetFound {
+  id                    String   @id @default(cuid())
+  recovery_case_id      String
+  investigation_id      String?
+
+  tipo                  String   // IMOVEL_URBANO, IMOVEL_RURAL, VEICULO, CONTA_BANCARIA, APLICACAO_FINANCEIRA, PARTICIPACAO_SOCIETARIA, CREDITO_JUDICIAL, MARCA_PATENTE, AERONAVE, EMBARCACAO, MAQUINARIO, SEMOVENTE, CRIPTOATIVO, DIREITO_CREDITORIO, PRECATORIO, OUTROS
+  subtipo               String?
+
+  descricao             String
+  identificador         String?
+  localizacao           String?
+
+  valor_estimado        Float?
+  valor_avaliacao       Float?
+  valor_mercado         Float?
+  valor_liquidacao      Float?
+
+  status                String   // LOCALIZADO, VERIFICANDO, CONFIRMADO, PENHORADO, BLOQUEADO, INDISPONIVEL, ARREMATADO, ADJUDICADO, LIBERADO, BEM_FAMILIA, IMPENHORAVEL, GRAVADO, ALIENADO
+  penhoravel            Boolean  @default(true)
+  motivo_impenhoravel   String?
+
+  titular_nome          String?
+  titular_cpf_cnpj      String?
+  titular_relacao       String?  // DEVEDOR, CONJUGE, SOCIO, EMPRESA, LARANJA, TERCEIRO
+
+  onus                  Json?
+  possui_onus           Boolean  @default(false)
+
+  data_localizacao      DateTime
+  data_penhora          DateTime?
+  data_avaliacao        DateTime?
+  data_expropriacao     DateTime?
+
+  fonte                 String?
+  documento_id          String?
+  observacoes           String?  @db.Text
+
+  created_at            DateTime @default(now())
+  updated_at            DateTime @updatedAt
+
+  recovery_case         CreditRecoveryCase @relation(fields: [recovery_case_id], references: [id], onDelete: Cascade)
+  investigation         PatrimonialInvestigation? @relation(fields: [investigation_id], references: [id])
+  penhora               Penhora?
+
+  @@index([recovery_case_id])
+  @@index([tipo])
+  @@map("assets_found")
+}
+
+model CollectionAction {
+  id                    String   @id @default(cuid())
+  recovery_case_id      String
+
+  tipo                  String   // NOTIFICACAO_EXTRAJUDICIAL, PROTESTO, NEGATIVACAO, MEDIACAO, PETICAO_INICIAL, CITACAO, PENHORA_ONLINE, ARRESTO, SEQUESTRO, AVALIACAO, LEILAO, ADJUDICACAO, IDPJ, ACAO_PAULIANA, FRAUDE_EXECUCAO, HABILITACAO_CREDITO, RECURSO, EMBARGOS, IMPUGNACAO, ACORDO, CUMPRIMENTO_ACORDO, PARCELAMENTO_916
+  categoria             String   // EXTRAJUDICIAL, JUDICIAL_CONHECIMENTO, JUDICIAL_EXECUCAO, CAUTELAR, INCIDENTAL, RECURSAL, ACORDO
+
+  descricao             String   @db.Text
+  data_acao             DateTime
+  data_prazo            DateTime?
+  data_resultado        DateTime?
+
+  status                String   // PLANEJADA, EM_EXECUCAO, AGUARDANDO_RESPOSTA, DEFERIDA, INDEFERIDA, CUMPRIDA, FRUSTRADA, CANCELADA
+  resultado             String?  @db.Text
+  valor_envolvido       Float?
+  valor_obtido          Float?
+
+  protesto_cartorio     String?
+  protesto_protocolo    String?
+  protesto_data_intimacao DateTime?
+  protesto_data_lavratura DateTime?
+  protesto_pago         Boolean?
+
+  negativacao_bureau    String?
+  negativacao_protocolo String?
+  negativacao_data_inclusao DateTime?
+  negativacao_data_exclusao DateTime?
+
+  leilao_leiloeiro      String?
+  leilao_data_1praca    DateTime?
+  leilao_data_2praca    DateTime?
+  leilao_valor_minimo   Float?
+  leilao_valor_arrematacao Float?
+  leilao_arrematante    String?
+  leilao_comissao       Float?
+
+  documento_id          String?
+  responsavel_id        String?
+  observacoes           String?  @db.Text
+
+  created_at            DateTime @default(now())
+  updated_at            DateTime @updatedAt
+
+  recovery_case         CreditRecoveryCase @relation(fields: [recovery_case_id], references: [id], onDelete: Cascade)
+  responsavel           User?    @relation("CollectionActionResponsavel", fields: [responsavel_id], references: [id])
+
+  @@index([recovery_case_id])
+  @@index([tipo])
+  @@map("collection_actions")
+}
+
+model Penhora {
+  id                    String   @id @default(cuid())
+  recovery_case_id      String
+  asset_id              String?  @unique
+
+  tipo                  String   // ONLINE_SISBAJUD, IMOVEL, VEICULO, FATURAMENTO, ROSTO_AUTOS, ACOES, RECEBIVEIS, SEMOVENTES, CRIPTOATIVOS
+  status                String   // SOLICITADA, EFETIVADA, PARCIAL, IMPUGNADA, MANTIDA, REDUZIDA, SUBSTITUIDA, CANCELADA, CONVERTIDA_RENDA, LIBERADA
+
+  valor_solicitado      Float?
+  valor_efetivado       Float?
+  valor_excesso         Float?
+
+  data_solicitacao      DateTime
+  data_efetivacao       DateTime?
+  data_intimacao_devedor DateTime?
+  data_impugnacao       DateTime?
+  data_decisao_impugnacao DateTime?
+
+  auto_penhora_numero   String?
+  depositario_nome      String?
+  depositario_cpf       String?
+
+  avaliacao_valor       Float?
+  avaliacao_data        DateTime?
+  avaliacao_por         String?
+
+  numero_processo       String?
+  observacoes           String?  @db.Text
+
+  created_at            DateTime @default(now())
+  updated_at            DateTime @updatedAt
+
+  recovery_case         CreditRecoveryCase @relation(fields: [recovery_case_id], references: [id], onDelete: Cascade)
+  asset                 AssetFound? @relation(fields: [asset_id], references: [id])
+
+  @@index([recovery_case_id])
+  @@map("penhoras")
+}
+
+model RecoveryAgreement {
+  id                    String   @id @default(cuid())
+  recovery_case_id      String
+
+  tipo                  String   // PAGAMENTO_INTEGRAL, PARCELAMENTO, DACAO_PAGAMENTO, DESCONTO, NOVACAO, TRANSACAO
+  status                String   // PROPOSTA, NEGOCIANDO, FORMALIZADO, EM_CUMPRIMENTO, CUMPRIDO, DESCUMPRIDO, RESCINDIDO
+
+  valor_divida_original Float
+  valor_acordo          Float
+  desconto_percentual   Float?
+  entrada               Float?
+  parcelas              Int?
+  valor_parcela         Float?
+  taxa_juros_mensal     Float?
+  dia_vencimento        Int?
+
+  dacao_bem_descricao   String?
+  dacao_bem_valor       Float?
+
+  parcelas_pagas        Int?     @default(0)
+  valor_pago_total      Float?   @default(0)
+  parcelas_atraso       Int?     @default(0)
+  data_ultima_parcela   DateTime?
+  proxima_parcela       DateTime?
+
+  data_proposta         DateTime
+  data_formalizacao     DateTime?
+  data_inicio_pagamento DateTime?
+  data_ultima_cobranca  DateTime?
+
+  clausulas_especiais   String?  @db.Text
+  documento_id          String?
+  responsavel_id        String?
+
+  created_at            DateTime @default(now())
+  updated_at            DateTime @updatedAt
+
+  recovery_case         CreditRecoveryCase @relation(fields: [recovery_case_id], references: [id], onDelete: Cascade)
+  responsavel           User?    @relation("AgreementResponsavel", fields: [responsavel_id], references: [id])
+  parcelas_detalhes     AgreementInstallment[]
+
+  @@index([recovery_case_id])
+  @@map("recovery_agreements")
+}
+
+model AgreementInstallment {
+  id                    String   @id @default(cuid())
+  agreement_id          String
+
+  numero                Int
+  valor                 Float
+  data_vencimento       DateTime
+  data_pagamento        DateTime?
+  valor_pago            Float?
+  status                String   // PENDENTE, PAGA, ATRASADA, PAGA_COM_ATRASO, RENEGOCIADA
+  dias_atraso           Int?
+  multa_atraso          Float?
+  comprovante_id        String?
+
+  created_at            DateTime @default(now())
+  agreement             RecoveryAgreement @relation(fields: [agreement_id], references: [id], onDelete: Cascade)
+
+  @@index([agreement_id])
+  @@map("agreement_installments")
+}
+
+model DesconsideracaoIncident {
+  id                    String   @id @default(cuid())
+  recovery_case_id      String
+
+  tipo                  String   // DIRETA, INVERSA, EXTENSAO_GRUPO_ECONOMICO
+  teoria                String   // MAIOR_CC50, MENOR_CDC28, TRABALHISTA_CLT2, AMBIENTAL
+  status                String   // ANALISE_VIABILIDADE, PREPARANDO, PETICIONADO, CITADO, RESPONDIDO, INSTRUINDO, DEFERIDO, INDEFERIDO, RECURSO
+
+  fundamento_legal      String
+  hipotese              String   // DESVIO_FINALIDADE, CONFUSAO_PATRIMONIAL, OBSTACULO_CDC, GRUPO_ECONOMICO
+
+  evidencias            Json?
+  confusao_patrimonial  Json?
+  desvio_finalidade     Json?
+
+  alvos                 Json?
+
+  valor_alcancado       Float?
+  decisao_resumo        String?  @db.Text
+  data_decisao          DateTime?
+  recurso               String?
+
+  data_peticao          DateTime?
+  data_citacao_alvos    DateTime?
+  data_resposta         DateTime?
+  prazo_resposta        DateTime?
+
+  documento_peticao_id  String?
+  numero_incidente      String?
+
+  created_at            DateTime @default(now())
+  updated_at            DateTime @updatedAt
+
+  recovery_case         CreditRecoveryCase @relation(fields: [recovery_case_id], references: [id], onDelete: Cascade)
+
+  @@index([recovery_case_id])
+  @@map("desconsideracao_incidents")
+}
+
+model JointDebtor {
+  id                    String   @id @default(cuid())
+  recovery_case_id      String
+  person_id             String?
+
+  nome                  String
+  cpf_cnpj              String?
+  tipo_responsabilidade String   // DEVEDOR_PRINCIPAL, AVALISTA, FIADOR, SOCIO, ADMINISTRADOR, GRUPO_ECONOMICO, SUCESSOR, CONJUGE
+  fundamentacao         String?  @db.Text
+
+  patrimonio_estimado   Float?
+  status                String   // IDENTIFICADO, NOTIFICADO, CITADO, EXECUTANDO, ACORDO, INSOLVENTE
+
+  created_at            DateTime @default(now())
+
+  recovery_case         CreditRecoveryCase @relation(fields: [recovery_case_id], references: [id], onDelete: Cascade)
+  person                Person?  @relation("JointDebtorPerson", fields: [person_id], references: [id])
+
+  @@index([recovery_case_id])
+  @@map("joint_debtors")
+}
+
+model DebtorMonitoring {
+  id                    String   @id @default(cuid())
+  recovery_case_id      String
+
+  tipo                  String   // PROCESSO_JUDICIAL, DIARIO_OFICIAL, CREDITO_BUREAU, PATRIMONIO, SOCIETARIO, REDES_SOCIAIS, CERTIDAO_PROTESTO
+  fonte                 String   // DATAJUD, JUDIT, ESCAVADOR, SERASA, NEOWAY, ARISP, CENPROT, MANUAL
+
+  ativo                 Boolean  @default(true)
+  frequencia            String   // TEMPO_REAL, DIARIO, SEMANAL, MENSAL
+
+  ultima_verificacao    DateTime?
+  ultimo_resultado      Json?
+  alertas_pendentes     Int?     @default(0)
+
+  configuracao          Json?
+  webhook_url           String?
+
+  created_at            DateTime @default(now())
+  updated_at            DateTime @updatedAt
+
+  recovery_case         CreditRecoveryCase @relation(fields: [recovery_case_id], references: [id], onDelete: Cascade)
+  alertas               MonitoringAlert[]
+
+  @@index([recovery_case_id])
+  @@map("debtor_monitorings")
+}
+
+model MonitoringAlert {
+  id                    String   @id @default(cuid())
+  monitoring_id         String
+
+  tipo                  String   // NOVO_BEM, BEM_ALIENADO, NOVO_PROCESSO, FALENCIA, RECUPERACAO_JUDICIAL, MUDANCA_SOCIETARIA, NOVO_EMPREGO, SCORE_ALTERADO, PROTESTO_PAGO, PUBLICACAO_DO, ESTILO_VIDA
+  severidade            String   // CRITICA, ALTA, MEDIA, BAIXA, INFO
+
+  titulo                String
+  descricao             String   @db.Text
+  dados                 Json?
+
+  lido                  Boolean  @default(false)
+  acao_tomada           String?  @db.Text
+  data_acao             DateTime?
+
+  created_at            DateTime @default(now())
+
+  monitoring            DebtorMonitoring @relation(fields: [monitoring_id], references: [id], onDelete: Cascade)
+
+  @@index([monitoring_id])
+  @@map("monitoring_alerts")
+}
+
+model RecoveryEvent {
+  id                    String   @id @default(cuid())
+  recovery_case_id      String
+
+  data                  DateTime
+  tipo                  String   // NOTA, REUNIAO, TELEFONEMA, EMAIL, WHATSAPP, DESPACHO, DECISAO, SENTENCA, PETICAO, AUDIENCIA, DILIGENCIA, PUBLICACAO, ALERTA_IA, MUDANCA_FASE
+
+  descricao             String   @db.Text
+  valor_mencionado      Float?
+  responsavel_id        String?
+  documento_id          String?
+
+  analise_ia            String?  @db.Text
+  sentimento            String?  // POSITIVO, NEUTRO, NEGATIVO
+  acao_recomendada      String?  @db.Text
+
+  created_at            DateTime @default(now())
+
+  recovery_case         CreditRecoveryCase @relation(fields: [recovery_case_id], references: [id], onDelete: Cascade)
+  responsavel           User?    @relation("RecoveryEventResponsavel", fields: [responsavel_id], references: [id])
+
+  @@index([recovery_case_id])
+  @@map("recovery_events")
 }

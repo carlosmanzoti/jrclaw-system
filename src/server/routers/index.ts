@@ -13,6 +13,7 @@ import { bibliotecaRouter } from "./biblioteca";
 import { rjRouter } from "./rj";
 import { importRouter } from "./import";
 import { stratNegRouter } from "./strat-neg";
+import { recoveryRouter } from "./recovery";
 
 export const appRouter = router({
   users: usersRouter,
@@ -29,6 +30,7 @@ export const appRouter = router({
   rj: rjRouter,
   import: importRouter,
   stratNeg: stratNegRouter,
+  recovery: recoveryRouter,
 });
 
 export type AppRouter = typeof appRouter;

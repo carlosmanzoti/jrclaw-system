@@ -12,6 +12,7 @@ import {
   FileText,
   Sparkles,
   ShieldAlert,
+  ShieldCheck,
   ArrowRightLeft,
   Radar,
   DollarSign,
@@ -120,6 +121,15 @@ const navModules = [
     items: [
       { title: "Negociações", url: "/reestruturacao" },
       { title: "Dashboard Estratégico", url: "/reestruturacao/estrategico" },
+    ],
+  },
+  {
+    title: "Recuperacao de Credito",
+    url: "/recuperacao-credito",
+    icon: ShieldCheck,
+    items: [
+      { title: "Todos os Casos", url: "/recuperacao-credito" },
+      { title: "Dashboard Analitico", url: "/recuperacao-credito/analitico" },
     ],
   },
   {
