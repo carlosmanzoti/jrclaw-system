@@ -20,6 +20,15 @@ async function main() {
   await prisma.document.deleteMany();
   await prisma.negotiation.deleteMany();
   await prisma.creditor.deleteMany();
+  // CRJ module cleanup
+  await prisma.cRJCollectiveRoundLink.deleteMany();
+  await prisma.cRJInstallmentSchedule.deleteMany();
+  await prisma.cRJNegotiationEmail.deleteMany();
+  await prisma.cRJNegotiationEvent.deleteMany();
+  await prisma.cRJProposal.deleteMany();
+  await prisma.cRJNegotiationRound.deleteMany();
+  await prisma.cRJDocumentTemplate.deleteMany();
+  await prisma.cRJNegotiation.deleteMany();
   // RJ module cleanup (cascades from JudicialRecoveryCase, but be explicit)
   await prisma.negotiationCreditor.deleteMany();
   await prisma.negotiationActivity.deleteMany();
@@ -673,6 +682,339 @@ async function main() {
   });
 
   console.log("⚖️  Created 2 JudicialRecoveryCases + 10 RJ creditors");
+
+  // ============================================================
+  // 5B. CRJ NEGOTIATIONS (Individual creditor negotiations)
+  // ============================================================
+
+  // Fetch the RJ creditors we just created (createMany doesn't return IDs)
+  const jrc1Creditors = await prisma.rJCreditor.findMany({
+    where: { jrc_id: jrc1.id },
+    orderBy: { ordem: "asc" },
+  });
+  const jrc2Creditors = await prisma.rJCreditor.findMany({
+    where: { jrc_id: jrc2.id },
+    orderBy: { ordem: "asc" },
+  });
+
+  // CRJ Negotiations for jrc1 — 3 negotiations at different stages
+  const crjNeg1 = await prisma.cRJNegotiation.create({
+    data: {
+      jrc_id: jrc1.id,
+      creditor_id: jrc1Creditors[0].id, // Banco do Brasil (Classe II — Garantia Real)
+      assigned_to_id: admin.id,
+      title: "Negociação — Banco do Brasil S.A.",
+      type: "CREDOR_PARCEIRO",
+      status: "CONTRAPROPOSTA",
+      priority: "ALTA",
+      credit_amount: jrc1Creditors[0].valor_atualizado || jrc1Creditors[0].valor_original,
+      credit_class: "CLASSE_II_GARANTIA_REAL",
+      proposed_amount: BigInt(945000000), // R$ 9.450.000 (30% deságio)
+      discount_percentage: 30,
+      installments: 60,
+      has_rotating_credit: true,
+      rotating_credit_value: BigInt(200000000), // R$ 2.000.000
+      rotating_credit_cycles: 3,
+      grace_period_months: 12,
+      payment_term_years: 5,
+      monetary_correction: "IPCA",
+      notes: "BB é credor estratégico. Possui garantia real sobre imóvel rural de alto valor. Negociação inclui proposta de crédito rotativo para capital de giro.",
+      start_date: addDays(now, -45),
+      target_date: addDays(now, 30),
+      tags: ["estrategico", "garantia_real", "rotativo"],
+    },
+  });
+
+  const crjNeg2 = await prisma.cRJNegotiation.create({
+    data: {
+      jrc_id: jrc1.id,
+      creditor_id: jrc1Creditors[1].id, // Sicredi (Classe II — Penhor)
+      assigned_to_id: advogado1.id,
+      title: "Negociação — Sicredi Cooperativa",
+      type: "ACORDO_SIMPLES",
+      status: "PROPOSTA_ENVIADA",
+      priority: "MEDIA",
+      credit_amount: jrc1Creditors[1].valor_atualizado || jrc1Creditors[1].valor_original,
+      credit_class: "CLASSE_II_GARANTIA_REAL",
+      proposed_amount: BigInt(598000000), // R$ 5.980.000 (35% deságio)
+      discount_percentage: 35,
+      installments: 48,
+      grace_period_months: 6,
+      payment_term_years: 4,
+      monetary_correction: "IPCA",
+      notes: "Penhor de safra. Credor cooperativista, perfil negociador moderado.",
+      start_date: addDays(now, -30),
+      target_date: addDays(now, 45),
+      tags: ["cooperativa", "penhor_safra"],
+    },
+  });
+
+  const crjNeg3 = await prisma.cRJNegotiation.create({
+    data: {
+      jrc_id: jrc1.id,
+      creditor_id: jrc1Creditors[2].id, // Bunge (Classe III — Quirografário)
+      assigned_to_id: advogado1.id,
+      title: "Negociação — Bunge Alimentos S.A.",
+      type: "CESSAO_CREDITOS",
+      status: "MEDIACAO",
+      priority: "ALTA",
+      credit_amount: jrc1Creditors[2].valor_atualizado || jrc1Creditors[2].valor_original,
+      credit_class: "CLASSE_III_QUIROGRAFARIO",
+      proposed_amount: BigInt(305000000), // R$ 3.050.000 (50% deságio)
+      discount_percentage: 50,
+      installments: 36,
+      has_assignment: true,
+      assignment_partner: "Fundo XYZ Créditos Especiais",
+      assignment_percentage: 60,
+      grace_period_months: 3,
+      monetary_correction: "IGP-M",
+      notes: "Bunge votou CONTRA na AGC. Explorando cessão a fundo especializado. Mediação agendada.",
+      start_date: addDays(now, -60),
+      target_date: addDays(now, 15),
+      tags: ["cessao", "quirografario", "mediacao"],
+    },
+  });
+
+  // CRJ Negotiations for jrc2 — 2 negotiations
+  const crjNeg4 = await prisma.cRJNegotiation.create({
+    data: {
+      jrc_id: jrc2.id,
+      creditor_id: jrc2Creditors[0].id, // Banco do Brasil (jrc2)
+      assigned_to_id: advogado2.id,
+      title: "Negociação — Banco do Brasil (Grupo Cerrado)",
+      type: "CREDOR_PARCEIRO",
+      status: "MAPEAMENTO",
+      priority: "CRITICA",
+      credit_amount: jrc2Creditors[0].valor_atualizado || jrc2Creditors[0].valor_original,
+      credit_class: "CLASSE_II_GARANTIA_REAL",
+      notes: "Maior credor do Grupo Cerrado. Fase inicial — mapeamento de interesses e análise de garantias.",
+      start_date: addDays(now, -10),
+      target_date: addDays(now, 90),
+      tags: ["estrategico", "garantia_real", "maior_credor"],
+    },
+  });
+
+  const crjNeg5 = await prisma.cRJNegotiation.create({
+    data: {
+      jrc_id: jrc2.id,
+      creditor_id: jrc2Creditors[2].id, // Cargill (jrc2 — quirografário)
+      assigned_to_id: advogado2.id,
+      title: "Negociação — Cargill Agrícola S.A.",
+      type: "ACORDO_SIMPLES",
+      status: "CONTATO_INICIAL",
+      priority: "MEDIA",
+      credit_amount: jrc2Creditors[2].valor_atualizado || jrc2Creditors[2].valor_original,
+      credit_class: "CLASSE_III_QUIROGRAFARIO",
+      proposed_amount: BigInt(570000000), // R$ 5.700.000 (40% deságio)
+      discount_percentage: 40,
+      installments: 48,
+      grace_period_months: 6,
+      monetary_correction: "IPCA",
+      notes: "Contato inicial realizado. Cargill demonstrou interesse em acordo rápido.",
+      start_date: addDays(now, -5),
+      target_date: addDays(now, 60),
+      tags: ["quirografario", "agro"],
+    },
+  });
+
+  // CRJ Rounds (negotiation history for crjNeg1 — BB)
+  await prisma.cRJNegotiationRound.createMany({
+    data: [
+      {
+        negotiation_id: crjNeg1.id,
+        round_number: 1,
+        type: "PROPOSTA_INICIAL",
+        date: addDays(now, -40),
+        description: "Proposta inicial apresentada ao BB: deságio de 30%, 60 parcelas, carência 12 meses, IPCA. Inclui crédito rotativo de R$ 2M para capital de giro.",
+        proposed_by_us: true,
+        value_proposed: BigInt(945000000),
+        discount_proposed: 30,
+        installments_proposed: 60,
+        has_rotating_credit: true,
+        rotating_value: BigInt(200000000),
+        entry_payment: BigInt(100000000), // R$ 1M entrada
+        outcome: "CONTRAPROPOSTA",
+        creditor_response: "BB considera deságio insuficiente. Aceita crédito rotativo, mas pede 15% deságio máximo e 36 parcelas.",
+        next_steps: "Preparar contraproposta com ajuste — avaliar 20-25% deságio com prazo maior.",
+      },
+      {
+        negotiation_id: crjNeg1.id,
+        round_number: 2,
+        type: "CONTRAPROPOSTA_ESCRITORIO",
+        date: addDays(now, -25),
+        description: "Nova proposta ao BB: deságio 25%, 48 parcelas, carência 12 meses, IPCA. Mantido crédito rotativo. Incluído seguro de crédito.",
+        proposed_by_us: true,
+        value_proposed: BigInt(1012500000), // R$ 10.125.000 (25% deságio)
+        discount_proposed: 25,
+        installments_proposed: 48,
+        has_rotating_credit: true,
+        rotating_value: BigInt(200000000),
+        outcome: "PENDENTE",
+        next_steps: "Aguardando resposta do comitê de crédito do BB.",
+      },
+    ],
+  });
+
+  // CRJ Rounds for crjNeg2 — Sicredi
+  await prisma.cRJNegotiationRound.createMany({
+    data: [
+      {
+        negotiation_id: crjNeg2.id,
+        round_number: 1,
+        type: "PROPOSTA_INICIAL",
+        date: addDays(now, -20),
+        description: "Proposta enviada ao Sicredi: deságio 35%, 48x, carência 6 meses, IPCA.",
+        proposed_by_us: true,
+        value_proposed: BigInt(598000000),
+        discount_proposed: 35,
+        installments_proposed: 48,
+        outcome: "PENDENTE",
+        next_steps: "Sicredi informou que avaliará em reunião do conselho na próxima semana.",
+      },
+    ],
+  });
+
+  // CRJ Rounds for crjNeg3 — Bunge (cessão)
+  await prisma.cRJNegotiationRound.createMany({
+    data: [
+      {
+        negotiation_id: crjNeg3.id,
+        round_number: 1,
+        type: "PROPOSTA_INICIAL",
+        date: addDays(now, -50),
+        description: "Proposta direta à Bunge: deságio 50%, 36 parcelas, correção IGP-M. Bunge votou contra o plano na AGC.",
+        proposed_by_us: true,
+        value_proposed: BigInt(305000000),
+        discount_proposed: 50,
+        outcome: "REJEITADA",
+        creditor_response: "Bunge rejeitou proposta de plano. Exige pagamento integral ou no mínimo 80% do crédito atualizado.",
+        next_steps: "Explorar cessão de crédito a fundo especializado.",
+      },
+      {
+        negotiation_id: crjNeg3.id,
+        round_number: 2,
+        type: "MEDIACAO",
+        date: addDays(now, -20),
+        description: "Sessão de mediação com Bunge. Apresentada proposta de cessão: Fundo XYZ assume 60% do crédito com deságio de 40%.",
+        proposed_by_us: true,
+        value_proposed: BigInt(366000000), // R$ 3.660.000 (40% deságio)
+        discount_proposed: 40,
+        outcome: "ADIADA",
+        creditor_response: "Bunge solicitou prazo adicional para análise da proposta de cessão.",
+        next_steps: "Retomar mediação em 2 semanas. Fundo XYZ confirmou interesse.",
+      },
+    ],
+  });
+
+  // CRJ Events (timeline entries)
+  await prisma.cRJNegotiationEvent.createMany({
+    data: [
+      // Events for crjNeg1 (BB)
+      { negotiation_id: crjNeg1.id, type: "CRIACAO", description: "Negociação com BB criada — credor estratégico classe II garantia real", user_id: admin.id, is_automatic: true, created_at: addDays(now, -45) },
+      { negotiation_id: crjNeg1.id, type: "MUDANCA_STATUS", description: "Status: MAPEAMENTO → PROPOSTA_ENVIADA", user_id: admin.id, is_automatic: true, created_at: addDays(now, -40) },
+      { negotiation_id: crjNeg1.id, type: "PROPOSTA_ENVIADA", description: "Rodada #1 — Proposta inicial: R$ 9.450.000 (30% deságio)", user_id: admin.id, is_automatic: true, created_at: addDays(now, -40) },
+      { negotiation_id: crjNeg1.id, type: "REUNIAO", description: "Reunião presencial com gerente regional do BB em Maringá. Credor receptivo mas pede revisão de deságio.", user_id: admin.id, is_automatic: false, created_at: addDays(now, -35) },
+      { negotiation_id: crjNeg1.id, type: "MUDANCA_STATUS", description: "Status: PROPOSTA_ENVIADA → CONTRAPROPOSTA", user_id: admin.id, is_automatic: true, created_at: addDays(now, -30) },
+      { negotiation_id: crjNeg1.id, type: "PROPOSTA_ENVIADA", description: "Rodada #2 — Contraproposta: R$ 10.125.000 (25% deságio, 48x)", user_id: admin.id, is_automatic: true, created_at: addDays(now, -25) },
+      { negotiation_id: crjNeg1.id, type: "LIGACAO", description: "Ligação para assessor jurídico do BB para acompanhar status da análise do comitê.", user_id: admin.id, is_automatic: false, created_at: addDays(now, -15) },
+      { negotiation_id: crjNeg1.id, type: "OBSERVACAO", description: "Comitê do BB solicita laudo de avaliação atualizado do imóvel rural em garantia.", user_id: admin.id, is_automatic: false, created_at: addDays(now, -10) },
+      // Events for crjNeg2 (Sicredi)
+      { negotiation_id: crjNeg2.id, type: "CRIACAO", description: "Negociação com Sicredi criada", user_id: advogado1.id, is_automatic: true, created_at: addDays(now, -30) },
+      { negotiation_id: crjNeg2.id, type: "CONTATO_CREDOR", description: "Primeiro contato telefônico com gerente Sicredi Maringá", user_id: advogado1.id, is_automatic: false, created_at: addDays(now, -28) },
+      { negotiation_id: crjNeg2.id, type: "MUDANCA_STATUS", description: "Status: MAPEAMENTO → PROPOSTA_ENVIADA", user_id: advogado1.id, is_automatic: true, created_at: addDays(now, -20) },
+      { negotiation_id: crjNeg2.id, type: "PROPOSTA_ENVIADA", description: "Proposta enviada por e-mail ao Sicredi — 35% deságio, 48x", user_id: advogado1.id, is_automatic: true, created_at: addDays(now, -20) },
+      // Events for crjNeg3 (Bunge)
+      { negotiation_id: crjNeg3.id, type: "CRIACAO", description: "Negociação com Bunge iniciada — credor votou CONTRA", user_id: advogado1.id, is_automatic: true, created_at: addDays(now, -60) },
+      { negotiation_id: crjNeg3.id, type: "PROPOSTA_ENVIADA", description: "Proposta inicial: R$ 3.050.000 (50% deságio)", user_id: advogado1.id, is_automatic: true, created_at: addDays(now, -50) },
+      { negotiation_id: crjNeg3.id, type: "OBSERVACAO", description: "Bunge rejeitou proposta. Departamento jurídico da Bunge inflexível. Avaliar cessão.", user_id: advogado1.id, is_automatic: false, created_at: addDays(now, -45) },
+      { negotiation_id: crjNeg3.id, type: "MUDANCA_STATUS", description: "Status: PROPOSTA_ENVIADA → MEDIAÇÃO", user_id: advogado1.id, is_automatic: true, created_at: addDays(now, -25) },
+      { negotiation_id: crjNeg3.id, type: "REUNIAO", description: "Sessão de mediação no CEJUSC com Bunge e Fundo XYZ", user_id: advogado1.id, is_automatic: false, created_at: addDays(now, -20) },
+      // Events for crjNeg4 (BB jrc2)
+      { negotiation_id: crjNeg4.id, type: "CRIACAO", description: "Negociação com BB (Grupo Cerrado) criada — maior credor", user_id: advogado2.id, is_automatic: true, created_at: addDays(now, -10) },
+      { negotiation_id: crjNeg4.id, type: "OBSERVACAO", description: "Análise de garantias: hipoteca sobre fazendas Cerrado I e II. Valor avaliação: R$ 35M.", user_id: advogado2.id, is_automatic: false, created_at: addDays(now, -7) },
+      // Events for crjNeg5 (Cargill jrc2)
+      { negotiation_id: crjNeg5.id, type: "CRIACAO", description: "Negociação com Cargill (Grupo Cerrado) criada", user_id: advogado2.id, is_automatic: true, created_at: addDays(now, -5) },
+      { negotiation_id: crjNeg5.id, type: "CONTATO_CREDOR", description: "Contato inicial com departamento jurídico da Cargill em SP", user_id: advogado2.id, is_automatic: false, created_at: addDays(now, -3) },
+    ],
+  });
+
+  // CRJ Document Templates
+  await prisma.cRJDocumentTemplate.createMany({
+    data: [
+      {
+        name: "Acordo Simples — Pagamento Parcelado",
+        type: "ACORDO_SIMPLES",
+        description: "Modelo padrão para acordo de pagamento parcelado com deságio. Aplicável a credores quirografários e ME/EPP.",
+        template_path: "/templates/crj/acordo-simples.docx",
+        placeholders: {
+          credor_nome: "Nome do credor",
+          credor_cnpj: "CNPJ/CPF do credor",
+          valor_credito: "Valor do crédito original",
+          desagio: "Percentual de deságio",
+          valor_proposto: "Valor após deságio",
+          parcelas: "Número de parcelas",
+          carencia: "Período de carência em meses",
+          correcao: "Índice de correção monetária",
+          data_proposta: "Data da proposta",
+        },
+      },
+      {
+        name: "Credor Parceiro com Crédito Rotativo",
+        type: "CREDOR_PARCEIRO_ROTATIVO",
+        description: "Modelo para credores estratégicos (bancos) com crédito rotativo para capital de giro. Inclui cláusulas de renovação.",
+        template_path: "/templates/crj/credor-parceiro-rotativo.docx",
+        placeholders: {
+          credor_nome: "Nome do credor",
+          valor_credito: "Valor do crédito",
+          valor_rotativo: "Valor do crédito rotativo",
+          ciclos_rotativo: "Ciclos de renovação",
+          desagio: "Percentual de deságio",
+          parcelas: "Número de parcelas",
+          garantia_tipo: "Tipo de garantia real",
+          garantia_descricao: "Descrição da garantia",
+        },
+      },
+      {
+        name: "Cessão de Créditos a Fundo",
+        type: "CESSAO_CREDITOS",
+        description: "Modelo para cessão de créditos a fundos especializados ou terceiros investidores.",
+        template_path: "/templates/crj/cessao-creditos.docx",
+        placeholders: {
+          credor_nome: "Nome do credor cedente",
+          cessionario_nome: "Nome do cessionário (fundo)",
+          valor_credito: "Valor do crédito cedido",
+          percentual_cessao: "Percentual da cessão",
+          valor_cessao: "Valor da cessão",
+          condicoes: "Condições especiais da cessão",
+        },
+      },
+      {
+        name: "Subclasse com Modalidades de Pagamento",
+        type: "SUBCLASSE_MODALIDADES",
+        description: "Modelo para acordos por subclasse com múltiplas modalidades de pagamento (art. 50, §1º da Lei 11.101).",
+        template_path: "/templates/crj/subclasse-modalidades.docx",
+        placeholders: {
+          subclasse: "Nome da subclasse",
+          modalidade_a: "Descrição da modalidade A",
+          modalidade_b: "Descrição da modalidade B",
+          prazo_adesao: "Prazo para adesão",
+          valor_credito: "Valor do crédito",
+        },
+      },
+      {
+        name: "Modelo Customizado",
+        type: "CUSTOMIZADO",
+        description: "Template em branco para propostas personalizadas. Preencha manualmente todos os campos.",
+        template_path: "/templates/crj/customizado.docx",
+        placeholders: {
+          titulo: "Título do documento",
+          corpo: "Corpo do documento",
+        },
+      },
+    ],
+  });
+
+  console.log("🤝 Created 5 CRJ negotiations + rounds + events + 5 document templates");
 
   // ============================================================
   // 6. DEADLINES (15 total)
@@ -1590,6 +1932,7 @@ async function main() {
   console.log("   - 3 projects (alvará, recuperação crédito, consultoria)");
   console.log("   - 15 deadlines");
   console.log("   - 10 creditors (5 per RJ)");
+  console.log("   - 5 CRJ negotiations + rounds + events + 5 templates");
   console.log("   - 10 document templates");
   console.log("   - 7 project templates");
   console.log("   - 5 library entries");
