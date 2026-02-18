@@ -69,7 +69,9 @@ import {
   Inbox,
   AlertCircle,
   Link2,
+  Wand2,
 } from "lucide-react";
+import { CRJProposalGenerator } from "./crj-proposal-generator";
 
 // Icon map for timeline events
 const EVENT_ICONS: Record<string, React.ReactNode> = {
@@ -659,13 +661,23 @@ function TabRodadas({ neg }: { neg: NegData }) {
 // ========== Tab Propostas ==========
 
 function TabPropostas({ neg }: { neg: NegData }) {
+  const [generatorOpen, setGeneratorOpen] = useState(false);
   const proposals = neg.proposals || [];
 
   return (
     <div className="space-y-4 p-6">
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold">Propostas e Documentos ({proposals.length})</h3>
+        <Button size="sm" className="h-8 text-xs" onClick={() => setGeneratorOpen(true)}>
+          <Wand2 className="mr-1 h-3 w-3" /> Gerar Proposta
+        </Button>
       </div>
+
+      <CRJProposalGenerator
+        open={generatorOpen}
+        onOpenChange={setGeneratorOpen}
+        negotiationId={neg.id}
+      />
 
       {proposals.length === 0 ? (
         <div className="flex h-40 items-center justify-center text-sm text-muted-foreground">
