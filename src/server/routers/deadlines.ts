@@ -1160,6 +1160,108 @@ export const deadlinesRouter = router({
 
         return entry;
       }),
+
+    /**
+     * Create a new catalog entry (user-created, is_system=false)
+     */
+    create: protectedProcedure
+      .input(
+        z.object({
+          codigo: z.string().min(1),
+          nome: z.string().min(1),
+          descricao: z.string().min(1),
+          dias: z.number().int().min(0),
+          contagem_tipo: z.string(),
+          tipo_prazo: z.string(),
+          categoria: z.string(),
+          subcategoria: z.string().optional(),
+          artigo: z.string().min(1),
+          lei: z.string().min(1),
+          paragrafos: z.string().optional(),
+          admite_dobra: z.boolean().default(true),
+          excecao_dobra: z.string().optional(),
+          admite_litisconsorcio: z.boolean().default(true),
+          excecao_litisconsorcio: z.string().optional(),
+          efeito_nao_cumprimento: z.string().optional(),
+          efeito_recursal: z.string().optional(),
+          termo_inicial: z.string().min(1),
+          observacoes: z.string().optional(),
+          jurisprudencia: z.string().optional(),
+          prazo_resposta_dias: z.number().int().optional(),
+          prazo_resposta_ref: z.string().optional(),
+        }),
+      )
+      .mutation(async ({ ctx, input }) => {
+        const existing = await ctx.db.deadlineCatalog.findUnique({
+          where: { codigo: input.codigo },
+        });
+        if (existing) {
+          throw new TRPCError({ code: "CONFLICT", message: `Codigo "${input.codigo}" ja existe no catalogo` });
+        }
+        return ctx.db.deadlineCatalog.create({
+          data: { ...input, is_system: false },
+        });
+      }),
+
+    /**
+     * Update an existing catalog entry
+     */
+    update: protectedProcedure
+      .input(
+        z.object({
+          id: z.string(),
+          codigo: z.string().min(1).optional(),
+          nome: z.string().min(1).optional(),
+          descricao: z.string().min(1).optional(),
+          dias: z.number().int().min(0).optional(),
+          contagem_tipo: z.string().optional(),
+          tipo_prazo: z.string().optional(),
+          categoria: z.string().optional(),
+          subcategoria: z.string().nullable().optional(),
+          artigo: z.string().min(1).optional(),
+          lei: z.string().min(1).optional(),
+          paragrafos: z.string().nullable().optional(),
+          admite_dobra: z.boolean().optional(),
+          excecao_dobra: z.string().nullable().optional(),
+          admite_litisconsorcio: z.boolean().optional(),
+          excecao_litisconsorcio: z.string().nullable().optional(),
+          efeito_nao_cumprimento: z.string().nullable().optional(),
+          efeito_recursal: z.string().nullable().optional(),
+          termo_inicial: z.string().min(1).optional(),
+          observacoes: z.string().nullable().optional(),
+          jurisprudencia: z.string().nullable().optional(),
+          prazo_resposta_dias: z.number().int().nullable().optional(),
+          prazo_resposta_ref: z.string().nullable().optional(),
+          ativo: z.boolean().optional(),
+        }),
+      )
+      .mutation(async ({ ctx, input }) => {
+        const { id, ...data } = input;
+        return ctx.db.deadlineCatalog.update({
+          where: { id },
+          data,
+        });
+      }),
+
+    /**
+     * Delete a catalog entry (only non-system entries can be deleted)
+     */
+    delete: protectedProcedure
+      .input(z.object({ id: z.string() }))
+      .mutation(async ({ ctx, input }) => {
+        const entry = await ctx.db.deadlineCatalog.findUnique({
+          where: { id: input.id },
+        });
+        if (!entry) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Item do catalogo nao encontrado" });
+        }
+        if (entry.is_system) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "Nao e possivel excluir prazos do sistema. Desative-o em vez disso." });
+        }
+        return ctx.db.deadlineCatalog.delete({
+          where: { id: input.id },
+        });
+      }),
   }),
 
   // ============================================================

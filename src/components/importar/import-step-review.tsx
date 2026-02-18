@@ -20,7 +20,15 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { IMPORT_ENTITY_FIELDS, type ImportEntityTypeKey } from "@/lib/import-constants"
+import { CREDIT_NATURE_LABELS } from "@/lib/rj-constants"
 import type { MappedRow } from "@/lib/services/import-service"
 
 interface ImportStepReviewProps {
@@ -120,6 +128,23 @@ export function ImportStepReview({
         )}
       </div>
 
+      {/* A_DEFINIR warning for RJ_CREDITOR */}
+      {entityType === "RJ_CREDITOR" &&
+        rows.some((r) => r._selected && r.natureza === "A_DEFINIR") && (
+        <div className="rounded-lg border border-amber-300 bg-amber-50 p-3 dark:border-amber-700 dark:bg-amber-950">
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="h-4 w-4 text-amber-600" />
+            <p className="text-sm font-medium text-amber-700 dark:text-amber-400">
+              Natureza da garantia pendente
+            </p>
+          </div>
+          <p className="mt-1 text-xs text-amber-600 dark:text-amber-500">
+            Alguns credores Classe II estão com natureza &quot;A Definir&quot;.
+            Selecione a natureza correta na coluna &quot;Natureza&quot; antes de confirmar a importação.
+          </p>
+        </div>
+      )}
+
       {/* Warnings */}
       {warnings.length > 0 && (
         <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-3 dark:border-yellow-800 dark:bg-yellow-950">
@@ -199,14 +224,34 @@ export function ImportStepReview({
                   const hasWarning = row._warnings.some((w: string) =>
                     w.toLowerCase().includes(f.field.toLowerCase())
                   )
+                  const isNaturezaField = entityType === "RJ_CREDITOR" && f.field === "natureza"
+                  const isADefinir = isNaturezaField && value === "A_DEFINIR"
 
                   return (
                     <TableCell
                       key={f.field}
-                      className={`text-sm ${hasWarning ? "bg-yellow-50 dark:bg-yellow-950/20" : ""}`}
-                      onDoubleClick={() => startEdit(i, f.field)}
+                      className={`text-sm ${isADefinir ? "bg-amber-50 dark:bg-amber-950/20" : hasWarning ? "bg-yellow-50 dark:bg-yellow-950/20" : ""}`}
+                      onDoubleClick={() => !isNaturezaField && startEdit(i, f.field)}
                     >
-                      {isEditing ? (
+                      {isNaturezaField ? (
+                        <Select
+                          value={String(value || "")}
+                          onValueChange={(v) => {
+                            const updated = [...rows]
+                            updated[i] = { ...updated[i], natureza: v }
+                            onRowsChange(updated)
+                          }}
+                        >
+                          <SelectTrigger className={`h-7 text-xs ${isADefinir ? "border-amber-400 text-amber-700" : ""}`}>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {Object.entries(CREDIT_NATURE_LABELS).map(([k, label]) => (
+                              <SelectItem key={k} value={k}>{label}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      ) : isEditing ? (
                         <Input
                           value={editValue}
                           onChange={(e) => setEditValue(e.target.value)}

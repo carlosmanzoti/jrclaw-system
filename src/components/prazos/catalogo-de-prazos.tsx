@@ -5,13 +5,17 @@ import Link from "next/link"
 import {
   Search, BookOpen, Clock, Scale, ArrowLeft, ChevronRight,
   Filter, X, LayoutGrid, List, AlertTriangle, CheckCircle2,
-  XCircle, Info, Gavel,
+  XCircle, Info, Gavel, Plus, Pencil, Trash2, Copy, Lock,
+  Save,
 } from "lucide-react"
 import { trpc } from "@/lib/trpc"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
+import { Switch } from "@/components/ui/switch"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import {
@@ -21,11 +25,12 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select"
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle,
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog"
 import {
   Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
 } from "@/components/ui/tooltip"
+import { Separator } from "@/components/ui/separator"
 
 // ─── Constants ────────────────────────────────────────────────────
 
@@ -51,20 +56,10 @@ const CATEGORY_FILTERS: Record<string, { lei?: string; categoria?: string }> = {
   ESPECIAIS: { categoria: "RJ_ESTATUTARIO" },
 }
 
-const CATEGORY_COLORS: Record<string, string> = {
-  CPC_GERAL: "bg-blue-100 text-blue-700",
-  CPC_RECURSOS: "bg-indigo-100 text-indigo-700",
-  CPC_EXECUCAO: "bg-purple-100 text-purple-700",
-  LEI_11101: "bg-[#C9A961]/10 text-[#C9A961]",
-  CLT: "bg-emerald-100 text-emerald-700",
-  CTN: "bg-orange-100 text-orange-700",
-  ESPECIAIS: "bg-rose-100 text-rose-700",
-}
-
 const TIPO_PRAZO_LABELS: Record<string, string> = {
-  PEREMPTORIO: "Peremptorio",
-  DILATATORIO: "Dilatorio",
-  IMPROPRIO: "Improprio",
+  PEREMPTORIO: "Peremptório",
+  DILATATORIO: "Dilatório",
+  IMPROPRIO: "Impróprio",
 }
 
 const TIPO_PRAZO_COLORS: Record<string, string> = {
@@ -74,7 +69,7 @@ const TIPO_PRAZO_COLORS: Record<string, string> = {
 }
 
 const CONTAGEM_LABELS: Record<string, string> = {
-  DIAS_UTEIS: "dias uteis",
+  DIAS_UTEIS: "dias úteis",
   DIAS_CORRIDOS: "dias corridos",
 }
 
@@ -91,9 +86,19 @@ const LEI_OPTIONS = [
 
 const TIPO_PRAZO_OPTIONS = [
   { value: "ALL", label: "Todos os tipos" },
-  { value: "PEREMPTORIO", label: "Peremptorio" },
-  { value: "DILATATORIO", label: "Dilatorio" },
-  { value: "IMPROPRIO", label: "Improprio" },
+  { value: "PEREMPTORIO", label: "Peremptório" },
+  { value: "DILATATORIO", label: "Dilatório" },
+  { value: "IMPROPRIO", label: "Impróprio" },
+]
+
+const CATEGORIA_OPTIONS = [
+  { value: "PARTE", label: "Parte" },
+  { value: "RECURSAL", label: "Recursal" },
+  { value: "JUIZ", label: "Juiz" },
+  { value: "MP", label: "Ministério Público" },
+  { value: "PERITO", label: "Perito" },
+  { value: "AUXILIAR", label: "Auxiliar" },
+  { value: "RJ_ESTATUTARIO", label: "RJ / Estatutário" },
 ]
 
 // ─── Types ────────────────────────────────────────────────────────
@@ -122,6 +127,57 @@ interface CatalogEntry {
   jurisprudencia: string | null
   prazo_resposta_dias: number | null
   prazo_resposta_ref: string | null
+  is_system?: boolean
+}
+
+interface CatalogFormData {
+  codigo: string
+  nome: string
+  descricao: string
+  dias: number
+  contagem_tipo: string
+  tipo_prazo: string
+  categoria: string
+  subcategoria: string
+  artigo: string
+  lei: string
+  paragrafos: string
+  admite_dobra: boolean
+  excecao_dobra: string
+  admite_litisconsorcio: boolean
+  excecao_litisconsorcio: string
+  efeito_nao_cumprimento: string
+  efeito_recursal: string
+  termo_inicial: string
+  observacoes: string
+  jurisprudencia: string
+  prazo_resposta_dias: number | undefined
+  prazo_resposta_ref: string
+}
+
+const EMPTY_FORM: CatalogFormData = {
+  codigo: "",
+  nome: "",
+  descricao: "",
+  dias: 15,
+  contagem_tipo: "DIAS_UTEIS",
+  tipo_prazo: "PEREMPTORIO",
+  categoria: "PARTE",
+  subcategoria: "",
+  artigo: "",
+  lei: "CPC/2015",
+  paragrafos: "",
+  admite_dobra: true,
+  excecao_dobra: "",
+  admite_litisconsorcio: true,
+  excecao_litisconsorcio: "",
+  efeito_nao_cumprimento: "",
+  efeito_recursal: "",
+  termo_inicial: "",
+  observacoes: "",
+  jurisprudencia: "",
+  prazo_resposta_dias: undefined,
+  prazo_resposta_ref: "",
 }
 
 // ─── Main Component ───────────────────────────────────────────────
@@ -133,6 +189,12 @@ export function CatalogoDePrazos() {
   const [tipoPrazoFilter, setTipoPrazoFilter] = useState("ALL")
   const [viewMode, setViewMode] = useState<"cards" | "table">("cards")
   const [selectedEntry, setSelectedEntry] = useState<CatalogEntry | null>(null)
+  const [formOpen, setFormOpen] = useState(false)
+  const [formMode, setFormMode] = useState<"create" | "edit" | "duplicate">("create")
+  const [formInitial, setFormInitial] = useState<CatalogFormData>(EMPTY_FORM)
+  const [editingId, setEditingId] = useState<string | null>(null)
+
+  const utils = trpc.useUtils()
 
   // Build query params from category + extra filters
   const queryParams = useMemo(() => {
@@ -167,6 +229,80 @@ export function CatalogoDePrazos() {
 
   const hasActiveFilters = searchTerm || activeCategory !== "TODOS" || leiFilter !== "ALL" || tipoPrazoFilter !== "ALL"
 
+  const handleCreate = () => {
+    setFormMode("create")
+    setFormInitial(EMPTY_FORM)
+    setEditingId(null)
+    setFormOpen(true)
+  }
+
+  const handleEdit = (entry: CatalogEntry) => {
+    setFormMode("edit")
+    setEditingId(entry.id)
+    setFormInitial({
+      codigo: entry.codigo,
+      nome: entry.nome,
+      descricao: entry.descricao,
+      dias: entry.dias,
+      contagem_tipo: entry.contagem_tipo,
+      tipo_prazo: entry.tipo_prazo,
+      categoria: entry.categoria,
+      subcategoria: entry.subcategoria || "",
+      artigo: entry.artigo,
+      lei: entry.lei,
+      paragrafos: entry.paragrafos || "",
+      admite_dobra: entry.admite_dobra,
+      excecao_dobra: entry.excecao_dobra || "",
+      admite_litisconsorcio: entry.admite_litisconsorcio,
+      excecao_litisconsorcio: entry.excecao_litisconsorcio || "",
+      efeito_nao_cumprimento: entry.efeito_nao_cumprimento || "",
+      efeito_recursal: entry.efeito_recursal || "",
+      termo_inicial: entry.termo_inicial,
+      observacoes: entry.observacoes || "",
+      jurisprudencia: entry.jurisprudencia || "",
+      prazo_resposta_dias: entry.prazo_resposta_dias ?? undefined,
+      prazo_resposta_ref: entry.prazo_resposta_ref || "",
+    })
+    setFormOpen(true)
+    setSelectedEntry(null)
+  }
+
+  const handleDuplicate = (entry: CatalogEntry) => {
+    setFormMode("duplicate")
+    setEditingId(null)
+    setFormInitial({
+      codigo: entry.codigo + "-COPIA",
+      nome: entry.nome + " (Cópia)",
+      descricao: entry.descricao,
+      dias: entry.dias,
+      contagem_tipo: entry.contagem_tipo,
+      tipo_prazo: entry.tipo_prazo,
+      categoria: entry.categoria,
+      subcategoria: entry.subcategoria || "",
+      artigo: entry.artigo,
+      lei: entry.lei,
+      paragrafos: entry.paragrafos || "",
+      admite_dobra: entry.admite_dobra,
+      excecao_dobra: entry.excecao_dobra || "",
+      admite_litisconsorcio: entry.admite_litisconsorcio,
+      excecao_litisconsorcio: entry.excecao_litisconsorcio || "",
+      efeito_nao_cumprimento: entry.efeito_nao_cumprimento || "",
+      efeito_recursal: entry.efeito_recursal || "",
+      termo_inicial: entry.termo_inicial,
+      observacoes: entry.observacoes || "",
+      jurisprudencia: entry.jurisprudencia || "",
+      prazo_resposta_dias: entry.prazo_resposta_dias ?? undefined,
+      prazo_resposta_ref: entry.prazo_resposta_ref || "",
+    })
+    setFormOpen(true)
+    setSelectedEntry(null)
+  }
+
+  const handleFormSuccess = () => {
+    setFormOpen(false)
+    utils.deadlines.catalog.list.invalidate()
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -180,7 +316,7 @@ export function CatalogoDePrazos() {
           <div>
             <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
               <BookOpen className="size-6 text-[#C9A961]" />
-              Catalogo de Prazos Legais
+              Catálogo de Prazos Legais
             </h1>
             <p className="text-[#666666] mt-1">
               Referência completa de prazos processuais e legais
@@ -191,6 +327,10 @@ export function CatalogoDePrazos() {
           <Badge variant="outline" className="text-sm">
             {totalResults} prazo(s)
           </Badge>
+          <Button size="sm" className="h-8 bg-[#C9A961] hover:bg-[#B8984F] text-white" onClick={handleCreate}>
+            <Plus className="size-4 mr-1" />
+            Novo Prazo
+          </Button>
           <div className="flex border rounded-md">
             <Button
               variant={viewMode === "cards" ? "default" : "ghost"}
@@ -217,7 +357,7 @@ export function CatalogoDePrazos() {
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-[#666666]" />
           <Input
-            placeholder="Buscar por nome, descricao, artigo..."
+            placeholder="Buscar por nome, descrição, artigo..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="pl-10 bg-white"
@@ -304,6 +444,22 @@ export function CatalogoDePrazos() {
       <CatalogDetailDialog
         entry={selectedEntry}
         onClose={() => setSelectedEntry(null)}
+        onEdit={handleEdit}
+        onDuplicate={handleDuplicate}
+        onDeleted={() => {
+          setSelectedEntry(null)
+          utils.deadlines.catalog.list.invalidate()
+        }}
+      />
+
+      {/* Create/Edit Form Dialog */}
+      <CatalogFormDialog
+        open={formOpen}
+        onOpenChange={setFormOpen}
+        mode={formMode}
+        editingId={editingId}
+        initialData={formInitial}
+        onSuccess={handleFormSuccess}
       />
     </div>
   )
@@ -375,9 +531,14 @@ function CatalogCard({
       <CardContent className="pt-4 pb-4 space-y-3">
         {/* Top row: code + tipo prazo */}
         <div className="flex items-center justify-between">
-          <Badge variant="outline" className="font-mono text-xs bg-[#FAFAFA]">
-            {entry.codigo}
-          </Badge>
+          <div className="flex items-center gap-1.5">
+            <Badge variant="outline" className="font-mono text-xs bg-[#FAFAFA]">
+              {entry.codigo}
+            </Badge>
+            {entry.is_system && (
+              <Lock className="size-3 text-muted-foreground" />
+            )}
+          </div>
           <Badge
             variant="outline"
             className={`text-[10px] ${TIPO_PRAZO_COLORS[entry.tipo_prazo] || "bg-gray-100 text-gray-600"}`}
@@ -442,9 +603,9 @@ function CatalogCard({
               </TooltipTrigger>
               <TooltipContent>
                 {entry.admite_dobra
-                  ? "Prazo em dobro para a Fazenda Publica e o MP (art. 183 e 180 CPC)"
-                  : "Este prazo nao admite dobra"}
-                {entry.excecao_dobra && ` - Excecao: ${entry.excecao_dobra}`}
+                  ? "Prazo em dobro para a Fazenda Pública e o MP (art. 183 e 180 CPC)"
+                  : "Este prazo não admite dobra"}
+                {entry.excecao_dobra && ` - Exceção: ${entry.excecao_dobra}`}
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
@@ -535,9 +696,12 @@ function CatalogTable({
                 onClick={() => onSelect(item)}
               >
                 <TableCell>
-                  <Badge variant="outline" className="font-mono text-xs">
-                    {item.codigo}
-                  </Badge>
+                  <div className="flex items-center gap-1">
+                    <Badge variant="outline" className="font-mono text-xs">
+                      {item.codigo}
+                    </Badge>
+                    {item.is_system && <Lock className="size-3 text-muted-foreground" />}
+                  </div>
                 </TableCell>
                 <TableCell>
                   <p className="text-sm font-medium line-clamp-1">{item.nome}</p>
@@ -598,11 +762,27 @@ function CatalogTable({
 function CatalogDetailDialog({
   entry,
   onClose,
+  onEdit,
+  onDuplicate,
+  onDeleted,
 }: {
   entry: CatalogEntry | null
   onClose: () => void
+  onEdit: (entry: CatalogEntry) => void
+  onDuplicate: (entry: CatalogEntry) => void
+  onDeleted: () => void
 }) {
+  const deleteMutation = trpc.deadlines.catalog.delete.useMutation({
+    onSuccess: () => onDeleted(),
+  })
+
   if (!entry) return null
+
+  const handleDelete = () => {
+    if (confirm("Excluir este prazo do catálogo? Esta ação não pode ser desfeita.")) {
+      deleteMutation.mutate({ id: entry.id })
+    }
+  }
 
   return (
     <Dialog open={!!entry} onOpenChange={() => onClose()}>
@@ -618,6 +798,11 @@ function CatalogDetailDialog({
             >
               {TIPO_PRAZO_LABELS[entry.tipo_prazo] || entry.tipo_prazo}
             </Badge>
+            {entry.is_system && (
+              <Badge variant="outline" className="text-[10px] bg-gray-50 text-gray-500">
+                <Lock className="size-3 mr-1" /> Sistema
+              </Badge>
+            )}
           </div>
           <DialogTitle className="text-lg">{entry.nome}</DialogTitle>
         </DialogHeader>
@@ -636,10 +821,10 @@ function CatalogDetailDialog({
                 </p>
                 <p className="text-xs text-[#666666] mt-0.5">
                   {entry.tipo_prazo === "PEREMPTORIO"
-                    ? "Prazo peremptorio (nao pode ser prorrogado)"
+                    ? "Prazo peremptório (não pode ser prorrogado)"
                     : entry.tipo_prazo === "DILATATORIO"
-                    ? "Prazo dilatorio (admite prorrogacao por convencao das partes)"
-                    : "Prazo improprio (destinado ao juiz/servidor)"}
+                    ? "Prazo dilatório (admite prorrogação por convenção das partes)"
+                    : "Prazo impróprio (destinado ao juiz/servidor)"}
                 </p>
               </div>
             </div>
@@ -648,7 +833,7 @@ function CatalogDetailDialog({
             <div>
               <h4 className="text-sm font-semibold text-gray-700 mb-1.5 flex items-center gap-1.5">
                 <Info className="size-4" />
-                Descricao
+                Descrição
               </h4>
               <p className="text-sm text-[#666666] leading-relaxed">{entry.descricao}</p>
             </div>
@@ -682,7 +867,7 @@ function CatalogDetailDialog({
               <div className="p-3 rounded-lg border border-[#DC3545]/20 bg-[#DC3545]/5">
                 <h4 className="text-sm font-semibold text-[#DC3545] mb-1 flex items-center gap-1.5">
                   <AlertTriangle className="size-4" />
-                  Efeito do Nao Cumprimento
+                  Efeito do Não Cumprimento
                 </h4>
                 <p className="text-sm text-[#DC3545]/80">{entry.efeito_nao_cumprimento}</p>
               </div>
@@ -705,12 +890,12 @@ function CatalogDetailDialog({
                     <XCircle className="size-4 text-gray-400" />
                   )}
                   <p className="text-sm font-medium">
-                    {entry.admite_dobra ? "Admite dobra" : "Nao admite dobra"}
+                    {entry.admite_dobra ? "Admite dobra" : "Não admite dobra"}
                   </p>
                 </div>
                 {entry.excecao_dobra && (
                   <p className="text-xs text-[#666666] mt-1">
-                    Excecao: {entry.excecao_dobra}
+                    Exceção: {entry.excecao_dobra}
                   </p>
                 )}
               </div>
@@ -723,13 +908,13 @@ function CatalogDetailDialog({
                   )}
                   <p className="text-sm font-medium">
                     {entry.admite_litisconsorcio
-                      ? "Admite litisconsorcio"
-                      : "Sem litisconsorcio"}
+                      ? "Admite litisconsórcio"
+                      : "Sem litisconsórcio"}
                   </p>
                 </div>
                 {entry.excecao_litisconsorcio && (
                   <p className="text-xs text-[#666666] mt-1">
-                    Excecao: {entry.excecao_litisconsorcio}
+                    Exceção: {entry.excecao_litisconsorcio}
                   </p>
                 )}
               </div>
@@ -762,7 +947,7 @@ function CatalogDetailDialog({
             {/* Jurisprudencia */}
             {entry.jurisprudencia && (
               <div>
-                <h4 className="text-sm font-semibold text-gray-700 mb-1.5">Jurisprudencia</h4>
+                <h4 className="text-sm font-semibold text-gray-700 mb-1.5">Jurisprudência</h4>
                 <p className="text-sm text-[#666666] leading-relaxed whitespace-pre-line italic">
                   {entry.jurisprudencia}
                 </p>
@@ -772,14 +957,431 @@ function CatalogDetailDialog({
         </ScrollArea>
 
         {/* Footer */}
-        <div className="shrink-0 px-6 py-4 border-t flex justify-end">
-          <Button asChild>
+        <div className="shrink-0 px-6 py-4 border-t flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 text-xs gap-1"
+              onClick={() => onEdit(entry)}
+            >
+              <Pencil className="size-3" /> Editar
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 text-xs gap-1"
+              onClick={() => onDuplicate(entry)}
+            >
+              <Copy className="size-3" /> Duplicar
+            </Button>
+            {!entry.is_system && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 text-xs gap-1 text-red-600 hover:text-red-700"
+                onClick={handleDelete}
+                disabled={deleteMutation.isPending}
+              >
+                <Trash2 className="size-3" /> Excluir
+              </Button>
+            )}
+          </div>
+          <Button size="sm" asChild>
             <Link href={`/prazos?usar_catalogo=${entry.id}`}>
               <ChevronRight className="size-4 mr-1.5" />
               Usar este prazo
             </Link>
           </Button>
         </div>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+// ─── Create/Edit Form Dialog ─────────────────────────────────────
+
+function CatalogFormDialog({
+  open,
+  onOpenChange,
+  mode,
+  editingId,
+  initialData,
+  onSuccess,
+}: {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  mode: "create" | "edit" | "duplicate"
+  editingId: string | null
+  initialData: CatalogFormData
+  onSuccess: () => void
+}) {
+  const [form, setForm] = useState<CatalogFormData>(initialData)
+  const [error, setError] = useState("")
+
+  // Reset form when dialog opens with new data
+  const resetKey = `${mode}-${editingId}-${open}`
+  useState(() => {
+    setForm(initialData)
+    setError("")
+  })
+
+  // Keep form in sync when initialData changes
+  const [prevKey, setPrevKey] = useState(resetKey)
+  if (resetKey !== prevKey) {
+    setPrevKey(resetKey)
+    setForm(initialData)
+    setError("")
+  }
+
+  const createMutation = trpc.deadlines.catalog.create.useMutation({
+    onSuccess: () => onSuccess(),
+    onError: (err) => setError(err.message),
+  })
+
+  const updateMutation = trpc.deadlines.catalog.update.useMutation({
+    onSuccess: () => onSuccess(),
+    onError: (err) => setError(err.message),
+  })
+
+  const handleSubmit = () => {
+    setError("")
+    if (!form.codigo || !form.nome || !form.descricao || !form.artigo || !form.termo_inicial) {
+      setError("Preencha todos os campos obrigatórios.")
+      return
+    }
+
+    if (mode === "edit" && editingId) {
+      updateMutation.mutate({
+        id: editingId,
+        ...form,
+        subcategoria: form.subcategoria || undefined,
+        paragrafos: form.paragrafos || undefined,
+        excecao_dobra: form.excecao_dobra || undefined,
+        excecao_litisconsorcio: form.excecao_litisconsorcio || undefined,
+        efeito_nao_cumprimento: form.efeito_nao_cumprimento || undefined,
+        efeito_recursal: form.efeito_recursal || undefined,
+        observacoes: form.observacoes || undefined,
+        jurisprudencia: form.jurisprudencia || undefined,
+        prazo_resposta_dias: form.prazo_resposta_dias ?? undefined,
+        prazo_resposta_ref: form.prazo_resposta_ref || undefined,
+      })
+    } else {
+      createMutation.mutate({
+        ...form,
+        subcategoria: form.subcategoria || undefined,
+        paragrafos: form.paragrafos || undefined,
+        excecao_dobra: form.excecao_dobra || undefined,
+        excecao_litisconsorcio: form.excecao_litisconsorcio || undefined,
+        efeito_nao_cumprimento: form.efeito_nao_cumprimento || undefined,
+        efeito_recursal: form.efeito_recursal || undefined,
+        observacoes: form.observacoes || undefined,
+        jurisprudencia: form.jurisprudencia || undefined,
+        prazo_resposta_dias: form.prazo_resposta_dias ?? undefined,
+        prazo_resposta_ref: form.prazo_resposta_ref || undefined,
+      })
+    }
+  }
+
+  const isPending = createMutation.isPending || updateMutation.isPending
+  const title = mode === "edit" ? "Editar Prazo" : mode === "duplicate" ? "Duplicar Prazo" : "Novo Prazo"
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col p-0 gap-0">
+        <DialogHeader className="shrink-0 px-6 pt-6 pb-4 border-b">
+          <DialogTitle className="flex items-center gap-2">
+            {mode === "edit" ? <Pencil className="size-5" /> : <Plus className="size-5" />}
+            {title}
+          </DialogTitle>
+        </DialogHeader>
+
+        <ScrollArea className="flex-1 min-h-0 px-6 py-4">
+          <div className="space-y-5">
+            {error && (
+              <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+                {error}
+              </div>
+            )}
+
+            {/* Identification */}
+            <section className="space-y-3">
+              <h3 className="text-sm font-semibold">Identificação</h3>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Código *</Label>
+                  <Input
+                    value={form.codigo}
+                    onChange={(e) => setForm((f) => ({ ...f, codigo: e.target.value.toUpperCase() }))}
+                    placeholder="CPC-001"
+                    className="h-8 text-sm font-mono"
+                    disabled={mode === "edit"}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Lei *</Label>
+                  <Input
+                    value={form.lei}
+                    onChange={(e) => setForm((f) => ({ ...f, lei: e.target.value }))}
+                    placeholder="CPC/2015"
+                    className="h-8 text-sm"
+                  />
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs">Nome *</Label>
+                <Input
+                  value={form.nome}
+                  onChange={(e) => setForm((f) => ({ ...f, nome: e.target.value }))}
+                  placeholder="Contestação"
+                  className="h-8 text-sm"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs">Descrição *</Label>
+                <Textarea
+                  value={form.descricao}
+                  onChange={(e) => setForm((f) => ({ ...f, descricao: e.target.value }))}
+                  rows={2}
+                  className="text-sm"
+                />
+              </div>
+            </section>
+
+            <Separator />
+
+            {/* Prazo */}
+            <section className="space-y-3">
+              <h3 className="text-sm font-semibold">Prazo</h3>
+              <div className="grid grid-cols-3 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Dias *</Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    value={form.dias}
+                    onChange={(e) => setForm((f) => ({ ...f, dias: parseInt(e.target.value) || 0 }))}
+                    className="h-8 text-sm"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Contagem *</Label>
+                  <Select value={form.contagem_tipo} onValueChange={(v) => setForm((f) => ({ ...f, contagem_tipo: v }))}>
+                    <SelectTrigger className="h-8 text-xs">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="DIAS_UTEIS">Dias úteis</SelectItem>
+                      <SelectItem value="DIAS_CORRIDOS">Dias corridos</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Tipo de prazo *</Label>
+                  <Select value={form.tipo_prazo} onValueChange={(v) => setForm((f) => ({ ...f, tipo_prazo: v }))}>
+                    <SelectTrigger className="h-8 text-xs">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="PEREMPTORIO">Peremptório</SelectItem>
+                      <SelectItem value="DILATATORIO">Dilatório</SelectItem>
+                      <SelectItem value="IMPROPRIO">Impróprio</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </section>
+
+            <Separator />
+
+            {/* Classificacao */}
+            <section className="space-y-3">
+              <h3 className="text-sm font-semibold">Classificação</h3>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Categoria *</Label>
+                  <Select value={form.categoria} onValueChange={(v) => setForm((f) => ({ ...f, categoria: v }))}>
+                    <SelectTrigger className="h-8 text-xs">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {CATEGORIA_OPTIONS.map((opt) => (
+                        <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Subcategoria</Label>
+                  <Input
+                    value={form.subcategoria}
+                    onChange={(e) => setForm((f) => ({ ...f, subcategoria: e.target.value }))}
+                    className="h-8 text-sm"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Artigo *</Label>
+                  <Input
+                    value={form.artigo}
+                    onChange={(e) => setForm((f) => ({ ...f, artigo: e.target.value }))}
+                    placeholder="Art. 335"
+                    className="h-8 text-sm"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Parágrafos</Label>
+                  <Input
+                    value={form.paragrafos}
+                    onChange={(e) => setForm((f) => ({ ...f, paragrafos: e.target.value }))}
+                    placeholder="§1, §2"
+                    className="h-8 text-sm"
+                  />
+                </div>
+              </div>
+            </section>
+
+            <Separator />
+
+            {/* Termo e efeitos */}
+            <section className="space-y-3">
+              <h3 className="text-sm font-semibold">Termo Inicial e Efeitos</h3>
+              <div className="space-y-1.5">
+                <Label className="text-xs">Termo inicial *</Label>
+                <Input
+                  value={form.termo_inicial}
+                  onChange={(e) => setForm((f) => ({ ...f, termo_inicial: e.target.value }))}
+                  placeholder="Da intimação da sentença"
+                  className="h-8 text-sm"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs">Efeito do não cumprimento</Label>
+                <Input
+                  value={form.efeito_nao_cumprimento}
+                  onChange={(e) => setForm((f) => ({ ...f, efeito_nao_cumprimento: e.target.value }))}
+                  placeholder="Preclusão"
+                  className="h-8 text-sm"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs">Efeito recursal</Label>
+                <Input
+                  value={form.efeito_recursal}
+                  onChange={(e) => setForm((f) => ({ ...f, efeito_recursal: e.target.value }))}
+                  className="h-8 text-sm"
+                />
+              </div>
+            </section>
+
+            <Separator />
+
+            {/* Dobra e litisconsorcio */}
+            <section className="space-y-3">
+              <h3 className="text-sm font-semibold">Regras Especiais</h3>
+              <div className="flex items-center gap-6">
+                <div className="flex items-center gap-2">
+                  <Switch
+                    checked={form.admite_dobra}
+                    onCheckedChange={(v) => setForm((f) => ({ ...f, admite_dobra: v }))}
+                  />
+                  <Label className="text-xs">Admite dobra</Label>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Switch
+                    checked={form.admite_litisconsorcio}
+                    onCheckedChange={(v) => setForm((f) => ({ ...f, admite_litisconsorcio: v }))}
+                  />
+                  <Label className="text-xs">Admite litisconsórcio</Label>
+                </div>
+              </div>
+              {form.admite_dobra && (
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Exceção à dobra</Label>
+                  <Input
+                    value={form.excecao_dobra}
+                    onChange={(e) => setForm((f) => ({ ...f, excecao_dobra: e.target.value }))}
+                    className="h-8 text-sm"
+                  />
+                </div>
+              )}
+              {form.admite_litisconsorcio && (
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Exceção ao litisconsórcio</Label>
+                  <Input
+                    value={form.excecao_litisconsorcio}
+                    onChange={(e) => setForm((f) => ({ ...f, excecao_litisconsorcio: e.target.value }))}
+                    className="h-8 text-sm"
+                  />
+                </div>
+              )}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Prazo de resposta (dias)</Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    value={form.prazo_resposta_dias ?? ""}
+                    onChange={(e) => setForm((f) => ({
+                      ...f,
+                      prazo_resposta_dias: e.target.value ? parseInt(e.target.value) : undefined,
+                    }))}
+                    className="h-8 text-sm"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Referência resposta</Label>
+                  <Input
+                    value={form.prazo_resposta_ref}
+                    onChange={(e) => setForm((f) => ({ ...f, prazo_resposta_ref: e.target.value }))}
+                    className="h-8 text-sm"
+                  />
+                </div>
+              </div>
+            </section>
+
+            <Separator />
+
+            {/* Observacoes */}
+            <section className="space-y-3">
+              <h3 className="text-sm font-semibold">Notas</h3>
+              <div className="space-y-1.5">
+                <Label className="text-xs">Observações</Label>
+                <Textarea
+                  value={form.observacoes}
+                  onChange={(e) => setForm((f) => ({ ...f, observacoes: e.target.value }))}
+                  rows={2}
+                  className="text-sm"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs">Jurisprudência</Label>
+                <Textarea
+                  value={form.jurisprudencia}
+                  onChange={(e) => setForm((f) => ({ ...f, jurisprudencia: e.target.value }))}
+                  rows={2}
+                  className="text-sm"
+                />
+              </div>
+            </section>
+          </div>
+        </ScrollArea>
+
+        <DialogFooter className="shrink-0 px-6 py-4 border-t">
+          <Button variant="outline" size="sm" onClick={() => onOpenChange(false)}>
+            Cancelar
+          </Button>
+          <Button
+            size="sm"
+            onClick={handleSubmit}
+            disabled={isPending}
+            className="bg-[#C9A961] hover:bg-[#B8984F] text-white"
+          >
+            <Save className="size-4 mr-1" />
+            {isPending ? "Salvando..." : mode === "edit" ? "Salvar Alterações" : "Criar Prazo"}
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   )

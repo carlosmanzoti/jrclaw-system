@@ -76,7 +76,7 @@ const RJ_CREDITOR_FIELDS: FieldDefinition[] = [
   { field: "nome", label: "Nome do credor", type: "string", required: true },
   { field: "cpf_cnpj", label: "CPF/CNPJ", type: "string" },
   { field: "classe", label: "Classe", type: "enum", required: true, values: ["CLASSE_I_TRABALHISTA", "CLASSE_II_GARANTIA_REAL", "CLASSE_III_QUIROGRAFARIO", "CLASSE_IV_ME_EPP"] },
-  { field: "natureza", label: "Natureza", type: "enum", required: true, values: ["TRABALHISTA", "ACIDENTARIO", "HIPOTECA", "PENHOR", "ALIENACAO_FIDUCIARIA_IMOVEL", "ALIENACAO_FIDUCIARIA_MOVEL", "CESSAO_FIDUCIARIA_RECEBIVEIS", "ANTICRESE", "QUIROGRAFARIO", "PRIVILEGIO_ESPECIAL", "PRIVILEGIO_GERAL", "SUBORDINADO", "ME_EPP"] },
+  { field: "natureza", label: "Natureza", type: "enum", required: true, values: ["TRABALHISTA", "ACIDENTARIO", "HIPOTECA", "PENHOR", "PENHOR_RURAL", "ALIENACAO_FIDUCIARIA_IMOVEL", "ALIENACAO_FIDUCIARIA_MOVEL", "CESSAO_FIDUCIARIA_RECEBIVEIS", "ANTICRESE", "WARRANT", "QUIROGRAFARIO", "PRIVILEGIO_ESPECIAL", "PRIVILEGIO_GERAL", "SUBORDINADO", "ME_EPP", "A_DEFINIR"] },
   { field: "valor_original", label: "Valor original", type: "bigint_money", required: true, description: "Original credit value in BRL" },
   { field: "valor_atualizado", label: "Valor atualizado", type: "bigint_money", description: "Updated credit value in BRL" },
   { field: "tipo_garantia", label: "Tipo de garantia", type: "string" },

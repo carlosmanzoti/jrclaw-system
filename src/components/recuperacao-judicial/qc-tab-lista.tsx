@@ -16,7 +16,14 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Plus, Download, Upload, Trash2, Tags, ArrowUpDown } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Plus, Download, Upload, Trash2, Tags, ArrowUpDown, Filter } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import {
   CREDIT_CLASS_SHORT_LABELS,
@@ -57,6 +64,7 @@ export function QCTabLista({ jrcId }: QCTabListaProps) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [showImport, setShowImport] = useState(false);
+  const [naturezaFilter, setNaturezaFilter] = useState("ALL");
 
   const tableContainerRef = useRef<HTMLDivElement>(null);
 
@@ -86,7 +94,11 @@ export function QCTabLista({ jrcId }: QCTabListaProps) {
     },
   });
 
-  const items: CreditorRow[] = useMemo(() => (data?.items || []) as CreditorRow[], [data]);
+  const items: CreditorRow[] = useMemo(() => {
+    const all = (data?.items || []) as CreditorRow[];
+    if (naturezaFilter === "ALL") return all;
+    return all.filter((c) => c.natureza === naturezaFilter);
+  }, [data, naturezaFilter]);
 
   const columns = useMemo<ColumnDef<CreditorRow>[]>(
     () => [
@@ -143,9 +155,15 @@ export function QCTabLista({ jrcId }: QCTabListaProps) {
       },
       {
         accessorKey: "natureza",
-        header: "Natureza",
+        header: ({ column }) => (
+          <Button variant="ghost" size="sm" className="-ml-3 h-8" onClick={() => column.toggleSorting()}>
+            Natureza <ArrowUpDown className="ml-1 h-3 w-3" />
+          </Button>
+        ),
         cell: ({ row }) => (
-          <span className="text-xs">{CREDIT_NATURE_LABELS[row.original.natureza] || row.original.natureza}</span>
+          <span className={`text-xs ${row.original.natureza === "A_DEFINIR" ? "font-medium text-amber-600" : ""}`}>
+            {CREDIT_NATURE_LABELS[row.original.natureza] || row.original.natureza}
+          </span>
         ),
         size: 140,
       },
@@ -267,6 +285,18 @@ export function QCTabLista({ jrcId }: QCTabListaProps) {
           onChange={(e) => setSearch(e.target.value)}
           className="h-8 max-w-xs text-xs"
         />
+        <Select value={naturezaFilter} onValueChange={setNaturezaFilter}>
+          <SelectTrigger className="h-8 w-[180px] text-xs">
+            <Filter className="mr-1 h-3 w-3" />
+            <SelectValue placeholder="Natureza" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="ALL">Todas as naturezas</SelectItem>
+            {Object.entries(CREDIT_NATURE_LABELS).map(([k, v]) => (
+              <SelectItem key={k} value={k}>{v}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
         <div className="flex-1" />
         <Button variant="outline" size="sm" className="h-8 text-xs" onClick={() => setShowImport(true)}>
           <Upload className="mr-1 h-3 w-3" /> Importar

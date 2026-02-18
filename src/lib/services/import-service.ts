@@ -34,6 +34,40 @@ export interface ImportResult {
   error_details: { row: number; message: string }[]
 }
 
+// ===== Constants =====
+
+const BATCH_SIZE = 50
+const MAX_RETRIES = 3
+const TRANSACTION_TIMEOUT = 60000
+
+// ===== Helpers =====
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
+function friendlyErrorMessage(err: unknown, rowIndex: number): string {
+  const raw = err instanceof Error ? err.message : String(err)
+
+  if (raw.includes("Unique constraint")) {
+    return `Registro duplicado (linha ${rowIndex + 1}): já existe um registro com esses dados.`
+  }
+  if (raw.includes("Foreign key constraint")) {
+    return `Referência inválida (linha ${rowIndex + 1}): um dos campos referencia um registro que não existe.`
+  }
+  if (raw.includes("Transaction not found") || raw.includes("Transaction API error")) {
+    return `Erro de conexão (linha ${rowIndex + 1}): transação expirou. O lote será retentado automaticamente.`
+  }
+  if (raw.includes("Invalid value") || raw.includes("Invalid enum value")) {
+    return `Valor inválido (linha ${rowIndex + 1}): um dos campos contém um valor não aceito pelo sistema.`
+  }
+  if (raw.includes("is required") || raw.includes("obrigatório")) {
+    return `Campo obrigatório ausente (linha ${rowIndex + 1}): ${raw}`
+  }
+
+  return `Erro ao importar linha ${rowIndex + 1}: ${raw.slice(0, 150)}`
+}
+
 // ===== Validation =====
 
 export function validateMappedRows(
@@ -169,15 +203,15 @@ export async function checkDuplicates(
   return { existing, newRows }
 }
 
-// ===== Bulk Import Execution =====
+// ===== Batch Processing with Retry =====
 
-export async function executeBulkImport(
+async function processBatchWithRetry(
   db: PrismaClient,
   entityType: ImportEntityTypeKey,
-  rows: MappedRow[],
+  batch: MappedRow[],
   options: {
     duplicateHandling: "skip" | "update" | "create"
-    contextId?: string    // case_id for deadlines/movements, jrc_id for creditors
+    contextId?: string
     defaultValues?: Record<string, unknown>
     createdById?: string
   }
@@ -190,69 +224,139 @@ export async function executeBulkImport(
     error_details: [],
   }
 
-  return await db.$transaction(async (tx) => {
-    for (const row of rows) {
-      try {
-        switch (entityType) {
-          case "PERSON": {
-            const id = await insertPerson(tx, row, options)
-            if (id) {
-              result.created_ids.push(id)
-              result.imported++
-            } else {
-              result.ignored++
-            }
-            break
+  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      const batchResult = await db.$transaction(
+        async (tx) => {
+          const txResult: ImportResult = {
+            imported: 0,
+            errors: 0,
+            ignored: 0,
+            created_ids: [],
+            error_details: [],
           }
-          case "CASE": {
-            const id = await insertCase(tx, row, options)
-            if (id) {
-              result.created_ids.push(id)
-              result.imported++
-            } else {
-              result.ignored++
+
+          for (const row of batch) {
+            try {
+              let id: string | null = null
+
+              switch (entityType) {
+                case "PERSON":
+                  id = await insertPerson(tx, row, options)
+                  break
+                case "CASE":
+                  id = await insertCase(tx, row, options)
+                  break
+                case "DEADLINE":
+                  id = await insertDeadline(tx, row, options)
+                  break
+                case "CASE_MOVEMENT":
+                  id = await insertCaseMovement(tx, row, options)
+                  break
+                case "RJ_CREDITOR":
+                  id = await insertRJCreditor(tx, row, options)
+                  break
+              }
+
+              if (id) {
+                txResult.created_ids.push(id)
+                txResult.imported++
+              } else {
+                txResult.ignored++
+              }
+            } catch (err: unknown) {
+              txResult.errors++
+              txResult.error_details.push({
+                row: row._rowIndex,
+                message: friendlyErrorMessage(err, row._rowIndex),
+              })
             }
-            break
           }
-          case "DEADLINE": {
-            const id = await insertDeadline(tx, row, options)
-            if (id) {
-              result.created_ids.push(id)
-              result.imported++
-            } else {
-              result.ignored++
-            }
-            break
-          }
-          case "CASE_MOVEMENT": {
-            const id = await insertCaseMovement(tx, row, options)
-            if (id) {
-              result.created_ids.push(id)
-              result.imported++
-            } else {
-              result.ignored++
-            }
-            break
-          }
-          case "RJ_CREDITOR": {
-            const id = await insertRJCreditor(tx, row, options)
-            if (id) {
-              result.created_ids.push(id)
-              result.imported++
-            } else {
-              result.ignored++
-            }
-            break
-          }
+
+          return txResult
+        },
+        {
+          maxWait: 10000,
+          timeout: TRANSACTION_TIMEOUT,
         }
-      } catch (err: unknown) {
-        result.errors++
-        const msg = err instanceof Error ? err.message : String(err)
-        result.error_details.push({ row: row._rowIndex, message: msg })
+      )
+
+      // Merge batch result into overall result
+      result.imported += batchResult.imported
+      result.errors += batchResult.errors
+      result.ignored += batchResult.ignored
+      result.created_ids.push(...batchResult.created_ids)
+      result.error_details.push(...batchResult.error_details)
+
+      // Success — break retry loop
+      return result
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err)
+      const isRetryable =
+        msg.includes("Transaction not found") ||
+        msg.includes("Transaction API error") ||
+        msg.includes("Can't reach database") ||
+        msg.includes("Connection pool timeout")
+
+      if (isRetryable && attempt < MAX_RETRIES) {
+        const delay = Math.pow(2, attempt) * 1000 // 2s, 4s, 8s
+        await sleep(delay)
+        continue
       }
+
+      // Non-retryable or max retries exhausted — mark all rows in batch as errors
+      for (const row of batch) {
+        result.errors++
+        result.error_details.push({
+          row: row._rowIndex,
+          message: friendlyErrorMessage(err, row._rowIndex),
+        })
+      }
+      return result
     }
-    return result
-  })
+  }
+
+  return result
+}
+
+// ===== Bulk Import Execution (Batched) =====
+
+export async function executeBulkImport(
+  db: PrismaClient,
+  entityType: ImportEntityTypeKey,
+  rows: MappedRow[],
+  options: {
+    duplicateHandling: "skip" | "update" | "create"
+    contextId?: string
+    defaultValues?: Record<string, unknown>
+    createdById?: string
+  }
+): Promise<ImportResult> {
+  const result: ImportResult = {
+    imported: 0,
+    errors: 0,
+    ignored: 0,
+    created_ids: [],
+    error_details: [],
+  }
+
+  // Split rows into batches of BATCH_SIZE
+  const batches: MappedRow[][] = []
+  for (let i = 0; i < rows.length; i += BATCH_SIZE) {
+    batches.push(rows.slice(i, i + BATCH_SIZE))
+  }
+
+  // Process each batch sequentially
+  for (const batch of batches) {
+    const batchResult = await processBatchWithRetry(db, entityType, batch, options)
+    result.imported += batchResult.imported
+    result.errors += batchResult.errors
+    result.ignored += batchResult.ignored
+    result.created_ids.push(...batchResult.created_ids)
+    result.error_details.push(...batchResult.error_details)
+  }
+
+  return result
 }
 
 // ===== Rollback =====
@@ -269,29 +373,40 @@ export async function rollbackImport(db: PrismaClient, logId: string): Promise<v
 
   if (ids.length === 0) throw new Error("Nenhum registro para reverter")
 
-  await db.$transaction(async (tx) => {
-    switch (log.entity_type) {
-      case "PERSON":
-        await tx.person.deleteMany({ where: { id: { in: ids } } })
-        break
-      case "CASE":
-        await tx.case.deleteMany({ where: { id: { in: ids } } })
-        break
-      case "DEADLINE":
-        await tx.deadline.deleteMany({ where: { id: { in: ids } } })
-        break
-      case "CASE_MOVEMENT":
-        await tx.caseMovement.deleteMany({ where: { id: { in: ids } } })
-        break
-      case "RJ_CREDITOR":
-        await tx.rJCreditor.deleteMany({ where: { id: { in: ids } } })
-        break
-    }
+  // Batch the rollback to avoid large transactions
+  const idBatches: string[][] = []
+  for (let i = 0; i < ids.length; i += BATCH_SIZE) {
+    idBatches.push(ids.slice(i, i + BATCH_SIZE))
+  }
 
-    await tx.importLog.update({
-      where: { id: logId },
-      data: { revertido: true, status: "REVERTIDO" as never },
-    })
+  for (const idBatch of idBatches) {
+    await db.$transaction(
+      async (tx) => {
+        switch (log.entity_type) {
+          case "PERSON":
+            await tx.person.deleteMany({ where: { id: { in: idBatch } } })
+            break
+          case "CASE":
+            await tx.case.deleteMany({ where: { id: { in: idBatch } } })
+            break
+          case "DEADLINE":
+            await tx.deadline.deleteMany({ where: { id: { in: idBatch } } })
+            break
+          case "CASE_MOVEMENT":
+            await tx.caseMovement.deleteMany({ where: { id: { in: idBatch } } })
+            break
+          case "RJ_CREDITOR":
+            await tx.rJCreditor.deleteMany({ where: { id: { in: idBatch } } })
+            break
+        }
+      },
+      { maxWait: 10000, timeout: TRANSACTION_TIMEOUT }
+    )
+  }
+
+  await db.importLog.update({
+    where: { id: logId },
+    data: { revertido: true, status: "REVERTIDO" as never },
   })
 }
 
@@ -415,21 +530,105 @@ async function insertRJCreditor(
 
   const cpf = row.cpf_cnpj ? String(row.cpf_cnpj).replace(/\D/g, "") : null
 
+  // Detect guarantee nature for Class II creditors
+  const classe = String(row.classe || "").toUpperCase()
+  let natureza = String(row.natureza || "").toUpperCase()
+
+  if (classe === "CLASSE_II_GARANTIA_REAL" && (!natureza || natureza === "QUIROGRAFARIO")) {
+    natureza = detectGuaranteeNature(row)
+  }
+
+  // Default natureza if still empty
+  if (!natureza) {
+    if (classe === "CLASSE_I_TRABALHISTA") natureza = "TRABALHISTA"
+    else if (classe === "CLASSE_IV_ME_EPP") natureza = "ME_EPP"
+    else natureza = "QUIROGRAFARIO"
+  }
+
+  // Map tipo_garantia from natureza for Class II
+  let tipoGarantia = row.tipo_garantia ? String(row.tipo_garantia).toUpperCase() : "NONE"
+  if (classe === "CLASSE_II_GARANTIA_REAL" && tipoGarantia === "NONE") {
+    tipoGarantia = mapNatureToGuaranteeType(natureza)
+  }
+
   const rec = await tx.rJCreditor.create({
     data: {
       jrc_id: jrcId,
       nome: String(row.nome || "").trim(),
       cpf_cnpj: row.cpf_cnpj ? String(row.cpf_cnpj).trim() : null,
       pessoa_fisica: cpf ? cpf.length === 11 : false,
-      classe: (String(row.classe)).toUpperCase() as never,
-      natureza: (String(row.natureza || "QUIROGRAFARIO")).toUpperCase() as never,
+      classe: classe as never,
+      natureza: natureza as never,
       fonte: "IMPORT_CSV" as never,
       valor_original: BigInt(Math.round((Number(row.valor_original) || 0) * 100)),
       valor_atualizado: BigInt(Math.round((Number(row.valor_atualizado || row.valor_original) || 0) * 100)),
-      tipo_garantia: (row.tipo_garantia ? String(row.tipo_garantia).toUpperCase() : "NONE") as never,
+      tipo_garantia: tipoGarantia as never,
       valor_garantia: BigInt(Math.round((Number(row.valor_garantia) || 0) * 100)),
       observacoes: row.observacoes ? String(row.observacoes) : null,
     },
   })
   return rec.id
+}
+
+// ===== Guarantee Nature Detection (Ajuste 2) =====
+
+function detectGuaranteeNature(row: MappedRow): string {
+  // Check all text fields for keywords
+  const searchText = [
+    row.natureza,
+    row.tipo_garantia,
+    row.observacoes,
+    row.descricao_garantia,
+    row.nome,
+  ]
+    .filter(Boolean)
+    .map((v) => String(v).toLowerCase())
+    .join(" ")
+
+  if (!searchText) return "A_DEFINIR"
+
+  // Order matters: more specific patterns first
+  if (/cessão\s*fiduciári|cessao\s*fiduciari|recebi[vé]veis|recebiv/i.test(searchText)) {
+    return "CESSAO_FIDUCIARIA_RECEBIVEIS"
+  }
+  if (/alien(?:ação|acao)\s*fiduciári|alienacao\s*fiduciari/i.test(searchText)) {
+    if (/im[oó]vel|imovel|matr[ií]cula|matricula/i.test(searchText)) {
+      return "ALIENACAO_FIDUCIARIA_IMOVEL"
+    }
+    if (/ve[ií]culo|veiculo|equipamento|m[aá]quina|maquina|m[oó]vel|movel/i.test(searchText)) {
+      return "ALIENACAO_FIDUCIARIA_MOVEL"
+    }
+    // Generic alienação fiduciária — default to movel
+    return "ALIENACAO_FIDUCIARIA_MOVEL"
+  }
+  if (/hipoteca|matr[ií]cula.*im[oó]vel/i.test(searchText)) {
+    return "HIPOTECA"
+  }
+  if (/warrant/i.test(searchText)) {
+    return "WARRANT"
+  }
+  if (/penhor\s*(rural|agr[ií]cola|safra|cpr)/i.test(searchText)) {
+    return "PENHOR_RURAL"
+  }
+  if (/penhor/i.test(searchText)) {
+    return "PENHOR"
+  }
+  if (/anticrese/i.test(searchText)) {
+    return "ANTICRESE"
+  }
+
+  return "A_DEFINIR"
+}
+
+function mapNatureToGuaranteeType(natureza: string): string {
+  switch (natureza) {
+    case "HIPOTECA": return "HIPOTECA"
+    case "PENHOR":
+    case "PENHOR_RURAL": return "PENHOR"
+    case "ALIENACAO_FIDUCIARIA_IMOVEL":
+    case "ALIENACAO_FIDUCIARIA_MOVEL": return "ALIENACAO_FIDUCIARIA"
+    case "CESSAO_FIDUCIARIA_RECEBIVEIS": return "CESSAO_FIDUCIARIA"
+    case "ANTICRESE": return "ANTICRESE"
+    default: return "NONE"
+  }
 }

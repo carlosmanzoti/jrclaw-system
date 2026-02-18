@@ -387,15 +387,18 @@ enum CreditNature {
   ACIDENTARIO
   HIPOTECA
   PENHOR
+  PENHOR_RURAL
   ALIENACAO_FIDUCIARIA_IMOVEL
   ALIENACAO_FIDUCIARIA_MOVEL
   CESSAO_FIDUCIARIA_RECEBIVEIS
   ANTICRESE
+  WARRANT
   QUIROGRAFARIO
   PRIVILEGIO_ESPECIAL
   PRIVILEGIO_GERAL
   SUBORDINADO
   ME_EPP
+  A_DEFINIR
 }
 
 enum GuaranteeType {
@@ -3260,6 +3263,7 @@ model DeadlineCatalog {
   prazo_resposta_ref        String?
 
   ativo                     Boolean   @default(true)
+  is_system                 Boolean   @default(false)
 
   created_at                DateTime  @default(now())
   updated_at                DateTime  @updatedAt
