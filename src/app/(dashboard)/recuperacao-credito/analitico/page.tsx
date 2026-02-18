@@ -255,12 +255,12 @@ function ChartTooltipContent({
 
 export default function RecuperacaoCreditoAnaliticoPage() {
   const router = useRouter()
-  const [responsavelFilter, setResponsavelFilter] = useState<string>("")
+  const [responsavelFilter, setResponsavelFilter] = useState<string>("ALL")
 
   // Fetch data
   const { data: dashboardData, isLoading: dashLoading } =
     trpc.recovery.cases.dashboard.useQuery({
-      responsavel_id: responsavelFilter || undefined,
+      responsavel_id: responsavelFilter !== "ALL" ? responsavelFilter : undefined,
     })
 
   const { data: listData, isLoading: listLoading } =
@@ -712,7 +712,7 @@ export default function RecuperacaoCreditoAnaliticoPage() {
               <SelectValue placeholder="Todos os responsaveis" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Todos os responsaveis</SelectItem>
+              <SelectItem value="ALL">Todos os responsaveis</SelectItem>
               {users?.map((u: { id: string; name: string }) => (
                 <SelectItem key={u.id} value={u.id}>
                   {u.name}

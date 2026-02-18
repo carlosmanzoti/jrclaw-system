@@ -36,6 +36,7 @@ import {
   RefreshCw,
 } from "lucide-react";
 import { NegotiationAssistant } from "./negotiation-assistant";
+import StratNegCreateWizard from "./strat-neg-create-wizard";
 import {
   STRAT_NEG_PHASES,
   STRAT_NEG_PHASE_LABELS,
@@ -415,6 +416,14 @@ export function StratNegLayout() {
             setFilterPrioridade={setFilterPrioridade}
           />
         )}
+
+        {/* ============================================================ */}
+        {/* CREATE WIZARD DIALOG */}
+        {/* ============================================================ */}
+        <StratNegCreateWizard
+          open={showCreateDialog}
+          onOpenChange={setShowCreateDialog}
+        />
 
         {/* ============================================================ */}
         {/* NEGOTIATION ASSISTANT (Global context) */}
