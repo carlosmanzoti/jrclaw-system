@@ -82,9 +82,9 @@ export function ProjectForm() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <Label htmlFor="titulo">Titulo *</Label>
-                <Input id="titulo" {...register("titulo", { required: true })} placeholder="Ex: Recuperacao de Credito - Empresa X" />
-                {errors.titulo && <p className="text-xs text-[#DC3545] mt-1">Titulo obrigatorio</p>}
+                <Label htmlFor="titulo">Título *</Label>
+                <Input id="titulo" {...register("titulo", { required: true })} placeholder="Ex: Recuperação de Crédito - Empresa X" />
+                {errors.titulo && <p className="text-xs text-[#DC3545] mt-1">Título obrigatório</p>}
               </div>
 
               <div className="grid gap-4 sm:grid-cols-2">
@@ -141,11 +141,11 @@ export function ProjectForm() {
                   </Select>
                 </div>
                 <div>
-                  <Label htmlFor="data_inicio">Data de Inicio</Label>
+                  <Label htmlFor="data_inicio">Data de Início</Label>
                   <Input id="data_inicio" type="date" {...register("data_inicio")} />
                 </div>
                 <div>
-                  <Label htmlFor="data_prevista_conclusao">Previsao de Conclusao</Label>
+                  <Label htmlFor="data_prevista_conclusao">Previsão de Conclusão</Label>
                   <Input id="data_prevista_conclusao" type="date" {...register("data_prevista_conclusao")} />
                 </div>
               </div>

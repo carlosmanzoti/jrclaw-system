@@ -131,7 +131,7 @@ export function CaseForm() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="numero_processo">Numero do Processo (CNJ)</Label>
+              <Label htmlFor="numero_processo">Número do Processo (CNJ)</Label>
               <Input
                 id="numero_processo"
                 placeholder="NNNNNNN-DD.AAAA.J.TR.OOOO"
@@ -168,7 +168,7 @@ export function CaseForm() {
 
             <div className="space-y-2">
               <Label htmlFor="fase_processual">Fase Processual</Label>
-              <Input id="fase_processual" {...register("fase_processual")} placeholder="Ex: Conhecimento, Execucao..." />
+              <Input id="fase_processual" {...register("fase_processual")} placeholder="Ex: Conhecimento, Execução..." />
             </div>
           </CardContent>
         </Card>

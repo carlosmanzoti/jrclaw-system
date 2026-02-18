@@ -98,7 +98,7 @@ export function NegTabMediacao({ jrcId }: NegTabMediacaoProps) {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-lg font-semibold">Mediacao Digital</h2>
+          <h2 className="text-lg font-semibold">Mediação Digital</h2>
           <p className="text-sm text-muted-foreground">
             Sessoes de mediacao digital para resolucao de impasses na negociacao
             com credores.
@@ -110,17 +110,17 @@ export function NegTabMediacao({ jrcId }: NegTabMediacaoProps) {
               size="sm"
               disabled={availableForMediation.length === 0}
             >
-              <Plus className="mr-1 h-4 w-4" /> Ativar Mediacao
+              <Plus className="mr-1 h-4 w-4" /> Ativar Mediação
             </Button>
           </DialogTrigger>
           <DialogContent className="sm:max-w-md">
             <DialogHeader>
-              <DialogTitle>Ativar Mediacao</DialogTitle>
+              <DialogTitle>Ativar Mediação</DialogTitle>
             </DialogHeader>
             <div className="space-y-4">
               {/* Negotiation select */}
               <div>
-                <Label>Negociacao *</Label>
+                <Label>Negociação *</Label>
                 <Select value={selectedNegId} onValueChange={setSelectedNegId}>
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione a negociacao" />
@@ -157,7 +157,7 @@ export function NegTabMediacao({ jrcId }: NegTabMediacaoProps) {
 
               {/* Next session */}
               <div>
-                <Label>Proxima Sessao</Label>
+                <Label>Próxima Sessão</Label>
                 <Input
                   type="datetime-local"
                   value={proximaSessao}
@@ -174,7 +174,7 @@ export function NegTabMediacao({ jrcId }: NegTabMediacaoProps) {
                   updateNegotiation.isPending
                 }
               >
-                {updateNegotiation.isPending ? "Ativando..." : "Ativar Mediacao"}
+                {updateNegotiation.isPending ? "Ativando..." : "Ativar Mediação"}
               </Button>
             </div>
           </DialogContent>

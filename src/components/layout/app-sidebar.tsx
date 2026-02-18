@@ -129,12 +129,12 @@ const navModules = [
     ],
   },
   {
-    title: "Recuperacao de Credito",
+    title: "Recuperação de Crédito",
     url: "/recuperacao-credito",
     icon: ShieldCheck,
     items: [
       { title: "Todos os Casos", url: "/recuperacao-credito" },
-      { title: "Dashboard Analitico", url: "/recuperacao-credito/analitico" },
+      { title: "Dashboard Analítico", url: "/recuperacao-credito/analitico" },
     ],
   },
   {

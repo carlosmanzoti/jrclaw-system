@@ -96,7 +96,7 @@ const INVESTIGATION_TYPES: { value: InvestigationType; label: string; descriptio
   {
     value: "COMPLETA",
     label: "Completa",
-    description: "Investigacao patrimonial abrangente cobrindo todos os escopos selecionados",
+    description: "Investigação patrimonial abrangente cobrindo todos os escopos selecionados",
   },
   {
     value: "COMPLEMENTAR",
@@ -105,13 +105,13 @@ const INVESTIGATION_TYPES: { value: InvestigationType; label: string; descriptio
   },
   {
     value: "ATUALIZACAO",
-    label: "Atualizacao",
-    description: "Atualizacao periodica de dados ja levantados anteriormente",
+    label: "Atualização",
+    description: "Atualização periódica de dados já levantados anteriormente",
   },
   {
     value: "URGENTE",
     label: "Urgente",
-    description: "Investigacao prioritaria com prazo reduzido para medidas cautelares",
+    description: "Investigação prioritária com prazo reduzido para medidas cautelares",
   },
 ]
 
@@ -136,8 +136,8 @@ const SCOPE_ITEMS: ScopeItem[] = [
   },
   {
     id: "contas_aplicacoes",
-    label: "Contas e aplicacoes",
-    description: "Rastreamento de contas bancarias, investimentos e aplicacoes financeiras",
+    label: "Contas e aplicações",
+    description: "Rastreamento de contas bancárias, investimentos e aplicações financeiras",
     systems: ["SISBAJUD", "CCS-Bacen"],
     icon: <Landmark className="size-4" />,
     defaultChecked: true,
@@ -145,8 +145,8 @@ const SCOPE_ITEMS: ScopeItem[] = [
   },
   {
     id: "participacoes",
-    label: "Participacoes societarias",
-    description: "Identificacao de empresas vinculadas, participacoes e grupo economico",
+    label: "Participações societárias",
+    description: "Identificação de empresas vinculadas, participações e grupo econômico",
     systems: ["Junta Comercial", "Receita Federal"],
     icon: <Users className="size-4" />,
     defaultChecked: true,
@@ -155,7 +155,7 @@ const SCOPE_ITEMS: ScopeItem[] = [
   {
     id: "socios_grupo",
     label: "Socios e grupo economico",
-    description: "Mapeamento de socios, procuradores, representantes e interligacoes",
+    description: "Mapeamento de sócios, procuradores, representantes e interligações",
     systems: ["SNIPER", "Neoway"],
     icon: <Fingerprint className="size-4" />,
     defaultChecked: true,
@@ -173,7 +173,7 @@ const SCOPE_ITEMS: ScopeItem[] = [
   {
     id: "exterior",
     label: "Ativos no exterior",
-    description: "Investigacao de patrimonio no exterior via cooperacao internacional",
+    description: "Investigação de patrimônio no exterior via cooperação internacional",
     systems: ["DRCI", "MLAT"],
     icon: <Globe className="size-4" />,
     defaultChecked: false,
@@ -182,7 +182,7 @@ const SCOPE_ITEMS: ScopeItem[] = [
   {
     id: "osint",
     label: "OSINT e redes sociais",
-    description: "Inteligencia em fontes abertas, redes sociais e presenca digital",
+    description: "Inteligência em fontes abertas, redes sociais e presença digital",
     systems: ["OSINT Tools", "Redes Sociais"],
     icon: <Search className="size-4" />,
     defaultChecked: false,
@@ -199,9 +199,9 @@ const SCOPE_ITEMS: ScopeItem[] = [
   },
   {
     id: "aeronaves_embarcacoes",
-    label: "Aeronaves e embarcacoes",
-    description: "Consulta de aeronaves registradas na ANAC e embarcacoes no Tribunal Maritimo",
-    systems: ["ANAC", "Tribunal Maritimo"],
+    label: "Aeronaves e embarcações",
+    description: "Consulta de aeronaves registradas na ANAC e embarcações no Tribunal Marítimo",
+    systems: ["ANAC", "Tribunal Marítimo"],
     icon: <Plane className="size-4" />,
     defaultChecked: false,
     estimatedDays: 5,
@@ -321,7 +321,7 @@ function generateSearchesForScope(
           tipoConsulta: "Consulta de participacoes societarias",
           cpfCnpj,
           alvoNome: nome,
-          description: `Junta Comercial -- Participacoes -- ${cpfCnpj}`,
+          description: `Junta Comercial -- Participações -- ${cpfCnpj}`,
           notes: "",
           scopeId: scope.id,
         },
@@ -356,7 +356,7 @@ function generateSearchesForScope(
           id: `${baseId}-neoway`,
           included: true,
           sistema: "Neoway",
-          tipoConsulta: "Analise de vinculos e interligacoes",
+          tipoConsulta: "Análise de vínculos e interligações",
           cpfCnpj,
           alvoNome: nome,
           description: `Neoway -- Vinculos societarios -- ${cpfCnpj}`,
@@ -399,7 +399,7 @@ function generateSearchesForScope(
         id: `${baseId}-osint`,
         included: true,
         sistema: "OSINT",
-        tipoConsulta: "Inteligencia em fontes abertas",
+        tipoConsulta: "Inteligência em fontes abertas",
         cpfCnpj,
         alvoNome: nome,
         description: `OSINT -- Fontes abertas e redes sociais -- ${nome}`,
@@ -438,11 +438,11 @@ function generateSearchesForScope(
         {
           id: `${baseId}-tribmar`,
           included: true,
-          sistema: "Tribunal Maritimo",
-          tipoConsulta: "Consulta de embarcacoes",
+          sistema: "Tribunal Marítimo",
+          tipoConsulta: "Consulta de embarcações",
           cpfCnpj,
           alvoNome: nome,
-          description: `Tribunal Maritimo -- Embarcacoes -- ${cpfCnpj}`,
+          description: `Tribunal Marítimo -- Embarcações -- ${cpfCnpj}`,
           notes: "",
           scopeId: scope.id,
         }
@@ -458,7 +458,7 @@ function generateSearchesForScope(
 const STEPS = [
   { number: 1, label: "Escopo" },
   { number: 2, label: "Buscas Planejadas" },
-  { number: 3, label: "Revisao e Inicio" },
+  { number: 3, label: "Revisão e Início" },
 ]
 
 // ===================== COMPONENT =====================
@@ -777,7 +777,7 @@ export function InvestigationWizard({
                   )}
                   {devedorTipo && (
                     <Badge variant="secondary" className="text-xs">
-                      {devedorTipo === "PESSOA_FISICA" ? "Pessoa Fisica" : "Pessoa Juridica"}
+                      {devedorTipo === "PESSOA_FISICA" ? "Pessoa Física" : "Pessoa Jurídica"}
                     </Badge>
                   )}
                 </div>
@@ -1054,7 +1054,7 @@ export function InvestigationWizard({
                           onChange={(e) =>
                             handleSearchNotesChange(search.id, e.target.value)
                           }
-                          placeholder="Observacoes da busca (opcional)"
+                          placeholder="Observações da busca (opcional)"
                           className="h-7 text-xs"
                         />
                       </div>
@@ -1190,12 +1190,12 @@ export function InvestigationWizard({
 
         <Separator />
 
-        {/* Responsavel */}
+        {/* Responsável */}
         <div className="space-y-2">
-          <Label className="text-sm font-medium">Responsavel</Label>
+          <Label className="text-sm font-medium">Responsável</Label>
           <Select value={responsavelId} onValueChange={setResponsavelId}>
             <SelectTrigger className="w-full">
-              <SelectValue placeholder="Selecione o responsavel" />
+              <SelectValue placeholder="Selecione o responsável" />
             </SelectTrigger>
             <SelectContent>
               {users?.map((user: { id: string; name: string; email: string }) => (
@@ -1207,9 +1207,9 @@ export function InvestigationWizard({
           </Select>
         </div>
 
-        {/* Observacoes */}
+        {/* Observações */}
         <div className="space-y-2">
-          <Label className="text-sm font-medium">Observacoes</Label>
+          <Label className="text-sm font-medium">Observações</Label>
           <Textarea
             value={observacoes}
             onChange={(e) => setObservacoes(e.target.value)}
@@ -1303,7 +1303,7 @@ export function InvestigationWizard({
                 disabled={currentStep === 1 && activeScopes.length === 0}
                 className="bg-gold text-text-primary hover:bg-gold/90"
               >
-                Proximo
+                Próximo
                 <ChevronRight className="size-4" />
               </Button>
             ) : (

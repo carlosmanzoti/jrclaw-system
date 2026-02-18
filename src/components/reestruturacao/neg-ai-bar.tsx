@@ -31,7 +31,7 @@ function getHealthColor(score: number): string {
 function getHealthLabel(score: number): string {
   if (score >= 80) return "Saudavel";
   if (score >= 60) return "Moderada";
-  if (score >= 40) return "Atencao";
+  if (score >= 40) return "Atenção";
   return "Critica";
 }
 
@@ -271,7 +271,7 @@ export function NegAIBar({
             className="text-[10px] uppercase tracking-wide font-medium"
             style={{ color: "#666666" }}
           >
-            Proxima Acao Recomendada
+            Próxima Ação Recomendada
           </span>
           {aiProximaAcao != null ? (
             <div className="flex items-center gap-2">
@@ -312,7 +312,7 @@ export function NegAIBar({
             className="text-[10px] uppercase tracking-wide font-medium"
             style={{ color: "#666666" }}
           >
-            Ultima Analise
+            Última Análise
           </span>
           <div className="flex items-center gap-1">
             <Clock className="h-3 w-3" style={{ color: "#666666" }} />

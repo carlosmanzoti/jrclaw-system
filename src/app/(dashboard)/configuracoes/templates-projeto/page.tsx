@@ -379,12 +379,12 @@ export default function TemplatesProjetoPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-[300px]">Titulo</TableHead>
+                  <TableHead className="w-[300px]">Título</TableHead>
                   <TableHead>Categoria</TableHead>
                   <TableHead className="text-center">Fases</TableHead>
                   <TableHead className="text-center">Marcos</TableHead>
                   <TableHead className="text-center">Ativo</TableHead>
-                  <TableHead className="text-right">Acoes</TableHead>
+                  <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -461,14 +461,14 @@ export default function TemplatesProjetoPage() {
             {/* Basic fields */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="titulo">Titulo *</Label>
+                <Label htmlFor="titulo">Título *</Label>
                 <Input
                   id="titulo"
                   value={form.titulo}
                   onChange={(e) =>
                     setForm((prev) => ({ ...prev, titulo: e.target.value }))
                   }
-                  placeholder="Ex: Recuperacao de Credito"
+                  placeholder="Ex: Recuperação de Crédito"
                 />
               </div>
               <div className="space-y-2">
@@ -522,7 +522,7 @@ export default function TemplatesProjetoPage() {
             {/* ─── Phases Section ──────────────────────────── */}
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold">Fases Padrao</h3>
+                <h3 className="text-lg font-semibold">Fases Padrão</h3>
                 <Button variant="outline" size="sm" onClick={addPhase}>
                   <Plus className="mr-1 size-3" />
                   Adicionar Fase
@@ -553,7 +553,7 @@ export default function TemplatesProjetoPage() {
             {/* ─── Milestones Section ─────────────────────── */}
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold">Marcos Padrao</h3>
+                <h3 className="text-lg font-semibold">Marcos Padrão</h3>
                 <Button variant="outline" size="sm" onClick={addMilestone}>
                   <Plus className="mr-1 size-3" />
                   Adicionar Marco
@@ -574,7 +574,7 @@ export default function TemplatesProjetoPage() {
                       <GripVertical className="size-4 mt-2.5 text-[#666666]/50 shrink-0" />
                       <div className="grid grid-cols-[1fr_1fr_120px] gap-3 flex-1">
                         <div className="space-y-1">
-                          <Label className="text-xs">Titulo</Label>
+                          <Label className="text-xs">Título</Label>
                           <Input
                             value={milestone.titulo}
                             onChange={(e) =>
@@ -641,7 +641,7 @@ export default function TemplatesProjetoPage() {
               onClick={handleSave}
               disabled={isSaving || !form.titulo.trim() || !form.categoria}
             >
-              {isSaving ? "Salvando..." : editingId ? "Salvar Alteracoes" : "Criar Template"}
+              {isSaving ? "Salvando..." : editingId ? "Salvar Alterações" : "Criar Template"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -761,7 +761,7 @@ function PhaseEditor({
         <CardContent className="pt-0 pb-4 px-4 space-y-3">
           <div className="grid grid-cols-[1fr_1fr] gap-3 pl-6">
             <div className="space-y-1">
-              <Label className="text-xs">Titulo da fase</Label>
+              <Label className="text-xs">Título da fase</Label>
               <Input
                 value={phase.titulo}
                 onChange={(e) =>
@@ -811,13 +811,13 @@ function PhaseEditor({
                 className="grid grid-cols-[1fr_160px_1fr_auto] gap-2 items-start"
               >
                 <div className="space-y-1">
-                  <Label className="text-xs">Titulo</Label>
+                  <Label className="text-xs">Título</Label>
                   <Input
                     value={task.titulo}
                     onChange={(e) =>
                       onUpdateTask(index, taskIdx, "titulo", e.target.value)
                     }
-                    placeholder="Titulo da tarefa"
+                    placeholder="Título da tarefa"
                     className="h-8 text-sm"
                   />
                 </div>

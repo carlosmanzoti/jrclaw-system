@@ -357,7 +357,7 @@ export function StratNegDetail({ params }: StratNegDetailProps) {
     return (
       <div className="h-full overflow-y-auto">
         <div className="flex flex-col items-center justify-center p-12">
-          <p className="text-[#666666]">Negociacao nao encontrada.</p>
+          <p className="text-[#666666]">Negociação não encontrada.</p>
           <Link href="/reestruturacao">
             <Button variant="outline" className="mt-4">
               Voltar
@@ -568,7 +568,7 @@ export function StratNegDetail({ params }: StratNegDetailProps) {
                 </Badge>
                 {valorCredito > 0 && (
                   <span className="text-sm font-semibold text-[#2A2A2A] ml-2">
-                    Credito: {formatBigIntBRL(neg.valor_credito)}
+                    Crédito: {formatBigIntBRL(neg.valor_credito)}
                   </span>
                 )}
               </div>
@@ -611,7 +611,7 @@ export function StratNegDetail({ params }: StratNegDetailProps) {
           <Card>
             <CardContent className="pt-4 pb-4">
               <p className="text-xs font-medium text-[#666666] mb-2">
-                ZOPA (Zona de Possivel Acordo)
+                ZOPA (Zona de Possível Acordo)
               </p>
               <ZopaBar
                 zopaMin={zopaMin}
@@ -680,7 +680,7 @@ export function StratNegDetail({ params }: StratNegDetailProps) {
                 </div>
               </div>
               <div>
-                <Label className="text-xs">Descricao *</Label>
+                <Label className="text-xs">Descrição *</Label>
                 <Textarea
                   className="mt-1"
                   rows={3}
@@ -756,14 +756,14 @@ export function StratNegDetail({ params }: StratNegDetailProps) {
               className="rounded-none border-b-2 border-transparent data-[state=active]:border-[#C9A961] data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 pb-2"
             >
               <ArrowRightLeft className="size-4 mr-2" />
-              Concessoes
+              Concessões
             </TabsTrigger>
             <TabsTrigger
               value="estrategia"
               className="rounded-none border-b-2 border-transparent data-[state=active]:border-[#C9A961] data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 pb-2"
             >
               <Target className="size-4 mr-2" />
-              Estrategia
+              Estratégia
             </TabsTrigger>
             <TabsTrigger
               value="one-sheets"
@@ -871,7 +871,7 @@ export function StratNegDetail({ params }: StratNegDetailProps) {
             {(devedorProposals.length > 0 || credorProposals.length > 0) && (
               <Card>
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-sm">Convergencia de Propostas</CardTitle>
+                  <CardTitle className="text-sm">Convergência de Propostas</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <ConvergenceVisual
@@ -952,7 +952,7 @@ export function StratNegDetail({ params }: StratNegDetailProps) {
               <div className="flex flex-col items-center justify-center rounded-lg border border-dashed p-12">
                 <ArrowRightLeft className="size-10 text-[#666666]/40" />
                 <p className="mt-3 text-sm text-[#666666]">
-                  Nenhuma concessao registrada ainda.
+                  Nenhuma concessão registrada ainda.
                 </p>
                 <Button
                   size="sm"
@@ -961,7 +961,7 @@ export function StratNegDetail({ params }: StratNegDetailProps) {
                   onClick={() => setShowConcessionDialog(true)}
                 >
                   <Plus className="size-4 mr-1" />
-                  Registrar Concessao
+                  Registrar Concessão
                 </Button>
               </div>
             ) : (
@@ -1024,7 +1024,7 @@ export function StratNegDetail({ params }: StratNegDetailProps) {
                 onClick={() => setShowConcessionDialog(true)}
               >
                 <Plus className="size-4 mr-1" />
-                Registrar Concessao
+                Registrar Concessão
               </Button>
             </div>
           </TabsContent>
@@ -1112,19 +1112,19 @@ export function StratNegDetail({ params }: StratNegDetailProps) {
                       Assertividade: {tkiAssertividade ?? "--"} | Cooperatividade:{" "}
                       {tkiCooperatividade ?? "--"}
                     </p>
-                    {tkiEstrategia && <p>Estrategia: {tkiEstrategia}</p>}
+                    {tkiEstrategia && <p>Estratégia: {tkiEstrategia}</p>}
                   </div>
                 }
                 details={
                   <div className="space-y-2 text-xs">
                     <p>
-                      <span className="font-medium">Estrategia recomendada:</span>{" "}
+                      <span className="font-medium">Estratégia recomendada:</span>{" "}
                       {tkiEstrategia || "--"}
                     </p>
                     <p className="text-[#666666]">
-                      O modelo Thomas-Kilmann avalia o estilo de negociacao da contraparte
+                      O modelo Thomas-Kilmann avalia o estilo de negociação da contraparte
                       em dois eixos: assertividade e cooperatividade, para calibrar a melhor
-                      abordagem tatica.
+                      abordagem tática.
                     </p>
                   </div>
                 }
@@ -1174,8 +1174,8 @@ export function StratNegDetail({ params }: StratNegDetailProps) {
                       </div>
                     )}
                     <p className="text-[#666666]">
-                      Tecnicas Voss: empatia tatica, rotulagem, perguntas calibradas,
-                      auditoria de acusacao, e ofertas nao monetarias.
+                      Técnicas Voss: empatia tática, rotulagem, perguntas calibradas,
+                      auditoria de acusação, e ofertas não monetárias.
                     </p>
                   </div>
                 }
@@ -1191,7 +1191,7 @@ export function StratNegDetail({ params }: StratNegDetailProps) {
                   <div className="space-y-1 text-xs text-[#666666]">
                     {campMissao && (
                       <p className="truncate">
-                        Missao: {campMissao.substring(0, 80)}
+                        Missão: {campMissao.substring(0, 80)}
                         {campMissao.length > 80 ? "..." : ""}
                       </p>
                     )}
@@ -1208,7 +1208,7 @@ export function StratNegDetail({ params }: StratNegDetailProps) {
                   <div className="space-y-2 text-xs">
                     {campMissao && (
                       <div>
-                        <p className="font-medium">Missao completa:</p>
+                        <p className="font-medium">Missão completa:</p>
                         <p>{campMissao}</p>
                       </div>
                     )}
@@ -1245,12 +1245,12 @@ export function StratNegDetail({ params }: StratNegDetailProps) {
                             "--"}
                         </p>
                         <p>
-                          Dimensoes avaliadas:{" "}
+                          Dimensões avaliadas:{" "}
                           {Object.keys(karrassPoder as Record<string, any>).length}
                         </p>
                       </>
                     ) : (
-                      <p>Analise de poder nao configurada.</p>
+                      <p>Análise de poder não configurada.</p>
                     )}
                   </div>
                 }
@@ -1258,7 +1258,7 @@ export function StratNegDetail({ params }: StratNegDetailProps) {
                   <div className="space-y-2 text-xs">
                     {karrassPoder != null ? (
                       <div>
-                        <p className="font-medium mb-1">Dimensoes de poder:</p>
+                        <p className="font-medium mb-1">Dimensões de poder:</p>
                         <ul className="space-y-0.5">
                           {Object.entries(karrassPoder as Record<string, unknown>).map(
                             ([key, val]) => (
@@ -1272,8 +1272,8 @@ export function StratNegDetail({ params }: StratNegDetailProps) {
                       </div>
                     ) : (
                       <p className="text-[#666666]">
-                        Configure a analise de poder de Karrass para identificar alavancas
-                        de negociacao.
+                        Configure a análise de poder de Karrass para identificar alavancas
+                        de negociação.
                       </p>
                     )}
                   </div>
@@ -1298,7 +1298,7 @@ export function StratNegDetail({ params }: StratNegDetailProps) {
                     )}
                     {gameEquilibrio && (
                       <div className="flex items-center gap-1">
-                        <span>Equilibrio:</span>
+                        <span>Equilíbrio:</span>
                         <Badge variant="outline" className="text-xs">
                           {gameEquilibrio}
                         </Badge>
@@ -1306,7 +1306,7 @@ export function StratNegDetail({ params }: StratNegDetailProps) {
                     )}
                     {gameCoalicao && (
                       <div className="flex items-center gap-1">
-                        <span>Coalicao:</span>
+                        <span>Coalizão:</span>
                         <Badge variant="outline" className="text-xs">
                           {gameCoalicao}
                         </Badge>
@@ -1323,7 +1323,7 @@ export function StratNegDetail({ params }: StratNegDetailProps) {
                     {!gameTipoJogo &&
                       !gameEquilibrio &&
                       !gameCoalicao &&
-                      !gameRiscoHoldout && <p>Analise nao configurada.</p>}
+                      !gameRiscoHoldout && <p>Análise não configurada.</p>}
                   </div>
                 }
                 details={
@@ -1334,11 +1334,11 @@ export function StratNegDetail({ params }: StratNegDetailProps) {
                         <p>{gameTipoJogo || "--"}</p>
                       </div>
                       <div>
-                        <p className="font-medium">Equilibrio:</p>
+                        <p className="font-medium">Equilíbrio:</p>
                         <p>{gameEquilibrio || "--"}</p>
                       </div>
                       <div>
-                        <p className="font-medium">Coalicao:</p>
+                        <p className="font-medium">Coalizão:</p>
                         <p>{gameCoalicao || "--"}</p>
                       </div>
                       <div>
@@ -1407,13 +1407,13 @@ export function StratNegDetail({ params }: StratNegDetailProps) {
                         <CardContent className="pt-0 space-y-3 text-sm">
                           <div>
                             <Label className="text-xs font-medium text-[#666666]">
-                              Objetivo Especifico
+                              Objetivo Específico
                             </Label>
                             <p className="mt-0.5">{sheet.objetivo_especifico}</p>
                           </div>
                           <div>
                             <Label className="text-xs font-medium text-[#666666]">
-                              Resumo da Situacao
+                              Resumo da Situação
                             </Label>
                             <p className="mt-0.5">{sheet.resumo_situacao}</p>
                           </div>
@@ -1508,10 +1508,10 @@ export function StratNegDetail({ params }: StratNegDetailProps) {
             <div className="flex flex-col items-center justify-center rounded-lg border border-dashed p-12">
               <FolderOpen className="size-12 text-[#666666]/40" />
               <h3 className="mt-4 text-lg font-semibold text-[#2A2A2A]">
-                Documentos vinculados a negociacao
+                Documentos vinculados à negociação
               </h3>
               <p className="mt-2 text-sm text-[#666666] text-center">
-                Os documentos relacionados a esta negociacao estrategica serao exibidos aqui.
+                Os documentos relacionados a esta negociação estratégica serão exibidos aqui.
               </p>
             </div>
           </TabsContent>
@@ -1742,16 +1742,16 @@ export function StratNegDetail({ params }: StratNegDetailProps) {
         </Dialog>
 
         {/* ============================================================= */}
-        {/* DIALOG: Registrar Concessao                                   */}
+        {/* DIALOG: Registrar Concessão                                   */}
         {/* ============================================================= */}
         <Dialog open={showConcessionDialog} onOpenChange={setShowConcessionDialog}>
           <DialogContent className="max-w-lg">
             <DialogHeader>
-              <DialogTitle>Registrar Concessao</DialogTitle>
+              <DialogTitle>Registrar Concessão</DialogTitle>
             </DialogHeader>
             <div className="space-y-4">
               <div>
-                <Label className="text-xs">Direcao *</Label>
+                <Label className="text-xs">Direção *</Label>
                 <Select
                   value={concessionDirecao}
                   onValueChange={setConcessionDirecao}
@@ -1769,13 +1769,13 @@ export function StratNegDetail({ params }: StratNegDetailProps) {
                 </Select>
               </div>
               <div>
-                <Label className="text-xs">Descricao *</Label>
+                <Label className="text-xs">Descrição *</Label>
                 <Textarea
                   className="mt-1"
                   rows={3}
                   value={concessionDescricao}
                   onChange={(e) => setConcessionDescricao(e.target.value)}
-                  placeholder="Descreva a concessao..."
+                  placeholder="Descreva a concessão..."
                 />
               </div>
               <div>
@@ -1796,7 +1796,7 @@ export function StratNegDetail({ params }: StratNegDetailProps) {
                   rows={2}
                   value={concessionJustificativa}
                   onChange={(e) => setConcessionJustificativa(e.target.value)}
-                  placeholder="Motivo desta concessao..."
+                  placeholder="Motivo desta concessão..."
                 />
               </div>
               <div>
@@ -1846,23 +1846,23 @@ export function StratNegDetail({ params }: StratNegDetailProps) {
             </DialogHeader>
             <div className="space-y-4">
               <div>
-                <Label className="text-xs">Objetivo Especifico *</Label>
+                <Label className="text-xs">Objetivo Específico *</Label>
                 <Textarea
                   className="mt-1"
                   rows={2}
                   value={oneSheetObjetivo}
                   onChange={(e) => setOneSheetObjetivo(e.target.value)}
-                  placeholder="O que deseja alcancar nesta negociacao..."
+                  placeholder="O que deseja alcançar nesta negociação..."
                 />
               </div>
               <div>
-                <Label className="text-xs">Resumo da Situacao *</Label>
+                <Label className="text-xs">Resumo da Situação *</Label>
                 <Textarea
                   className="mt-1"
                   rows={3}
                   value={oneSheetResumo}
                   onChange={(e) => setOneSheetResumo(e.target.value)}
-                  placeholder="Contexto da negociacao, historico, pontos-chave..."
+                  placeholder="Contexto da negociação, histórico, pontos-chave..."
                 />
               </div>
               <div>
@@ -1902,7 +1902,7 @@ export function StratNegDetail({ params }: StratNegDetailProps) {
                   rows={2}
                   value={oneSheetBlackSwans}
                   onChange={(e) => setOneSheetBlackSwans(e.target.value)}
-                  placeholder="Informacoes ocultas que podem mudar tudo..."
+                  placeholder="Informações ocultas que podem mudar tudo..."
                 />
               </div>
             </div>

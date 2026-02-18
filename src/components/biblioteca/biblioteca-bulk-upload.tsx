@@ -287,7 +287,7 @@ export function BibliotecaBulkUpload({ open, onOpenChange }: BibliotecaBulkUploa
       <DialogContent className="min-w-[900px] max-w-[1100px] max-w-[95vw] max-h-[85vh] flex flex-col p-0 gap-0">
         {/* FIXED HEADER */}
         <DialogHeader className="shrink-0 px-6 pt-6 pb-4 border-b">
-          <DialogTitle>Importacao em Lote</DialogTitle>
+          <DialogTitle>Importação em Lote</DialogTitle>
         </DialogHeader>
 
         {/* SCROLLABLE BODY */}
@@ -394,7 +394,7 @@ export function BibliotecaBulkUpload({ open, onOpenChange }: BibliotecaBulkUploa
                   <span />
                   <span />
                   <span>Arquivo</span>
-                  <span>Titulo</span>
+                  <span>Título</span>
                   <span>Tipo</span>
                   <span>Area</span>
                   <span />

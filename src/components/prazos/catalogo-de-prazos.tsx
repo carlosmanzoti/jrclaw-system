@@ -33,7 +33,7 @@ const CATEGORY_LABELS: Record<string, string> = {
   TODOS: "Todos",
   CPC_GERAL: "CPC Geral",
   CPC_RECURSOS: "CPC Recursos",
-  CPC_EXECUCAO: "CPC Execucao",
+  CPC_EXECUCAO: "CPC Execução",
   LEI_11101: "Lei 11.101 (RJ)",
   CLT: "CLT",
   CTN: "CTN",
@@ -183,7 +183,7 @@ export function CatalogoDePrazos() {
               Catalogo de Prazos Legais
             </h1>
             <p className="text-[#666666] mt-1">
-              Referencia completa de prazos processuais e legais
+              Referência completa de prazos processuais e legais
             </p>
           </div>
         </div>
@@ -478,7 +478,7 @@ function CatalogTable({
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Codigo</TableHead>
+              <TableHead>Código</TableHead>
               <TableHead>Nome</TableHead>
               <TableHead>Prazo</TableHead>
               <TableHead>Tipo</TableHead>
@@ -517,7 +517,7 @@ function CatalogTable({
         <Table>
           <TableHeader className="sticky top-0 z-10 bg-white">
             <TableRow>
-              <TableHead className="w-[100px]">Codigo</TableHead>
+              <TableHead className="w-[100px]">Código</TableHead>
               <TableHead className="min-w-[200px]">Nome</TableHead>
               <TableHead className="w-[130px]">Prazo</TableHead>
               <TableHead className="w-[110px]">Tipo</TableHead>
@@ -743,7 +743,7 @@ function CatalogDetailDialog({
                 </p>
                 {entry.prazo_resposta_ref && (
                   <p className="text-xs text-amber-600 mt-0.5">
-                    Referencia: {entry.prazo_resposta_ref}
+                    Referência: {entry.prazo_resposta_ref}
                   </p>
                 )}
               </div>
@@ -752,7 +752,7 @@ function CatalogDetailDialog({
             {/* Observacoes */}
             {entry.observacoes && (
               <div>
-                <h4 className="text-sm font-semibold text-gray-700 mb-1.5">Observacoes</h4>
+                <h4 className="text-sm font-semibold text-gray-700 mb-1.5">Observações</h4>
                 <p className="text-sm text-[#666666] leading-relaxed whitespace-pre-line">
                   {entry.observacoes}
                 </p>

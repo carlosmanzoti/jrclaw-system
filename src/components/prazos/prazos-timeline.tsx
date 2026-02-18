@@ -252,7 +252,7 @@ export function PrazosTimeline() {
                 </Badge>
               </div>
               <div>
-                <p className="text-xs text-[#666666] mb-1">Descricao</p>
+                <p className="text-xs text-[#666666] mb-1">Descrição</p>
                 <p className="text-sm">{selectedDeadline.descricao}</p>
               </div>
               <div>
@@ -273,7 +273,7 @@ export function PrazosTimeline() {
                 </div>
               </div>
               <div>
-                <p className="text-xs text-[#666666] mb-1">Responsavel</p>
+                <p className="text-xs text-[#666666] mb-1">Responsável</p>
                 <div className="flex items-center gap-2">
                   <Avatar className="size-6">
                     <AvatarFallback className="text-[10px] bg-primary/10 text-primary">

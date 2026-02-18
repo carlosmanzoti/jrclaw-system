@@ -150,12 +150,12 @@ const PIE_COLORS = [GOLD, BLUE, PURPLE, GREEN, ORANGE, RED, GRAY]
 const FUNNEL_COLORS = [BLUE, "#6366F1", GOLD, ORANGE, GREEN]
 
 const FASE_LABELS: Record<string, string> = {
-  ANALISE_INICIAL: "Analise Inicial",
-  INVESTIGACAO_PATRIMONIAL: "Investigacao",
+  ANALISE_INICIAL: "Análise Inicial",
+  INVESTIGACAO_PATRIMONIAL: "Investigação",
   MEDIDAS_PREPARATORIAS: "Medidas Prep.",
-  EXECUCAO: "Execucao",
+  EXECUCAO: "Execução",
   PENHORA_CONSTRICAO: "Penhora",
-  EXPROPRIACAO: "Expropriacao",
+  EXPROPRIACAO: "Expropriação",
   ACORDO: "Acordo",
   SATISFACAO_CREDITO: "Recuperado",
   ARQUIVADO: "Arquivado",
@@ -407,8 +407,8 @@ export default function RecuperacaoCreditoAnaliticoPage() {
     const pjCount = cases.length - pfCount
 
     return [
-      { name: "Pessoa Fisica", value: pfCount },
-      { name: "Pessoa Juridica", value: pjCount },
+      { name: "Pessoa Física", value: pfCount },
+      { name: "Pessoa Jurídica", value: pjCount },
     ].filter((d) => d.value > 0)
   }, [cases])
 
@@ -456,7 +456,7 @@ export default function RecuperacaoCreditoAnaliticoPage() {
         ).length,
       },
       {
-        name: "Execucao",
+        name: "Execução",
         total: cases.filter(
           (c) =>
             c.fase === "EXECUCAO" ||
@@ -517,7 +517,7 @@ export default function RecuperacaoCreditoAnaliticoPage() {
 
     for (const c of activeCases) {
       const respId = c.responsavel?.id || "unassigned"
-      const respName = c.responsavel?.name || "Nao atribuido"
+      const respName = c.responsavel?.name || "Não atribuído"
 
       if (!byResp[respId]) {
         byResp[respId] = {
@@ -589,28 +589,28 @@ export default function RecuperacaoCreditoAnaliticoPage() {
 
     const quadrants = {
       prioridadeMaxima: {
-        label: "Prioridade maxima",
+        label: "Prioridade máxima",
         description: "Alto valor + alta probabilidade",
         cases: 0,
         valor: 0,
         color: GREEN,
       },
       altoValorDificil: {
-        label: "Alto valor dificil",
+        label: "Alto valor difícil",
         description: "Alto valor + baixa probabilidade",
         cases: 0,
         valor: 0,
         color: ORANGE,
       },
       baixoValorFacil: {
-        label: "Baixo valor facil",
+        label: "Baixo valor fácil",
         description: "Baixo valor + alta probabilidade",
         cases: 0,
         valor: 0,
         color: BLUE,
       },
       considerarCessao: {
-        label: "Considerar cessao",
+        label: "Considerar cessão",
         description: "Baixo valor + baixa probabilidade",
         cases: 0,
         valor: 0,
@@ -657,8 +657,8 @@ export default function RecuperacaoCreditoAnaliticoPage() {
               <ArrowLeft className="size-4" />
             </Button>
             <div>
-              <h1 className="text-xl font-bold">Dashboard Analitico</h1>
-              <p className="text-sm text-muted-foreground">Recuperacao de Credito</p>
+              <h1 className="text-xl font-bold">Dashboard Analítico</h1>
+              <p className="text-sm text-muted-foreground">Recuperação de Crédito</p>
             </div>
           </div>
           <div className="grid grid-cols-4 gap-4">
@@ -699,20 +699,20 @@ export default function RecuperacaoCreditoAnaliticoPage() {
             </Button>
             <div>
               <h1 className="text-xl font-bold">
-                Dashboard Analitico — Recuperacao de Credito
+                Dashboard Analítico — Recuperação de Crédito
               </h1>
               <p className="text-sm text-muted-foreground">
-                Visao consolidada do portfolio de recuperacao
+                Visão consolidada do portfólio de recuperação
               </p>
             </div>
           </div>
 
           <Select value={responsavelFilter} onValueChange={setResponsavelFilter}>
             <SelectTrigger className="w-[200px]">
-              <SelectValue placeholder="Todos os responsaveis" />
+              <SelectValue placeholder="Todos os responsáveis" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="ALL">Todos os responsaveis</SelectItem>
+              <SelectItem value="ALL">Todos os responsáveis</SelectItem>
               {users?.map((u: { id: string; name: string }) => (
                 <SelectItem key={u.id} value={u.id}>
                   {u.name}
@@ -731,7 +731,7 @@ export default function RecuperacaoCreditoAnaliticoPage() {
           />
           <KpiCard
             icon={DollarSign}
-            label="Vol. em execucao"
+            label="Vol. em execução"
             value={formatCurrencyCompact(kpis.totalExecucao)}
           />
           <KpiCard
@@ -776,10 +776,10 @@ export default function RecuperacaoCreditoAnaliticoPage() {
             <CardHeader>
               <CardTitle className="text-sm font-semibold flex items-center gap-2">
                 <BarChart3 className="size-4 text-gold" />
-                Funil de Recuperacao
+                Funil de Recuperação
               </CardTitle>
               <CardDescription className="text-xs">
-                Casos por estagio com taxas de conversao
+                Casos por estágio com taxas de conversão
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -844,10 +844,10 @@ export default function RecuperacaoCreditoAnaliticoPage() {
             <CardHeader>
               <CardTitle className="text-sm font-semibold flex items-center gap-2">
                 <TrendingUp className="size-4 text-gold" />
-                Evolucao Mensal
+                Evolução Mensal
               </CardTitle>
               <CardDescription className="text-xs">
-                Volume em execucao vs. recuperado (ultimos 12 meses)
+                Volume em execução vs. recuperado (últimos 12 meses)
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -879,7 +879,7 @@ export default function RecuperacaoCreditoAnaliticoPage() {
                     dataKey="execucao"
                     stroke={BLUE}
                     strokeWidth={2}
-                    name="Em execucao"
+                    name="Em execução"
                     dot={false}
                   />
                   <Line
@@ -958,7 +958,7 @@ export default function RecuperacaoCreditoAnaliticoPage() {
                 Top 10 Devedores
               </CardTitle>
               <CardDescription className="text-xs">
-                Por valor total em execucao
+                Por valor total em execução
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -989,7 +989,7 @@ export default function RecuperacaoCreditoAnaliticoPage() {
                     />
                     <Bar
                       dataKey="valor"
-                      name="Valor execucao"
+                      name="Valor execução"
                       fill={GOLD}
                       radius={[0, 4, 4, 0]}
                     />
@@ -1011,7 +1011,7 @@ export default function RecuperacaoCreditoAnaliticoPage() {
             <CardHeader>
               <CardTitle className="text-sm font-semibold flex items-center gap-2">
                 <Target className="size-4 text-gold" />
-                Taxa de Sucesso por Acao
+                Taxa de Sucesso por Ação
               </CardTitle>
               <CardDescription className="text-xs">
                 Efetividade de cada tipo de medida
@@ -1054,7 +1054,7 @@ export default function RecuperacaoCreditoAnaliticoPage() {
                 </ResponsiveContainer>
               ) : (
                 <div className="flex items-center justify-center h-48 text-sm text-muted-foreground">
-                  Sem dados de acoes
+                  Sem dados de ações
                 </div>
               )}
 
@@ -1081,7 +1081,7 @@ export default function RecuperacaoCreditoAnaliticoPage() {
             <CardHeader>
               <CardTitle className="text-sm font-semibold flex items-center gap-2">
                 <Users className="size-4 text-gold" />
-                Performance por Responsavel
+                Performance por Responsável
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -1089,13 +1089,13 @@ export default function RecuperacaoCreditoAnaliticoPage() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="text-xs">Responsavel</TableHead>
+                      <TableHead className="text-xs">Responsável</TableHead>
                       <TableHead className="text-xs text-right">Ativos</TableHead>
                       <TableHead className="text-xs text-right">Volume</TableHead>
                       <TableHead className="text-xs text-right">Recuperado</TableHead>
                       <TableHead className="text-xs text-right">%</TableHead>
-                      <TableHead className="text-xs text-right">Acoes/Caso</TableHead>
-                      <TableHead className="text-xs text-right">Score Medio</TableHead>
+                      <TableHead className="text-xs text-right">Ações/Caso</TableHead>
+                      <TableHead className="text-xs text-right">Score Médio</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -1145,7 +1145,7 @@ export default function RecuperacaoCreditoAnaliticoPage() {
                 </Table>
               ) : (
                 <div className="flex items-center justify-center h-32 text-sm text-muted-foreground">
-                  Nenhum caso atribuido
+                  Nenhum caso atribuído
                 </div>
               )}
             </CardContent>
@@ -1159,10 +1159,10 @@ export default function RecuperacaoCreditoAnaliticoPage() {
             <CardHeader>
               <CardTitle className="text-sm font-semibold flex items-center gap-2">
                 <Clock className="size-4 text-gold" />
-                Analise de Prescricao
+                Análise de Prescrição
               </CardTitle>
               <CardDescription className="text-xs">
-                Casos com prescricao em ate 6 meses
+                Casos com prescrição em até 6 meses
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -1170,7 +1170,7 @@ export default function RecuperacaoCreditoAnaliticoPage() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="text-xs">Codigo</TableHead>
+                      <TableHead className="text-xs">Código</TableHead>
                       <TableHead className="text-xs">Devedor</TableHead>
                       <TableHead className="text-xs text-right">Valor</TableHead>
                       <TableHead className="text-xs text-right">Dias restantes</TableHead>
@@ -1221,7 +1221,7 @@ export default function RecuperacaoCreditoAnaliticoPage() {
                 <div className="flex flex-col items-center justify-center h-32 text-center">
                   <Shield className="size-8 text-green-500/40 mb-2" />
                   <p className="text-sm text-muted-foreground">
-                    Nenhum caso com prescricao proxima
+                    Nenhum caso com prescrição próxima
                   </p>
                 </div>
               )}
@@ -1239,10 +1239,10 @@ export default function RecuperacaoCreditoAnaliticoPage() {
             <CardHeader>
               <CardTitle className="text-sm font-semibold flex items-center gap-2">
                 <BarChart3 className="size-4 text-gold" />
-                Analise de Portfolio
+                Análise de Portfólio
               </CardTitle>
               <CardDescription className="text-xs">
-                Segmentacao: Valor x Score de Recuperacao
+                Segmentação: Valor x Score de Recuperação
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -1287,7 +1287,7 @@ export default function RecuperacaoCreditoAnaliticoPage() {
                       className="size-3 rounded-sm shrink-0"
                       style={{ backgroundColor: GREEN }}
                     />
-                    <span className="font-medium">Prioridade maxima</span>
+                    <span className="font-medium">Prioridade máxima</span>
                     <span className="text-muted-foreground">— foco total</span>
                   </div>
                   <div className="flex items-center gap-1.5">
@@ -1295,7 +1295,7 @@ export default function RecuperacaoCreditoAnaliticoPage() {
                       className="size-3 rounded-sm shrink-0"
                       style={{ backgroundColor: ORANGE }}
                     />
-                    <span className="font-medium">Alto valor dificil</span>
+                    <span className="font-medium">Alto valor difícil</span>
                     <span className="text-muted-foreground">— investigar mais</span>
                   </div>
                   <div className="flex items-center gap-1.5">
@@ -1303,15 +1303,15 @@ export default function RecuperacaoCreditoAnaliticoPage() {
                       className="size-3 rounded-sm shrink-0"
                       style={{ backgroundColor: BLUE }}
                     />
-                    <span className="font-medium">Baixo valor facil</span>
-                    <span className="text-muted-foreground">— acordos rapidos</span>
+                    <span className="font-medium">Baixo valor fácil</span>
+                    <span className="text-muted-foreground">— acordos rápidos</span>
                   </div>
                   <div className="flex items-center gap-1.5">
                     <span
                       className="size-3 rounded-sm shrink-0"
                       style={{ backgroundColor: GRAY }}
                     />
-                    <span className="font-medium">Considerar cessao</span>
+                    <span className="font-medium">Considerar cessão</span>
                     <span className="text-muted-foreground">— vender carteira</span>
                   </div>
                 </div>
@@ -1325,10 +1325,10 @@ export default function RecuperacaoCreditoAnaliticoPage() {
           <CardHeader>
             <CardTitle className="text-sm font-semibold flex items-center gap-2">
               <Briefcase className="size-4 text-gold" />
-              Distribuicao por Tipo de Titulo
+              Distribuição por Tipo de Título
             </CardTitle>
             <CardDescription className="text-xs">
-              Quantidade de casos por tipo de divida/titulo executivo
+              Quantidade de casos por tipo de dívida/título executivo
             </CardDescription>
           </CardHeader>
           <CardContent>

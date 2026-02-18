@@ -154,7 +154,7 @@ export default async function DashboardPage() {
       borderColor: "border-t-[#FFC107]",
     },
     {
-      title: "Movimentacoes Nao Lidas",
+      title: "Movimentações Não Lidas",
       value: String(movNaoLidas),
       description: movNaoLidas === 0 ? "Tudo em dia" : `${movNaoLidas} pendente(s)`,
       icon: FileText,
@@ -175,11 +175,11 @@ export default async function DashboardPage() {
       borderColor: "border-t-[#C9A961]",
     },
     {
-      title: "Liberacoes em Andamento",
+      title: "Liberações em Andamento",
       value: String(liberacoesEmAndamento.length),
       description: liberacoesEmAndamento.length > 0
         ? `${formatCurrency(liberacoesEmAndamento.reduce((acc, p) => acc + Number(p.valor_envolvido || 0), 0))} total`
-        : "Nenhuma liberacao ativa",
+        : "Nenhuma liberação ativa",
       icon: Landmark,
       borderColor: "border-t-[#28A745]",
     },
@@ -300,7 +300,7 @@ export default async function DashboardPage() {
               <CardHeader className="flex flex-row items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Landmark className="size-4 text-[#28A745]" />
-                  <CardTitle className="text-base">Liberacoes em Andamento</CardTitle>
+                  <CardTitle className="text-base">Liberações em Andamento</CardTitle>
                 </div>
                 <Link href="/projetos?categoria=ALVARA_LIBERACAO" className="text-xs text-primary hover:underline flex items-center gap-1">
                   Ver todos <ChevronRight className="size-3" />

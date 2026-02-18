@@ -170,7 +170,7 @@ export function StratNegLayout() {
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-2xl font-bold tracking-tight font-heading">
-              Reestruturacao &amp; Negociacoes
+              Reestruturação &amp; Negociações
             </h1>
           </div>
           <div className="flex items-center gap-2">
@@ -179,12 +179,12 @@ export function StratNegLayout() {
               className="bg-[#C9A961] text-[#2A2A2A] hover:bg-[#B8984F]"
             >
               <Plus className="size-4 mr-2" />
-              Nova Negociacao
+              Nova Negociação
             </Button>
             <Button variant="outline" asChild>
               <Link href="/reestruturacao/estrategico">
                 <LayoutDashboard className="size-4 mr-2" />
-                Dashboard Estrategico
+                Dashboard Estratégico
               </Link>
             </Button>
           </div>
@@ -199,7 +199,7 @@ export function StratNegLayout() {
             <CardHeader className="pb-2">
               <div className="flex items-center justify-between">
                 <p className="text-sm font-medium text-muted-foreground">
-                  Negociacoes Ativas
+                  Negociações Ativas
                 </p>
                 <Handshake className="size-4 text-muted-foreground" />
               </div>
@@ -221,19 +221,19 @@ export function StratNegLayout() {
                               `${STRAT_NEG_PHASE_LABELS[k as StratNegPhase] ?? k}: ${v.count}`
                           )
                           .join(" | ")
-                      : "Sem negociacoes"}
+                      : "Sem negociações"}
                   </p>
                 </>
               )}
             </CardContent>
           </Card>
 
-          {/* Card 2: Volume em Negociacao */}
+          {/* Card 2: Volume em Negociação */}
           <Card className="bg-white rounded-lg shadow-sm border">
             <CardHeader className="pb-2">
               <div className="flex items-center justify-between">
                 <p className="text-sm font-medium text-muted-foreground">
-                  Volume em Negociacao
+                  Volume em Negociação
                 </p>
                 <DollarSign className="size-4 text-muted-foreground" />
               </div>
@@ -254,12 +254,12 @@ export function StratNegLayout() {
             </CardContent>
           </Card>
 
-          {/* Card 3: Haircut Medio */}
+          {/* Card 3: Haircut Médio */}
           <Card className="bg-white rounded-lg shadow-sm border">
             <CardHeader className="pb-2">
               <div className="flex items-center justify-between">
                 <p className="text-sm font-medium text-muted-foreground">
-                  Haircut Medio
+                  Haircut Médio
                 </p>
                 <Percent className="size-4 text-muted-foreground" />
               </div>
@@ -273,7 +273,7 @@ export function StratNegLayout() {
                     {dashboard?.haircut_medio?.toFixed(1) || 0}%
                   </p>
                   <p className="text-xs text-muted-foreground mt-1">
-                    Desconto medio obtido
+                    Desconto médio obtido
                   </p>
                 </>
               )}
@@ -337,7 +337,7 @@ export function StratNegLayout() {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Sparkles className="size-4 text-[#C9A961]" />
-                <CardTitle className="text-sm">Inteligencia IA — Visao Global</CardTitle>
+                <CardTitle className="text-sm">Inteligência IA — Visão Global</CardTitle>
               </div>
               <Button
                 size="sm"
@@ -358,7 +358,7 @@ export function StratNegLayout() {
           </CardHeader>
           <CardContent className="pt-0">
             <p className="text-xs text-muted-foreground">
-              Clique em "Atualizar" para gerar insights cruzados entre todas as negociacoes ativas.
+              Clique em "Atualizar" para gerar insights cruzados entre todas as negociações ativas.
             </p>
           </CardContent>
         </Card>
@@ -379,11 +379,11 @@ export function StratNegLayout() {
                   <ArrowRightLeft className="size-8 text-muted-foreground" />
                 </div>
                 <h3 className="text-lg font-semibold mb-2">
-                  Nenhuma negociacao estrategica
+                  Nenhuma negociação estratégica
                 </h3>
                 <p className="text-sm text-muted-foreground max-w-md mb-6">
-                  Inicie uma negociacao estrategica para gerenciar reestruturacoes
-                  de passivos, acordos com credores e operacoes complexas utilizando
+                  Inicie uma negociação estratégica para gerenciar reestruturações
+                  de passivos, acordos com credores e operações complexas utilizando
                   metodologias de Harvard, Voss e Teoria dos Jogos.
                 </p>
                 <Button
@@ -391,7 +391,7 @@ export function StratNegLayout() {
                   className="bg-[#C9A961] text-[#2A2A2A] hover:bg-[#B8984F]"
                 >
                   <Plus className="size-4 mr-2" />
-                  Nova Negociacao
+                  Nova Negociação
                 </Button>
               </div>
             </CardContent>
@@ -477,7 +477,7 @@ function PipelineView({
               <div className="p-2 space-y-2 overflow-y-auto max-h-[500px]">
                 {items.length === 0 ? (
                   <p className="text-xs text-muted-foreground text-center py-8">
-                    Nenhuma negociacao
+                    Nenhuma negociação
                   </p>
                 ) : (
                   items.map((neg) => (
@@ -596,7 +596,7 @@ function TableView({
   return (
     <Card className="bg-white rounded-lg shadow-sm border">
       <CardHeader className="pb-4">
-        <CardTitle className="text-base">Negociacoes Estrategicas</CardTitle>
+        <CardTitle className="text-base">Negociações Estratégicas</CardTitle>
         {/* Filters */}
         <div className="flex flex-wrap gap-3 pt-2">
           <Select value={filterFase} onValueChange={setFilterFase}>
@@ -648,7 +648,7 @@ function TableView({
             <thead>
               <tr className="border-b bg-muted/30">
                 <th className="text-left px-4 py-3 font-medium text-muted-foreground whitespace-nowrap">
-                  Codigo
+                  Código
                 </th>
                 <th className="text-left px-4 py-3 font-medium text-muted-foreground whitespace-nowrap">
                   Credor
@@ -663,7 +663,7 @@ function TableView({
                   Status
                 </th>
                 <th className="text-right px-4 py-3 font-medium text-muted-foreground whitespace-nowrap">
-                  Valor Credito
+                  Valor Crédito
                 </th>
                 <th className="text-right px-4 py-3 font-medium text-muted-foreground whitespace-nowrap">
                   Proposta Atual
@@ -681,7 +681,7 @@ function TableView({
                   Prioridade
                 </th>
                 <th className="text-left px-4 py-3 font-medium text-muted-foreground whitespace-nowrap">
-                  Proxima Acao
+                  Próxima Ação
                 </th>
               </tr>
             </thead>
@@ -692,7 +692,7 @@ function TableView({
                     colSpan={12}
                     className="px-4 py-12 text-center text-muted-foreground"
                   >
-                    Nenhuma negociacao encontrada com os filtros selecionados.
+                    Nenhuma negociação encontrada com os filtros selecionados.
                   </td>
                 </tr>
               ) : (
@@ -805,7 +805,7 @@ function TableView({
                         </Badge>
                       </td>
 
-                      {/* Proxima Acao */}
+                      {/* Próxima Ação */}
                       <td className="px-4 py-3 whitespace-nowrap max-w-[200px]">
                         {n.proxima_acao ? (
                           <div className="text-xs">

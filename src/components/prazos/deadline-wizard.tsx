@@ -44,7 +44,7 @@ const ESTADOS_BRASIL = [
 ]
 
 const STEPS = [
-  { number: 1, label: "Dados Basicos", icon: FileText },
+  { number: 1, label: "Dados Básicos", icon: FileText },
   { number: 2, label: "Evento Gatilho", icon: CalendarDays },
   { number: 3, label: "Regras Especiais", icon: Scale },
   { number: 4, label: "Resultado", icon: Calculator },
@@ -562,11 +562,11 @@ export function DeadlineWizard({ open, onOpenChange, caseId, onSuccess }: Deadli
 
         {/* Title */}
         <div className="space-y-2">
-          <Label>Titulo *</Label>
+          <Label>Título *</Label>
           <Input
             value={formData.titulo}
             onChange={(e) => set("titulo", e.target.value)}
-            placeholder="Ex: Contestacao, Apelacao, Embargos de Declaracao..."
+            placeholder="Ex: Contestação, Apelação, Embargos de Declaração..."
           />
         </div>
 
@@ -617,7 +617,7 @@ export function DeadlineWizard({ open, onOpenChange, caseId, onSuccess }: Deadli
         {/* Responsible + Backup */}
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label>Responsavel *</Label>
+            <Label>Responsável *</Label>
             <Select value={formData.responsavel_id} onValueChange={(v) => set("responsavel_id", v)}>
               <SelectTrigger className="w-full">
                 <SelectValue placeholder="Selecionar" />
@@ -631,7 +631,7 @@ export function DeadlineWizard({ open, onOpenChange, caseId, onSuccess }: Deadli
             </Select>
           </div>
           <div className="space-y-2">
-            <Label>Responsavel backup</Label>
+            <Label>Responsável backup</Label>
             <Select value={formData.responsavel_backup_id} onValueChange={(v) => set("responsavel_backup_id", v)}>
               <SelectTrigger className="w-full">
                 <SelectValue placeholder="Opcional" />
@@ -1072,7 +1072,7 @@ export function DeadlineWizard({ open, onOpenChange, caseId, onSuccess }: Deadli
             )}
             <div className="flex items-center gap-3 text-sm">
               <div className="size-2 rounded-full bg-[#C9A961] shrink-0" />
-              <span className="text-[#666666] w-32 shrink-0">Inicio contagem:</span>
+              <span className="text-[#666666] w-32 shrink-0">Início contagem:</span>
               <span className="font-medium">
                 {startDate.toLocaleDateString("pt-BR")}
               </span>
@@ -1138,8 +1138,8 @@ export function DeadlineWizard({ open, onOpenChange, caseId, onSuccess }: Deadli
   // ============================================================
 
   const stepTitles: Record<number, { title: string; subtitle: string }> = {
-    1: { title: "Dados Basicos", subtitle: "Selecione o processo, tipo e responsavel pelo prazo" },
-    2: { title: "Evento Gatilho & Jurisdicao", subtitle: "Defina o marco inicial e parametros de contagem" },
+    1: { title: "Dados Básicos", subtitle: "Selecione o processo, tipo e responsável pelo prazo" },
+    2: { title: "Evento Gatilho & Jurisdição", subtitle: "Defina o marco inicial e parâmetros de contagem" },
     3: { title: "Regras Especiais", subtitle: "Selecione regras de contagem aplicaveis ao caso" },
     4: { title: "Resultado do Calculo", subtitle: "Confira as datas calculadas e salve o prazo" },
   }
@@ -1206,7 +1206,7 @@ export function DeadlineWizard({ open, onOpenChange, caseId, onSuccess }: Deadli
                   disabled={!validateStep(step)}
                   className="bg-[#C9A961] hover:bg-[#B8944E] text-white"
                 >
-                  Proximo
+                  Próximo
                   <ChevronRight className="size-4 ml-1" />
                 </Button>
               )}

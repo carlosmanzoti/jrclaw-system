@@ -363,7 +363,7 @@ export function ImportWizard({ open, onOpenChange, jrcId }: ImportWizardProps) {
                 </div>
                 <div className="flex-1">
                   <p className="text-sm font-semibold text-emerald-900 dark:text-emerald-100">
-                    Importacao Rapida
+                    Importação Rápida
                   </p>
                   <p className="mt-0.5 text-xs text-emerald-700 dark:text-emerald-300">
                     Processa direto com as colunas padrao. Ideal para planilhas
@@ -384,7 +384,7 @@ export function ImportWizard({ open, onOpenChange, jrcId }: ImportWizardProps) {
                 </div>
                 <div className="flex-1">
                   <p className="text-sm font-semibold text-violet-900 dark:text-violet-100">
-                    Importacao com IA
+                    Importação com IA
                   </p>
                   <p className="mt-0.5 text-xs text-violet-700 dark:text-violet-300">
                     Aceita planilhas em qualquer formato. A IA mapeia
@@ -412,7 +412,7 @@ export function ImportWizard({ open, onOpenChange, jrcId }: ImportWizardProps) {
             <div className="flex items-center gap-3">
               <CheckCircle2 className="h-8 w-8 text-emerald-600" />
               <div>
-                <p className="text-sm font-semibold">Importacao concluida</p>
+                <p className="text-sm font-semibold">Importação concluída</p>
                 <p className="text-xs text-muted-foreground">
                   {result.imported} de {result.total} credores importados
                 </p>

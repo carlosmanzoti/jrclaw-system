@@ -31,7 +31,7 @@ const TYPE_LABELS: Record<string, string> = {
   SUMULA: "Sumula",
   DOUTRINA: "Doutrina",
   ARTIGO: "Artigo",
-  LEGISLACAO: "Legislacao",
+  LEGISLACAO: "Legislação",
   MODELO_PECA: "Modelo de Peca",
   PARECER_INTERNO: "Parecer Interno",
   PESQUISA: "Pesquisa",
@@ -41,9 +41,9 @@ const TYPE_LABELS: Record<string, string> = {
   ENUNCIADO: "Enunciado",
   CONTRATO_MODELO: "Contrato Modelo",
   ESTRATEGIA: "Estrategia",
-  CASO_REFERENCIA: "Caso Referencia",
+  CASO_REFERENCIA: "Caso Referência",
   MATERIAL_ESTUDO: "Material de Estudo",
-  TABELA_REFERENCIA: "Tabela Referencia",
+  TABELA_REFERENCIA: "Tabela Referência",
   OUTRO: "Outro",
 }
 
@@ -69,9 +69,9 @@ const TYPE_COLORS: Record<string, string> = {
 }
 
 const AREA_LABELS: Record<string, string> = {
-  RECUPERACAO_JUDICIAL: "Recuperacao Judicial",
+  RECUPERACAO_JUDICIAL: "Recuperação Judicial",
   FALENCIA: "Falencia",
-  EXECUCAO: "Execucao",
+  EXECUCAO: "Execução",
   AGRONEGOCIO: "Agronegócio",
   TRABALHISTA: "Trabalhista",
   TRIBUTARIO: "Tributario",
@@ -508,7 +508,7 @@ export function BibliotecaSearchModal({
               Anterior
             </Button>
             <span className="text-[10px] text-[#666666]">
-              Pagina {page} de {totalPages}
+              Página {page} de {totalPages}
             </span>
             <Button
               variant="outline"
@@ -517,7 +517,7 @@ export function BibliotecaSearchModal({
               disabled={page >= totalPages}
               onClick={() => setPage((p) => p + 1)}
             >
-              Proxima
+              Próxima
             </Button>
           </div>
         )}

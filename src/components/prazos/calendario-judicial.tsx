@@ -61,8 +61,8 @@ const HOLIDAY_TYPE_LABELS: Record<string, string> = {
 const SUSPENSION_TYPE_LABELS: Record<string, string> = {
   RECESSO_DEZ_JAN: "Recesso Dez/Jan",
   FERIAS_JULHO: "Ferias Julho",
-  SUSPENSAO_PRAZOS_ART220: "Suspensao Art. 220 CPC",
-  SUSPENSAO_PORTARIA: "Suspensao por Portaria",
+  SUSPENSAO_PRAZOS_ART220: "Suspensão Art. 220 CPC",
+  SUSPENSAO_PORTARIA: "Suspensão por Portaria",
   INDISPONIBILIDADE_SISTEMA: "Indisponibilidade de Sistema",
   LUTO_OFICIAL: "Luto Oficial",
   CALAMIDADE: "Calamidade",
@@ -217,7 +217,7 @@ export function CalendarioJudicial() {
           <div>
             <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
               <Calendar className="size-6 text-[#C9A961]" />
-              Calendario Judicial {ano}
+              Calendário Judicial {ano}
             </h1>
             <p className="text-[#666666] mt-1">
               Feriados, suspensoes e recessos dos tribunais
@@ -359,7 +359,7 @@ export function CalendarioJudicial() {
             </div>
             <div className="flex items-center gap-1.5">
               <div className="size-3 rounded-sm bg-blue-400" />
-              <span>Suspensao</span>
+              <span>Suspensão</span>
             </div>
             <div className="flex items-center gap-1.5">
               <div className="size-3 rounded-sm bg-gray-200" />
@@ -520,7 +520,7 @@ export function CalendarioJudicial() {
         <CardContent>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
             <div className="space-y-1.5">
-              <Label className="text-xs">Data Inicio</Label>
+              <Label className="text-xs">Data Início</Label>
               <Input
                 type="date"
                 value={calcDataInicio}
@@ -724,7 +724,7 @@ function getHolidayTooltip(
     parts.push(`${holiday.nome} (${HOLIDAY_TYPE_LABELS[holiday.tipo] || holiday.tipo})`)
   }
   if (isInSuspension(date)) {
-    parts.push("Periodo de suspensao")
+    parts.push("Período de suspensão")
   }
 
   return parts.join(" | ")

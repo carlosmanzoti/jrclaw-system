@@ -129,8 +129,8 @@ interface MonitoringItem {
 
 const CASE_TYPES = [
   { value: "CUMPRIMENTO_SENTENCA", label: "Cumprimento de Sentenca" },
-  { value: "EXECUCAO_TITULO_EXTRAJUDICIAL", label: "Execucao Titulo Extrajudicial" },
-  { value: "EXECUCAO_FISCAL", label: "Execucao Fiscal" },
+  { value: "EXECUCAO_TITULO_EXTRAJUDICIAL", label: "Execução Título Extrajudicial" },
+  { value: "EXECUCAO_FISCAL", label: "Execução Fiscal" },
   { value: "MONITORIA", label: "Monitoria" },
   { value: "BUSCA_APREENSAO", label: "Busca e Apreensao" },
   { value: "COBRANCA_EXTRAJUDICIAL", label: "Cobranca Extrajudicial" },
@@ -143,7 +143,7 @@ const TITULO_TYPES = [
   { value: "CONTRATO", label: "Contrato" },
   { value: "SENTENCA", label: "Sentenca Judicial" },
   { value: "CDA", label: "Certidao de Divida Ativa" },
-  { value: "CCB", label: "Cedula de Credito Bancario" },
+  { value: "CCB", label: "Cédula de Crédito Bancário" },
   { value: "OUTRO", label: "Outro" },
 ];
 
@@ -157,7 +157,7 @@ const CORRECAO_INDICES = [
 const PRIORITY_OPTIONS = [
   { value: "CRITICA", label: "Critica", color: "#DC2626" },
   { value: "ALTA", label: "Alta", color: "#EA580C" },
-  { value: "MEDIA", label: "Media", color: "#C9A961" },
+  { value: "MEDIA", label: "Média", color: "#C9A961" },
   { value: "BAIXA", label: "Baixa", color: "#16A34A" },
 ];
 
@@ -180,9 +180,9 @@ const FREQUENCY_OPTIONS = [
 ];
 
 const STEP_LABELS = [
-  "Devedor e Credito",
-  "Avaliacao IA",
-  "Corresponsaveis",
+  "Devedor e Crédito",
+  "Avaliação IA",
+  "Corresponsáveis",
   "Monitoramento",
 ];
 
@@ -767,7 +767,7 @@ export function RecoveryWizard({ onClose, onSuccess }: RecoveryWizardProps) {
                         : ""
                     }
                   >
-                    Pessoa Fisica
+                    Pessoa Física
                   </Button>
                   <Button
                     type="button"
@@ -780,7 +780,7 @@ export function RecoveryWizard({ onClose, onSuccess }: RecoveryWizardProps) {
                         : ""
                     }
                   >
-                    Pessoa Juridica
+                    Pessoa Jurídica
                   </Button>
                 </div>
 
@@ -812,13 +812,13 @@ export function RecoveryWizard({ onClose, onSuccess }: RecoveryWizardProps) {
                     />
                   </div>
                   <div className="space-y-1">
-                    <Label className="text-xs text-[#666666]">Endereco</Label>
+                    <Label className="text-xs text-[#666666]">Endereço</Label>
                     <Input
                       value={devedor.endereco}
                       onChange={(e) =>
                         setDevedor((p) => ({ ...p, endereco: e.target.value }))
                       }
-                      placeholder="Endereco completo"
+                      placeholder="Endereço completo"
                       className="bg-[#F2F2F2] border-[#E5E5E5]"
                     />
                   </div>
@@ -861,7 +861,7 @@ export function RecoveryWizard({ onClose, onSuccess }: RecoveryWizardProps) {
                 {devedor.tipo === "PJ" && (
                   <div className="space-y-3 border-t border-[#E5E5E5] pt-3 mt-2">
                     <p className="text-xs font-medium text-[#999999] uppercase tracking-wide">
-                      Informacoes da pessoa juridica
+                      Informações da pessoa jurídica
                     </p>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div className="space-y-1">
@@ -887,7 +887,7 @@ export function RecoveryWizard({ onClose, onSuccess }: RecoveryWizardProps) {
                           onChange={(e) =>
                             setDevedor((p) => ({ ...p, cnae: e.target.value }))
                           }
-                          placeholder="Codigo CNAE"
+                          placeholder="Código CNAE"
                           className="bg-[#F2F2F2] border-[#E5E5E5]"
                         />
                       </div>
@@ -981,13 +981,13 @@ export function RecoveryWizard({ onClose, onSuccess }: RecoveryWizardProps) {
                 </Select>
               </div>
               <div className="space-y-1">
-                <Label className="text-xs text-[#666666]">Numero</Label>
+                <Label className="text-xs text-[#666666]">Número</Label>
                 <Input
                   value={titulo.numero}
                   onChange={(e) =>
                     setTitulo((p) => ({ ...p, numero: e.target.value }))
                   }
-                  placeholder="Numero do titulo"
+                  placeholder="Número do título"
                   className="bg-[#F2F2F2] border-[#E5E5E5]"
                 />
               </div>
@@ -1292,10 +1292,10 @@ export function RecoveryWizard({ onClose, onSuccess }: RecoveryWizardProps) {
                 </Select>
               </div>
               <div className="space-y-1">
-                <Label className="text-xs text-[#666666]">Responsavel</Label>
+                <Label className="text-xs text-[#666666]">Responsável</Label>
                 <Select value={responsavelId} onValueChange={setResponsavelId}>
                   <SelectTrigger className="w-full bg-[#F2F2F2] border-[#E5E5E5]">
-                    <SelectValue placeholder="Selecionar responsavel" />
+                    <SelectValue placeholder="Selecionar responsável" />
                   </SelectTrigger>
                   <SelectContent>
                     {((usersQuery.data ?? []) as Record<string, any>[]).map(
@@ -1984,7 +1984,7 @@ export function RecoveryWizard({ onClose, onSuccess }: RecoveryWizardProps) {
         <div className="shrink-0 px-6 pt-6 pb-4 border-b border-[#E5E5E5]">
           <div className="flex items-center justify-between mb-4">
             <DialogTitle className="text-lg font-bold text-[#2A2A2A]">
-              Novo Caso de Recuperacao de Credito
+              Novo Caso de Recuperação de Crédito
             </DialogTitle>
             <Button
               type="button"

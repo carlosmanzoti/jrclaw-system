@@ -97,7 +97,7 @@ export function PrazosLayout() {
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Prazos & Calendario Judicial</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Prazos & Calendário Judicial</h1>
           <p className="text-[#666666]">
             Controle de prazos processuais, fatais e ordinarios
           </p>
@@ -112,7 +112,7 @@ export function PrazosLayout() {
           <Button variant="outline" size="sm" asChild>
             <Link href="/prazos/calendario-judicial">
               <Scale className="mr-1.5 size-3.5" />
-              Calendario Judicial
+              Calendário Judicial
             </Link>
           </Button>
           <Button onClick={() => setNewDialogOpen(true)}>
@@ -137,7 +137,7 @@ export function PrazosLayout() {
             <Timer className="size-3.5" />Timeline
           </TabsTrigger>
           <TabsTrigger value="calendario" className="gap-1.5">
-            <CalendarIcon className="size-3.5" />Calendario
+            <CalendarIcon className="size-3.5" />Calendário
           </TabsTrigger>
         </TabsList>
 
@@ -191,7 +191,7 @@ function UrgencyCards() {
       pulse: false,
     },
     {
-      label: "Proximos 3 Dias",
+      label: "Próximos 3 Dias",
       value: stats?.tomorrow ?? 0,
       icon: AlertTriangle,
       bg: "bg-orange-500",
@@ -207,7 +207,7 @@ function UrgencyCards() {
       pulse: false,
     },
     {
-      label: "Proximos 30 Dias",
+      label: "Próximos 30 Dias",
       value: stats?.next30 ?? 0,
       icon: TrendingUp,
       bg: "bg-[#28A745]",
@@ -275,7 +275,7 @@ function PainelTab() {
           <div className="flex items-center justify-between">
             <CardTitle className="text-base flex items-center gap-2">
               <Flame className="size-4 text-[#DC3545]" />
-              Proximos Prazos Fatais
+              Próximos Prazos Fatais
             </CardTitle>
             <Badge variant="secondary" className="bg-[#DC3545]/10 text-[#DC3545]">
               {fatalDeadlines.length} pendente(s)
@@ -351,13 +351,13 @@ function PainelTab() {
         </CardContent>
       </Card>
 
-      {/* Prazos que Precisam de Atencao */}
+      {/* Prazos que Precisam de Atenção */}
       <Card>
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
             <CardTitle className="text-base flex items-center gap-2">
               <AlertTriangle className="size-4 text-orange-500" />
-              Prazos que Precisam de Atencao
+              Prazos que Precisam de Atenção
             </CardTitle>
             <Badge variant="secondary" className="bg-orange-100 text-orange-700">
               {attentionDeadlines.length}
@@ -383,10 +383,10 @@ function PainelTab() {
                   <TableRow>
                     <TableHead className="w-[4px] p-0" />
                     <TableHead>Tipo</TableHead>
-                    <TableHead>Descricao</TableHead>
+                    <TableHead>Descrição</TableHead>
                     <TableHead>Processo</TableHead>
                     <TableHead>Data Limite</TableHead>
-                    <TableHead>Responsavel</TableHead>
+                    <TableHead>Responsável</TableHead>
                     <TableHead className="text-right">Dias</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -646,9 +646,9 @@ function TodosOsPrazosTab() {
             </Select>
           </div>
           <div className="space-y-1">
-            <Label className="text-xs">Responsavel</Label>
+            <Label className="text-xs">Responsável</Label>
             <Select value={responsavelFilter} onValueChange={(v) => { setResponsavelFilter(v); setPage(1) }}>
-              <SelectTrigger className="w-[180px] bg-white"><SelectValue placeholder="Responsavel" /></SelectTrigger>
+              <SelectTrigger className="w-[180px] bg-white"><SelectValue placeholder="Responsável" /></SelectTrigger>
               <SelectContent>
                 {users?.map((u) => <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>)}
               </SelectContent>
@@ -698,9 +698,9 @@ function TodosOsPrazosTab() {
                 <TableHead className="w-[4px] p-0" />
                 <TableHead>Tipo</TableHead>
                 <TableHead>Processo / Cliente</TableHead>
-                <TableHead>Descricao</TableHead>
+                <TableHead>Descrição</TableHead>
                 <TableHead>Data Limite</TableHead>
-                <TableHead>Responsavel</TableHead>
+                <TableHead>Responsável</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Dias</TableHead>
                 <TableHead className="w-[100px]" />
@@ -962,7 +962,7 @@ function NewDeadlineDialog({ open, onOpenChange }: { open: boolean; onOpenChange
               </Select>
             </div>
             <div className="space-y-2">
-              <Label>Responsavel *</Label>
+              <Label>Responsável *</Label>
               <Select value={formData.responsavel_id} onValueChange={(v) => set("responsavel_id", v)}>
                 <SelectTrigger><SelectValue placeholder="Selecionar" /></SelectTrigger>
                 <SelectContent>
@@ -973,7 +973,7 @@ function NewDeadlineDialog({ open, onOpenChange }: { open: boolean; onOpenChange
           </div>
 
           <div className="space-y-2">
-            <Label>Descricao *</Label>
+            <Label>Descrição *</Label>
             <Input value={formData.descricao} onChange={(e) => set("descricao", e.target.value)} placeholder="Descreva o prazo..." />
           </div>
 

@@ -673,11 +673,11 @@ export function ConfeccaoGenerate({
 
             {/* Row 2: Title */}
             <div className="space-y-1.5">
-              <Label className="text-sm">Titulo (opcional)</Label>
+              <Label className="text-sm">Título (opcional)</Label>
               <Input
                 value={titulo}
                 onChange={(e) => setTitulo(e.target.value)}
-                placeholder="Titulo do documento"
+                placeholder="Título do documento"
                 className="h-10"
               />
             </div>
@@ -697,14 +697,14 @@ export function ConfeccaoGenerate({
             {/* Row 4: Extension + Destinatário + switches (compact row) */}
             <div className="flex flex-wrap items-end gap-4">
               <div className="space-y-1 w-[180px]">
-                <Label className="text-xs">Extensao</Label>
+                <Label className="text-xs">Extensão</Label>
                 <Select value={extensao} onValueChange={setExtensao}>
                   <SelectTrigger className="h-9 text-xs">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="conciso">Conciso (1-3 pg)</SelectItem>
-                    <SelectItem value="padrao">Padrao (5-10 pg)</SelectItem>
+                    <SelectItem value="padrao">Padrão (5-10 pg)</SelectItem>
                     <SelectItem value="detalhado">Detalhado (10-15 pg)</SelectItem>
                     <SelectItem value="exaustivo">Exaustivo (15+ pg)</SelectItem>
                   </SelectContent>
@@ -781,7 +781,7 @@ export function ConfeccaoGenerate({
               >
                 {showRefsSection ? <ChevronDown className="size-3.5" /> : <ChevronRight className="size-3.5" />}
                 <BookOpen className="size-3.5" />
-                Referencias da Biblioteca
+                Referências da Biblioteca
                 {bibliotecaRefs.length > 0 && (
                   <Badge variant="secondary" className="text-[10px] ml-1 px-1.5">
                     {bibliotecaRefs.length}

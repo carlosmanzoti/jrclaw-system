@@ -57,16 +57,16 @@ import {
 // ========== CONSTANTS ==========
 
 const GUARANTEE_LABELS: Record<string, string> = {
-  ALIENACAO_FIDUCIARIA_IMOVEL: "Alienacao Fiduciaria de Imovel",
-  ALIENACAO_FIDUCIARIA_MOVEL: "Alienacao Fiduciaria de Movel",
-  CESSAO_FIDUCIARIA_RECEBIVEIS: "Cessao Fiduciaria de Recebiveis",
-  CESSAO_FIDUCIARIA_DIREITOS_CREDITORIOS: "Cessao Fiduciaria de Dir. Creditorios",
+  ALIENACAO_FIDUCIARIA_IMOVEL: "Alienação Fiduciária de Imóvel",
+  ALIENACAO_FIDUCIARIA_MOVEL: "Alienação Fiduciária de Móvel",
+  CESSAO_FIDUCIARIA_RECEBIVEIS: "Cessão Fiduciária de Recebíveis",
+  CESSAO_FIDUCIARIA_DIREITOS_CREDITORIOS: "Cessão Fiduciária de Dir. Creditórios",
   HIPOTECA: "Hipoteca",
   PENHOR_AGRICOLA: "Penhor Agricola",
   PENHOR_MERCANTIL: "Penhor Mercantil",
   RESERVA_DOMINIO: "Reserva de Dominio",
   ARRENDAMENTO_MERCANTIL: "Arrendamento Mercantil (Leasing)",
-  CESSAO_FIDUCIARIA_TITULOS: "Cessao Fiduciaria de Titulos",
+  CESSAO_FIDUCIARIA_TITULOS: "Cessão Fiduciária de Títulos",
   OUTRO: "Outro",
 };
 
@@ -86,11 +86,11 @@ const GUARANTEE_COLORS: Record<string, string> = {
 
 const NEG_STATUS_LABELS: Record<string, string> = {
   NAO_INICIADA: "Nao Iniciada",
-  EM_NEGOCIACAO: "Em Negociacao",
+  EM_NEGOCIACAO: "Em Negociação",
   PROPOSTA_ENVIADA: "Proposta Enviada",
   CONTRAPROPOSTA: "Contraproposta",
   ACORDO: "Acordo",
-  EXECUCAO_GARANTIA: "Execucao da Garantia",
+  EXECUCAO_GARANTIA: "Execução da Garantia",
   BUSCA_APREENSAO_JUDICIAL: "Busca e Apreensao",
 };
 
@@ -116,7 +116,7 @@ const SITUACAO_LABELS: Record<string, string> = {
 
 const RISCO_LABELS: Record<string, string> = {
   BAIXO: "Baixo",
-  MEDIO: "Medio",
+  MEDIO: "Médio",
   ALTO: "Alto",
   CRITICO: "Critico",
 };
@@ -130,7 +130,7 @@ const RISCO_COLORS: Record<string, string> = {
 
 const IMPACTO_LABELS: Record<string, string> = {
   BAIXO: "Baixo",
-  MEDIO: "Medio",
+  MEDIO: "Médio",
   ALTO: "Alto",
   CRITICO: "Critico",
 };
@@ -143,9 +143,9 @@ const EVENT_TYPE_LABELS: Record<string, string> = {
   PROPOSTA_ENVIADA: "Proposta Enviada",
   CONTRAPROPOSTA_RECEBIDA: "Contraproposta Recebida",
   ACORDO: "Acordo",
-  NOTIFICACAO_JUDICIAL: "Notificacao Judicial",
+  NOTIFICACAO_JUDICIAL: "Notificação Judicial",
   BUSCA_APREENSAO: "Busca e Apreensao",
-  OBSERVACAO: "Observacao",
+  OBSERVACAO: "Observação",
 };
 
 const EVENT_TYPE_ICONS: Record<string, typeof Phone> = {
@@ -255,7 +255,7 @@ function KPICards({ summary }: { summary: ExtraconcursalSummary }) {
 
   const kpis = [
     {
-      title: "Total Creditos Extraconcursais",
+      title: "Total Créditos Extraconcursais",
       value: formatBRL(summary.total_credito),
       icon: DollarSign,
       description: "Soma de todos os creditos",
@@ -267,14 +267,14 @@ function KPICards({ summary }: { summary: ExtraconcursalSummary }) {
       description: "Valor de avaliacao dos bens",
     },
     {
-      title: "Exposicao Liquida",
+      title: "Exposição Líquida",
       value: formatBRL(summary.exposicao),
       icon: TrendingDown,
       description: exposicao > 0 ? "Descoberto" : "Coberto pelas garantias",
       className: exposicao > 0 ? "text-red-600" : "text-emerald-600",
     },
     {
-      title: "Em Negociacao",
+      title: "Em Negociação",
       value: String(summary.em_negociacao),
       icon: Handshake,
       description: "Credores em tratativa",
@@ -350,12 +350,12 @@ function CreditorsTable({
           <tr className="border-b">
             <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground">Credor</th>
             <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground">Tipo Garantia</th>
-            <th className="px-3 py-2 text-right text-xs font-medium text-muted-foreground">Valor Credito</th>
+            <th className="px-3 py-2 text-right text-xs font-medium text-muted-foreground">Valor Crédito</th>
             <th className="px-3 py-2 text-right text-xs font-medium text-muted-foreground">Valor Garantia</th>
             <th className="px-3 py-2 text-right text-xs font-medium text-muted-foreground">Exposicao</th>
             <th className="px-3 py-2 text-center text-xs font-medium text-muted-foreground">Essencial?</th>
             <th className="px-3 py-2 text-center text-xs font-medium text-muted-foreground">Stay Period</th>
-            <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground">Status Negociacao</th>
+            <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground">Status Negociação</th>
             <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground">Risco</th>
           </tr>
         </thead>
@@ -619,7 +619,7 @@ function CreateCreditorDialog({
               </Select>
             </div>
             <div className="space-y-2">
-              <Label>Situacao do Bem</Label>
+              <Label>Situação do Bem</Label>
               <Select value={situacaoBem} onValueChange={setSituacaoBem}>
                 <SelectTrigger>
                   <SelectValue />
@@ -658,12 +658,12 @@ function CreateCreditorDialog({
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="ec-localizacao">Localizacao do Bem</Label>
+              <Label htmlFor="ec-localizacao">Localização do Bem</Label>
               <Input
                 id="ec-localizacao"
                 value={localizacaoBem}
                 onChange={(e) => setLocalizacaoBem(e.target.value)}
-                placeholder="Endereco ou localizacao"
+                placeholder="Endereço ou localização"
               />
             </div>
           </div>
@@ -757,7 +757,7 @@ function CreateCreditorDialog({
 
           {/* Notes */}
           <div className="space-y-2">
-            <Label htmlFor="ec-obs">Observacoes</Label>
+            <Label htmlFor="ec-obs">Observações</Label>
             <Textarea
               id="ec-obs"
               value={observacoes}
@@ -986,7 +986,7 @@ function CreditorDetailSheet({
             <CardContent>
               <div className="grid grid-cols-3 gap-4 text-center">
                 <div>
-                  <p className="text-[10px] text-muted-foreground">Credito Total</p>
+                  <p className="text-[10px] text-muted-foreground">Crédito Total</p>
                   <p className="text-sm font-bold">{formatBRL(creditor.valor_total)}</p>
                 </div>
                 <div>
@@ -994,7 +994,7 @@ function CreditorDetailSheet({
                   <p className="text-sm font-bold">{formatBRL(creditor.avaliacao_valor)}</p>
                 </div>
                 <div>
-                  <p className="text-[10px] text-muted-foreground">Exposicao</p>
+                  <p className="text-[10px] text-muted-foreground">Exposição</p>
                   <p
                     className={`text-sm font-bold ${
                       exposure > 0 ? "text-red-600" : "text-emerald-600"
@@ -1010,7 +1010,7 @@ function CreditorDetailSheet({
 
               <div className="mt-4 grid grid-cols-2 gap-4">
                 <div className="rounded-lg border p-3 text-center">
-                  <p className="text-[10px] text-muted-foreground">Situacao do Bem</p>
+                  <p className="text-[10px] text-muted-foreground">Situação do Bem</p>
                   <p className="text-xs font-medium">
                     {SITUACAO_LABELS[creditor.situacao_bem] || creditor.situacao_bem}
                   </p>
@@ -1040,7 +1040,7 @@ function CreditorDetailSheet({
 
               {creditor.localizacao_bem && (
                 <p className="mt-1 text-xs text-muted-foreground">
-                  <span className="font-medium">Localizacao:</span> {creditor.localizacao_bem}
+                  <span className="font-medium">Localização:</span> {creditor.localizacao_bem}
                 </p>
               )}
 
@@ -1080,7 +1080,7 @@ function CreditorDetailSheet({
           {/* Observations */}
           {creditor.observacoes && (
             <div className="rounded-lg bg-muted/50 p-3">
-              <p className="text-[10px] font-medium text-muted-foreground mb-1">Observacoes</p>
+              <p className="text-[10px] font-medium text-muted-foreground mb-1">Observações</p>
               <p className="text-xs">{creditor.observacoes}</p>
             </div>
           )}
@@ -1091,7 +1091,7 @@ function CreditorDetailSheet({
               <div className="flex items-center justify-between">
                 <CardTitle className="flex items-center gap-2 text-sm">
                   <MessageSquare className="h-4 w-4" />
-                  Historico de Negociacao
+                  Histórico de Negociação
                 </CardTitle>
                 <Button
                   size="sm"

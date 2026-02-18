@@ -206,7 +206,7 @@ export function ProjectDetail({ projectId }: ProjectDetailProps) {
             </Card>
             <Card>
               <CardContent className="pt-4">
-                <div className="text-sm text-[#666666]">Periodo</div>
+                <div className="text-sm text-[#666666]">Período</div>
                 <div className="text-sm font-medium mt-1">
                   {project.data_inicio ? new Date(project.data_inicio).toLocaleDateString("pt-BR") : "\u2014"}
                   {" \u2192 "}
@@ -427,7 +427,7 @@ function TasksTab({ project, users, projectId }: { project: any; users: Array<{ 
     { key: "BACKLOG", label: "Backlog" },
     { key: "A_FAZER", label: "A Fazer" },
     { key: "EM_ANDAMENTO", label: "Em Andamento" },
-    { key: "EM_REVISAO", label: "Revisao" },
+    { key: "EM_REVISAO", label: "Revisão" },
     { key: "AGUARDANDO", label: "Aguardando" },
     { key: "CONCLUIDA", label: "Concluida" },
   ]
@@ -679,7 +679,7 @@ function MilestonesTab({ project, projectId }: { project: any; projectId: string
         <Card>
           <CardContent className="pt-4 space-y-3">
             <div className="grid grid-cols-2 gap-3">
-              <div><Label>Titulo *</Label><Input value={newTitulo} onChange={(e) => setNewTitulo(e.target.value)} placeholder="Ex: Alvara expedido" /></div>
+              <div><Label>Título *</Label><Input value={newTitulo} onChange={(e) => setNewTitulo(e.target.value)} placeholder="Ex: Alvara expedido" /></div>
               <div><Label>Data Prevista</Label><Input type="date" value={newData} onChange={(e) => setNewData(e.target.value)} /></div>
             </div>
             <div><Label>Descrição</Label><Textarea value={newDescricao} onChange={(e) => setNewDescricao(e.target.value)} rows={2} /></div>
@@ -991,7 +991,7 @@ function ComunicacoesTab({ project, projectId }: { project: any; projectId: stri
 
   const COMM_ICONS: Record<string, typeof Phone> = { TELEFONEMA: Phone, EMAIL: Mail, REUNIAO: Users, NEGOCIACAO: Target }
   const COMM_COLORS: Record<string, string> = { TELEFONEMA: "bg-[#28A745]/10 text-[#28A745]", EMAIL: "bg-[#17A2B8]/10 text-[#17A2B8]", REUNIAO: "bg-[#C9A961]/10 text-[#C9A961]", NEGOCIACAO: "bg-[#C9A961]/10 text-[#C9A961]" }
-  const COMM_LABELS: Record<string, string> = { TELEFONEMA: "Telefonema", EMAIL: "E-mail", REUNIAO: "Reuniao", NEGOCIACAO: "Negociacao" }
+  const COMM_LABELS: Record<string, string> = { TELEFONEMA: "Telefonema", EMAIL: "E-mail", REUNIAO: "Reunião", NEGOCIACAO: "Negociação" }
 
   const tipoMap: Record<string, string> = { telefonema: "TELEFONEMA", email: "EMAIL", reuniao: "REUNIAO" }
   const modalTitles: Record<string, string> = { telefonema: "Registrar Telefonema", email: "Registrar E-mail", reuniao: "Registrar Reuniao" }

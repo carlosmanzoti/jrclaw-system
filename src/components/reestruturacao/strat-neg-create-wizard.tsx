@@ -48,95 +48,95 @@ import {
 // ============================================================
 
 const TIPO_LABELS: Record<string, string> = {
-  INDIVIDUAL: "Individual (Credor Unico)",
+  INDIVIDUAL: "Individual (Credor Único)",
   COLETIVA_CLASSE: "Coletiva por Classe",
-  COLETIVA_COMITE: "Coletiva por Comite",
+  COLETIVA_COMITE: "Coletiva por Comitê",
   EXTRAJUDICIAL: "Extrajudicial",
 };
 
 const CLASSE_LABELS: Record<string, string> = {
   I: "Classe I - Trabalhista",
   II: "Classe II - Garantia Real",
-  III: "Classe III - Quirografario",
+  III: "Classe III - Quirografário",
   IV: "Classe IV - ME/EPP",
 };
 
 const IMPORTANCIA_LABELS: Record<number, string> = {
   1: "Indiferente",
-  2: "Desejavel",
+  2: "Desejável",
   3: "Importante",
   4: "Muito Importante",
   5: "Essencial",
 };
 
 const FLEXIBILIDADE_LABELS: Record<number, string> = {
-  1: "Inflexivel",
-  2: "Pouco Flexivel",
+  1: "Inflexível",
+  2: "Pouco Flexível",
   3: "Moderado",
-  4: "Flexivel",
-  5: "Muito Flexivel",
+  4: "Flexível",
+  5: "Muito Flexível",
 };
 
 const BATNA_ALTERNATIVES_DEVEDOR = [
   "Plano de RJ sem acordo individual",
   "Cram down judicial",
-  "Novacao compulsoria via PRJ",
-  "Alienacao de ativos UPI",
-  "Falencia (cenario extremo)",
+  "Novação compulsória via PRJ",
+  "Alienação de ativos UPI",
+  "Falência (cenário extremo)",
   "Acordo com outros credores para pressionar",
-  "Mediacao/Conciliacao judicial",
-  "Pagamento parcial via precatorio",
-  "Conversao de divida em participacao",
-  "Renegociacao direta apos homologacao",
+  "Mediação/Conciliação judicial",
+  "Pagamento parcial via precatório",
+  "Conversão de dívida em participação",
+  "Renegociação direta após homologação",
 ];
 
 const BATNA_ALTERNATIVES_CREDOR = [
-  "Habilitacao/impugnacao de credito",
-  "Acao de execucao individual",
-  "Pedido de falencia",
-  "Excussao de garantia real",
-  "Cessao de credito a terceiros",
-  "Formacao de comite de credores",
-  "Voto contrario ao PRJ",
-  "Acao revocatoria/pauliana",
-  "Denuncia ao MP de fraude",
-  "Aguardar inadimplencia do plano",
+  "Habilitação/impugnação de crédito",
+  "Ação de execução individual",
+  "Pedido de falência",
+  "Excussão de garantia real",
+  "Cessão de crédito a terceiros",
+  "Formação de comitê de credores",
+  "Voto contrário ao PRJ",
+  "Ação revocatória/pauliana",
+  "Denúncia ao MP de fraude",
+  "Aguardar inadimplência do plano",
 ];
 
 const CREATIVE_OPTIONS_TEMPLATES = [
-  { id: "haircut", label: "Haircut (desconto no principal)", descricao: "Reducao percentual do valor principal do credito" },
-  { id: "carencia", label: "Periodo de carencia", descricao: "Prazo sem pagamento de principal e/ou juros" },
-  { id: "alongamento", label: "Alongamento de prazo", descricao: "Extensao do prazo de pagamento" },
-  { id: "taxa_reduzida", label: "Reducao de taxa de juros", descricao: "Juros abaixo do contratual original" },
-  { id: "debt_equity", label: "Conversao divida-equity", descricao: "Transformacao de parte da divida em participacao societaria" },
-  { id: "dacao_pagamento", label: "Dacao em pagamento", descricao: "Entrega de ativo em quitacao parcial ou total" },
-  { id: "upi", label: "Pagamento via UPI", descricao: "Alienacao de unidade produtiva isolada" },
+  { id: "haircut", label: "Haircut (desconto no principal)", descricao: "Redução percentual do valor principal do crédito" },
+  { id: "carencia", label: "Período de carência", descricao: "Prazo sem pagamento de principal e/ou juros" },
+  { id: "alongamento", label: "Alongamento de prazo", descricao: "Extensão do prazo de pagamento" },
+  { id: "taxa_reduzida", label: "Redução de taxa de juros", descricao: "Juros abaixo do contratual original" },
+  { id: "debt_equity", label: "Conversão dívida-equity", descricao: "Transformação de parte da dívida em participação societária" },
+  { id: "dacao_pagamento", label: "Dação em pagamento", descricao: "Entrega de ativo em quitação parcial ou total" },
+  { id: "upi", label: "Pagamento via UPI", descricao: "Alienação de unidade produtiva isolada" },
   { id: "condicional", label: "Pagamento condicional (earn-out)", descricao: "Pagamento adicional condicionado a performance futura" },
   { id: "garantia_adicional", label: "Garantia adicional", descricao: "Oferecimento de garantia suplementar" },
-  { id: "prioridade_pagamento", label: "Prioridade no pagamento", descricao: "Pagamento antecipado em relacao a outros credores" },
-  { id: "pagamento_unico", label: "Pagamento unico com desconto", descricao: "Liquidacao a vista com deducao significativa" },
-  { id: "cessao_credito", label: "Cessao de creditos recebiveis", descricao: "Vinculacao de recebiveis como fonte de pagamento" },
+  { id: "prioridade_pagamento", label: "Prioridade no pagamento", descricao: "Pagamento antecipado em relação a outros credores" },
+  { id: "pagamento_unico", label: "Pagamento único com desconto", descricao: "Liquidação à vista com dedução significativa" },
+  { id: "cessao_credito", label: "Cessão de créditos recebíveis", descricao: "Vinculação de recebíveis como fonte de pagamento" },
 ];
 
 const TKI_PROFILE_DESCRIPTIONS: Record<string, string> = {
-  COMPETITIVO: "Busca maximizar ganhos proprios, negocia com firmeza, usa pressao e prazo. Foca em posicoes, nao em interesses.",
-  COLABORATIVO: "Busca solucoes ganha-ganha, disposto a explorar opcoes criativas. Valoriza relacionamento e resultado.",
-  COMPROMISSO: "Aceita ceder algo para ganhar algo. Busca ponto medio rapido. Pragmatico.",
-  EVASIVO: "Evita confronto, adia decisoes, delega. Pode estar inseguro ou sem autonomia para decidir.",
+  COMPETITIVO: "Busca maximizar ganhos próprios, negocia com firmeza, usa pressão e prazo. Foca em posições, não em interesses.",
+  COLABORATIVO: "Busca soluções ganha-ganha, disposto a explorar opções criativas. Valoriza relacionamento e resultado.",
+  COMPROMISSO: "Aceita ceder algo para ganhar algo. Busca ponto médio rápido. Pragmático.",
+  EVASIVO: "Evita confronto, adia decisões, delega. Pode estar inseguro ou sem autonomia para decidir.",
   ACOMODATIVO: "Prioriza o relacionamento sobre o resultado. Cede facilmente, evita conflito.",
 };
 
 const TKI_PROFILE_COUNTER_STRATEGY: Record<string, string> = {
-  COMPETITIVO: "Mantenha firmeza, mostre BATNA forte, use dados objetivos. Nao faca concessoes sem contrapartida. Ancoragem alta.",
-  COLABORATIVO: "Explore opcoes criativas juntos, compartilhe interesses (seletivamente). Construa confianca, mas proteja limites.",
-  COMPROMISSO: "Prepare-se para split the difference. Comece com margem. Oferte pacotes, nao valores isolados.",
-  EVASIVO: "Crie urgencia (deadline), facilite a decisao, reduza risco percebido. Identifique o verdadeiro decisor.",
-  ACOMODATIVO: "Nao abuse da boa vontade (risco de arrependimento/renegociacao). Formalize rapido. Oferte seguranca no acordo.",
+  COMPETITIVO: "Mantenha firmeza, mostre BATNA forte, use dados objetivos. Não faça concessões sem contrapartida. Ancoragem alta.",
+  COLABORATIVO: "Explore opções criativas juntos, compartilhe interesses (seletivamente). Construa confiança, mas proteja limites.",
+  COMPROMISSO: "Prepare-se para split the difference. Comece com margem. Oferte pacotes, não valores isolados.",
+  EVASIVO: "Crie urgência (deadline), facilite a decisão, reduza risco percebido. Identifique o verdadeiro decisor.",
+  ACOMODATIVO: "Não abuse da boa vontade (risco de arrependimento/renegociação). Formalize rápido. Oferte segurança no acordo.",
 };
 
 const VOSS_NEGOTIATOR_DESCRIPTIONS: Record<string, string> = {
-  ANALISTA: "Metodico, orientado a dados, precisa de tempo para decidir. Valoriza precisao e detalhes. Evita emocao. Perguntas detalhadas, e-mails longos.",
-  ACOMODADOR: "Sociavel, orientado a relacionamento, tempo = relacao. Quer ser ouvido e validado. Pode prometer e nao cumprir. Otimista.",
+  ANALISTA: "Metódico, orientado a dados, precisa de tempo para decidir. Valoriza precisão e detalhes. Evita emoção. Perguntas detalhadas, e-mails longos.",
+  ACOMODADOR: "Sociável, orientado a relacionamento, tempo = relação. Quer ser ouvido e validado. Pode prometer e não cumprir. Otimista.",
   ASSERTIVO: "Direto, orientado a resultado, tempo = dinheiro. Quer ser respeitado. Precisa sentir que ganhou. Comunica de forma curta e firme.",
 };
 
@@ -212,10 +212,10 @@ interface Props {
 // ============================================================
 
 const STEPS = [
-  { number: 1, label: "Identificacao", icon: Target },
+  { number: 1, label: "Identificação", icon: Target },
   { number: 2, label: "Harvard", icon: Users },
   { number: 3, label: "Perfil Negociador", icon: Brain },
-  { number: 4, label: "Plano Tatico", icon: Swords },
+  { number: 4, label: "Plano Tático", icon: Swords },
   { number: 5, label: "One-Sheet", icon: FileText },
 ];
 
@@ -410,16 +410,16 @@ export default function StratNegCreateWizard({ open, onOpenChange }: Props) {
   // -- Auto-generate titulo --
   function generateTitulo() {
     if (tipo === "INDIVIDUAL" && credorNome) {
-      return `Negociacao - ${credorNome}`;
+      return `Negociação - ${credorNome}`;
     }
     if (tipo === "COLETIVA_CLASSE" && classeColetiva) {
-      return `Negociacao Coletiva - ${CLASSE_LABELS[classeColetiva] || classeColetiva}`;
+      return `Negociação Coletiva - ${CLASSE_LABELS[classeColetiva] || classeColetiva}`;
     }
     if (tipo === "COLETIVA_COMITE") {
-      return "Negociacao Coletiva - Comite de Credores";
+      return "Negociação Coletiva - Comitê de Credores";
     }
     if (tipo === "EXTRAJUDICIAL") {
-      return "Negociacao Extrajudicial";
+      return "Negociação Extrajudicial";
     }
     return "";
   }
@@ -481,7 +481,7 @@ export default function StratNegCreateWizard({ open, onOpenChange }: Props) {
       .map((o) => ({ id: o.id, label: o.label, descricao: o.descricao }));
 
     const fullData = {
-      titulo: titulo || generateTitulo() || "Nova Negociacao Estrategica",
+      titulo: titulo || generateTitulo() || "Nova Negociação Estratégica",
       tipo: tipo === "COLETIVA_CLASSE" || tipo === "COLETIVA_COMITE" ? "COLETIVA" : tipo === "EXTRAJUDICIAL" ? "BILATERAL" : "BILATERAL",
       jrc_id: jrcId || undefined,
       contraparte_nome: credorNome || undefined,
@@ -643,7 +643,7 @@ export default function StratNegCreateWizard({ open, onOpenChange }: Props) {
       <div className="space-y-4">
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label htmlFor="tipo">Tipo de Negociacao</Label>
+            <Label htmlFor="tipo">Tipo de Negociação</Label>
             <Select value={tipo} onValueChange={(v) => { setTipo(v); setTitulo(""); }}>
               <SelectTrigger className="w-full">
                 <SelectValue placeholder="Selecione o tipo" />
@@ -714,12 +714,12 @@ export default function StratNegCreateWizard({ open, onOpenChange }: Props) {
         )}
 
         <div className="space-y-2">
-          <Label htmlFor="titulo">Titulo</Label>
+          <Label htmlFor="titulo">Título</Label>
           <Input
             id="titulo"
             value={titulo || generateTitulo()}
             onChange={(e) => setTitulo(e.target.value)}
-            placeholder="Titulo da negociacao (gerado automaticamente)"
+            placeholder="Título da negociação (gerado automaticamente)"
           />
         </div>
 
@@ -741,7 +741,7 @@ export default function StratNegCreateWizard({ open, onOpenChange }: Props) {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="valor_credito">Valor do Credito (R$)</Label>
+            <Label htmlFor="valor_credito">Valor do Crédito (R$)</Label>
             <Input
               id="valor_credito"
               type="number"
@@ -754,12 +754,12 @@ export default function StratNegCreateWizard({ open, onOpenChange }: Props) {
 
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label htmlFor="responsavel_id">Responsavel</Label>
+            <Label htmlFor="responsavel_id">Responsável</Label>
             <Input
               id="responsavel_id"
               value={responsavelId}
               onChange={(e) => setResponsavelId(e.target.value)}
-              placeholder="Nome do responsavel"
+              placeholder="Nome do responsável"
             />
           </div>
 
@@ -775,12 +775,12 @@ export default function StratNegCreateWizard({ open, onOpenChange }: Props) {
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="observacoes">Observacoes</Label>
+          <Label htmlFor="observacoes">Observações</Label>
           <Textarea
             id="observacoes"
             value={observacoes}
             onChange={(e) => setObservacoes(e.target.value)}
-            placeholder="Notas gerais sobre a negociacao..."
+            placeholder="Notas gerais sobre a negociação..."
             rows={3}
           />
         </div>
@@ -842,7 +842,7 @@ export default function StratNegCreateWizard({ open, onOpenChange }: Props) {
                   </div>
                   <div className="grid grid-cols-2 gap-2">
                     <div>
-                      <Label className="text-[10px] text-gray-500">Importancia</Label>
+                      <Label className="text-[10px] text-gray-500">Importância</Label>
                       <Select
                         value={String(interesse.importancia)}
                         onValueChange={(v) => {
@@ -937,7 +937,7 @@ export default function StratNegCreateWizard({ open, onOpenChange }: Props) {
                   </div>
                   <div className="grid grid-cols-2 gap-2">
                     <div>
-                      <Label className="text-[10px] text-gray-500">Importancia</Label>
+                      <Label className="text-[10px] text-gray-500">Importância</Label>
                       <Select
                         value={String(interesse.importancia)}
                         onValueChange={(v) => {
@@ -997,11 +997,11 @@ export default function StratNegCreateWizard({ open, onOpenChange }: Props) {
               </CardHeader>
               <CardContent className="space-y-3">
                 <div className="space-y-1">
-                  <Label className="text-xs">Descricao</Label>
+                  <Label className="text-xs">Descrição</Label>
                   <Textarea
                     value={batnaDevedor.descricao}
                     onChange={(e) => setBatnaDevedor({ ...batnaDevedor, descricao: e.target.value })}
-                    placeholder="O que faremos se nao houver acordo?"
+                    placeholder="O que faremos se não houver acordo?"
                     rows={2}
                     className="text-sm"
                   />
@@ -1071,11 +1071,11 @@ export default function StratNegCreateWizard({ open, onOpenChange }: Props) {
               </CardHeader>
               <CardContent className="space-y-3">
                 <div className="space-y-1">
-                  <Label className="text-xs">Descricao</Label>
+                  <Label className="text-xs">Descrição</Label>
                   <Textarea
                     value={batnaCredor.descricao}
                     onChange={(e) => setBatnaCredor({ ...batnaCredor, descricao: e.target.value })}
-                    placeholder="O que o credor fara se nao houver acordo?"
+                    placeholder="O que o credor fará se não houver acordo?"
                     rows={2}
                     className="text-sm"
                   />
@@ -1143,10 +1143,10 @@ export default function StratNegCreateWizard({ open, onOpenChange }: Props) {
 
         {/* ZOPA */}
         <div>
-          <h3 className="text-sm font-semibold text-[#2A2A2A] mb-3">ZOPA (Zona de Possivel Acordo)</h3>
+          <h3 className="text-sm font-semibold text-[#2A2A2A] mb-3">ZOPA (Zona de Possível Acordo)</h3>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1">
-              <Label className="text-xs">Maximo que podemos pagar (R$)</Label>
+              <Label className="text-xs">Máximo que podemos pagar (R$)</Label>
               <Input
                 type="number"
                 value={zopaMax || ""}
@@ -1155,7 +1155,7 @@ export default function StratNegCreateWizard({ open, onOpenChange }: Props) {
               />
             </div>
             <div className="space-y-1">
-              <Label className="text-xs">Minimo que credor aceitaria (R$ estimado)</Label>
+              <Label className="text-xs">Mínimo que credor aceitaria (R$ estimado)</Label>
               <Input
                 type="number"
                 value={zopaMin || ""}
@@ -1173,7 +1173,7 @@ export default function StratNegCreateWizard({ open, onOpenChange }: Props) {
                     ZOPA: R$ {zopaValue.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
                   </span>
                   <span className="text-xs text-green-600">
-                    (Margem de negociacao existente)
+                    (Margem de negociação existente)
                   </span>
                 </div>
               ) : (
@@ -1181,7 +1181,7 @@ export default function StratNegCreateWizard({ open, onOpenChange }: Props) {
                   <AlertTriangle className="size-4 text-red-600" />
                   <span className="text-sm font-medium text-red-700">Sem ZOPA</span>
                   <span className="text-xs text-red-600">
-                    (O minimo do credor excede o maximo do devedor)
+                    (O mínimo do credor excede o máximo do devedor)
                   </span>
                 </div>
               )}
@@ -1191,7 +1191,7 @@ export default function StratNegCreateWizard({ open, onOpenChange }: Props) {
 
         {/* Opcoes Criativas */}
         <div>
-          <h3 className="text-sm font-semibold text-[#2A2A2A] mb-3">Opcoes Criativas</h3>
+          <h3 className="text-sm font-semibold text-[#2A2A2A] mb-3">Opções Criativas</h3>
           <div className="grid grid-cols-2 gap-2">
             {creativeOptions.map((option, idx) => (
               <div
@@ -1276,7 +1276,7 @@ export default function StratNegCreateWizard({ open, onOpenChange }: Props) {
               {TKI_PROFILE_DESCRIPTIONS[tkiPerfil] || ""}
             </p>
             <div className="pt-1 border-t">
-              <span className="text-[10px] font-semibold text-[#C9A961] uppercase">Contra-estrategia recomendada:</span>
+              <span className="text-[10px] font-semibold text-[#C9A961] uppercase">Contra-estratégia recomendada:</span>
               <p className="text-xs text-gray-700 mt-1">
                 {TKI_PROFILE_COUNTER_STRATEGY[tkiPerfil] || ""}
               </p>
@@ -1309,7 +1309,7 @@ export default function StratNegCreateWizard({ open, onOpenChange }: Props) {
         {/* Black Swans */}
         <div>
           <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-semibold text-[#2A2A2A]">Black Swans (Hipoteses Ocultas)</h3>
+            <h3 className="text-sm font-semibold text-[#2A2A2A]">Black Swans (Hipóteses Ocultas)</h3>
             <Button
               type="button"
               variant="outline"
@@ -1322,7 +1322,7 @@ export default function StratNegCreateWizard({ open, onOpenChange }: Props) {
               }
             >
               <Plus className="size-3 mr-1" />
-              Adicionar Hipotese
+              Adicionar Hipótese
             </Button>
           </div>
           <div className="space-y-3">
@@ -1331,7 +1331,7 @@ export default function StratNegCreateWizard({ open, onOpenChange }: Props) {
                 <CardContent className="space-y-2 pt-0">
                   <div className="flex items-center gap-2">
                     <div className="flex-1 space-y-1">
-                      <Label className="text-[10px] text-gray-500">Hipotese</Label>
+                      <Label className="text-[10px] text-gray-500">Hipótese</Label>
                       <Input
                         value={swan.hipotese}
                         onChange={(e) => {
@@ -1339,7 +1339,7 @@ export default function StratNegCreateWizard({ open, onOpenChange }: Props) {
                           updated[idx] = { ...updated[idx], hipotese: e.target.value };
                           setBlackSwans(updated);
                         }}
-                        placeholder="O que pode estar oculto nessa negociacao?"
+                        placeholder="O que pode estar oculto nessa negociação?"
                         className="text-sm"
                       />
                     </div>
@@ -1392,7 +1392,7 @@ export default function StratNegCreateWizard({ open, onOpenChange }: Props) {
                         updated[idx] = { ...updated[idx], como_descobrir: e.target.value };
                         setBlackSwans(updated);
                       }}
-                      placeholder="Estrategia para confirmar ou descartar..."
+                      placeholder="Estratégia para confirmar ou descartar..."
                       className="text-sm"
                     />
                   </div>
@@ -1425,11 +1425,11 @@ export default function StratNegCreateWizard({ open, onOpenChange }: Props) {
       <div className="space-y-6">
         {/* Missao (Camp) */}
         <div>
-          <h3 className="text-sm font-semibold text-[#2A2A2A] mb-3">Missao (Camp)</h3>
+          <h3 className="text-sm font-semibold text-[#2A2A2A] mb-3">Missão (Camp)</h3>
           <Textarea
             value={missao}
             onChange={(e) => setMissao(e.target.value)}
-            placeholder="Nossa missao e proporcionar ao [Credor] a oportunidade de [beneficio] atraves de [proposta], preservando [interesse mutuo]."
+            placeholder="Nossa missão é proporcionar ao [Credor] a oportunidade de [benefício] através de [proposta], preservando [interesse mútuo]."
             rows={3}
             className="text-sm"
           />
@@ -1438,7 +1438,7 @@ export default function StratNegCreateWizard({ open, onOpenChange }: Props) {
         {/* Decisores (Camp) */}
         <div>
           <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-semibold text-[#2A2A2A]">Decisores (Camp)</h3>
+            <h3 className="text-sm font-semibold text-[#2A2A2A]">Decisores (CAMP)</h3>
             <Button
               type="button"
               variant="outline"
@@ -1548,13 +1548,13 @@ export default function StratNegCreateWizard({ open, onOpenChange }: Props) {
 
         {/* Orcamento 4 Fatores (Camp) */}
         <div>
-          <h3 className="text-sm font-semibold text-[#2A2A2A] mb-3">Orcamento 4 Fatores (Camp)</h3>
+          <h3 className="text-sm font-semibold text-[#2A2A2A] mb-3">Orçamento 4 Fatores (CAMP)</h3>
           <div className="grid grid-cols-2 gap-4">
             {[
               { label: "Tempo", value: orcTempo, setter: setOrcTempo, weight: 1 },
               { label: "Energia", value: orcEnergia, setter: setOrcEnergia, weight: 2 },
               { label: "Dinheiro", value: orcDinheiro, setter: setOrcDinheiro, weight: 3 },
-              { label: "Emocao", value: orcEmocao, setter: setOrcEmocao, weight: 4 },
+              { label: "Emoção", value: orcEmocao, setter: setOrcEmocao, weight: 4 },
             ].map((factor) => (
               <div key={factor.label} className="space-y-1">
                 <div className="flex items-center justify-between">
@@ -1581,10 +1581,10 @@ export default function StratNegCreateWizard({ open, onOpenChange }: Props) {
             </div>
             <p className="text-[10px] text-gray-500 mt-1">
               {orcamentoScore <= 30
-                ? "Investimento baixo: negociacao acessivel, sem grande comprometimento de recursos."
+                ? "Investimento baixo: negociação acessível, sem grande comprometimento de recursos."
                 : orcamentoScore <= 60
-                  ? "Investimento moderado: exige atencao e recursos significativos do credor."
-                  : "Investimento alto: credor esta muito investido nesta negociacao, pode haver pressao interna para fechar."}
+                  ? "Investimento moderado: exige atenção e recursos significativos do credor."
+                  : "Investimento alto: credor está muito investido nesta negociação, pode haver pressão interna para fechar."}
             </p>
           </div>
         </div>
@@ -1657,7 +1657,7 @@ export default function StratNegCreateWizard({ open, onOpenChange }: Props) {
       <div className="space-y-6">
         {/* Objetivo Especifico */}
         <div className="space-y-2">
-          <Label className="text-sm font-semibold text-[#2A2A2A]">Objetivo Especifico</Label>
+          <Label className="text-sm font-semibold text-[#2A2A2A]">Objetivo Específico</Label>
           <Input
             value={objetivoEspecifico}
             onChange={(e) => setObjetivoEspecifico(e.target.value)}
@@ -1669,12 +1669,12 @@ export default function StratNegCreateWizard({ open, onOpenChange }: Props) {
         {/* Resumo Situacao */}
         <div className="space-y-2">
           <Label className="text-sm font-semibold text-[#2A2A2A]">
-            Resumo da Situacao <span className="text-xs font-normal text-gray-400">(para provocar &quot;That&apos;s Right&quot;)</span>
+            Resumo da Situação <span className="text-xs font-normal text-gray-400">(para provocar &quot;That&apos;s Right&quot;)</span>
           </Label>
           <Textarea
             value={resumoSituacao}
             onChange={(e) => setResumoSituacao(e.target.value)}
-            placeholder="Resuma a situacao do credor de forma que ele diria 'Isso mesmo!' ao ouvir..."
+            placeholder="Resuma a situação do credor de forma que ele diria 'Isso mesmo!' ao ouvir..."
             rows={3}
             className="text-sm"
           />
@@ -1851,7 +1851,7 @@ export default function StratNegCreateWizard({ open, onOpenChange }: Props) {
         {/* Ofertas Nao Monetarias */}
         <div>
           <div className="flex items-center justify-between mb-2">
-            <Label className="text-sm font-semibold text-[#2A2A2A]">Ofertas Nao Monetarias</Label>
+            <Label className="text-sm font-semibold text-[#2A2A2A]">Ofertas Não Monetárias</Label>
             <Button
               type="button"
               variant="outline"
@@ -1875,7 +1875,7 @@ export default function StratNegCreateWizard({ open, onOpenChange }: Props) {
                       updated[idx] = { oferta: e.target.value };
                       setOfertasNaoMonetarias(updated);
                     }}
-                    placeholder="Descreva a oferta nao monetaria..."
+                    placeholder="Descreva a oferta não monetária..."
                     className="text-sm"
                   />
                 </div>
@@ -1908,7 +1908,7 @@ export default function StratNegCreateWizard({ open, onOpenChange }: Props) {
       <DialogContent className="sm:max-w-4xl max-h-[85vh] flex flex-col">
         <DialogHeader className="shrink-0">
           <DialogTitle className="text-lg font-bold text-[#2A2A2A]">
-            Nova Negociacao Estrategica
+            Nova Negociação Estratégica
           </DialogTitle>
         </DialogHeader>
 
@@ -1951,7 +1951,7 @@ export default function StratNegCreateWizard({ open, onOpenChange }: Props) {
                   onClick={() => setStep(step + 1)}
                   className="bg-[#C9A961] hover:bg-[#B8944E] text-white"
                 >
-                  Proximo
+                  Próximo
                   <ChevronRight className="size-4 ml-1" />
                 </Button>
               )}
@@ -1962,7 +1962,7 @@ export default function StratNegCreateWizard({ open, onOpenChange }: Props) {
                   disabled={createMutation.isPending}
                   className="bg-[#C9A961] hover:bg-[#B8944E] text-white"
                 >
-                  {createMutation.isPending ? "Criando..." : "Criar Negociacao"}
+                  {createMutation.isPending ? "Criando..." : "Criar Negociação"}
                 </Button>
               )}
             </div>

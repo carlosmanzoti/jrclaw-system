@@ -15,7 +15,7 @@ export default function LoginPage() {
           <div className="mx-auto mt-3 mb-3 h-px w-16 bg-[#C9A961]" />
 
           <p className="font-body text-[#666666] text-base">
-            Sistema de Gestao Juridica
+            Sistema de Gestão Jurídica
           </p>
         </div>
 

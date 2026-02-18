@@ -132,10 +132,10 @@ export function StratDashboard() {
           </Link>
           <div>
             <h1 className="text-2xl font-bold text-[#2A2A2A]">
-              Dashboard Estrategico
+              Dashboard Estratégico
             </h1>
             <p className="text-sm text-muted-foreground">
-              Analise consolidada de todas as negociacoes
+              Análise consolidada de todas as negociações
             </p>
           </div>
         </div>
@@ -152,7 +152,7 @@ export function StratDashboard() {
         {/* 4. Analise de Coalizoes */}
         <CoalitionAnalysis negotiations={negotiations} />
 
-        {/* 5. Alertas Estrategicos */}
+        {/* 5. Alertas Estratégicos */}
         <StrategicAlerts
           negotiations={negotiations}
           dashboard={dashboard}
@@ -197,11 +197,11 @@ function CreditorMap({ negotiations }: { negotiations: any[] }) {
           <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
             <Target className="h-12 w-12 mb-3 opacity-30" />
             <p className="text-sm">
-              Nenhuma negociacao possui dados de teoria dos jogos.
+              Nenhuma negociação possui dados de teoria dos jogos.
             </p>
             <p className="text-xs mt-1">
               Preencha os campos de poder de voto e cooperatividade nas
-              negociacoes para visualizar o mapa.
+              negociações para visualizar o mapa.
             </p>
           </div>
         ) : (
@@ -342,7 +342,7 @@ function CreditorMap({ negotiations }: { negotiations: any[] }) {
               </div>
               <div className="flex items-center gap-1.5">
                 <div className="h-3 w-3 rounded-full bg-gray-400" />
-                <span>Medio</span>
+                <span>Médio</span>
               </div>
               <div className="flex items-center gap-1.5">
                 <div className="h-4 w-4 rounded-full bg-gray-400" />
@@ -555,7 +555,7 @@ function VotingSimulator({ negotiations }: { negotiations: any[] }) {
         <CardContent>
           <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
             <Vote className="h-12 w-12 mb-3 opacity-30" />
-            <p className="text-sm">Nenhuma negociacao cadastrada.</p>
+            <p className="text-sm">Nenhuma negociação cadastrada.</p>
           </div>
         </CardContent>
       </Card>
@@ -818,14 +818,14 @@ function PriorityMatrix({ negotiations }: { negotiations: any[] }) {
         <CardHeader>
           <div className="flex items-center gap-2">
             <BarChart3 className="h-5 w-5 text-[#C9A961]" />
-            <CardTitle>Matriz de Priorizacao de Negociacoes</CardTitle>
+            <CardTitle>Matriz de Priorização de Negociações</CardTitle>
           </div>
         </CardHeader>
         <CardContent>
           <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
             <BarChart3 className="h-12 w-12 mb-3 opacity-30" />
             <p className="text-sm">
-              Nenhuma negociacao cadastrada para priorizar.
+              Nenhuma negociação cadastrada para priorizar.
             </p>
           </div>
         </CardContent>
@@ -838,10 +838,10 @@ function PriorityMatrix({ negotiations }: { negotiations: any[] }) {
       <CardHeader>
         <div className="flex items-center gap-2">
           <BarChart3 className="h-5 w-5 text-[#C9A961]" />
-          <CardTitle>Matriz de Priorizacao de Negociacoes</CardTitle>
+          <CardTitle>Matriz de Priorização de Negociações</CardTitle>
         </div>
         <CardDescription>
-          Classificacao por score calculado: (valor x peso_voto x
+          Classificação por score calculado: (valor x peso_voto x
           risco_holdout) / cooperatividade
         </CardDescription>
       </CardHeader>
@@ -1012,7 +1012,7 @@ function CoalitionAnalysis({ negotiations }: { negotiations: any[] }) {
         {negotiations.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
             <Users className="h-12 w-12 mb-3 opacity-30" />
-            <p className="text-sm">Nenhuma negociacao cadastrada.</p>
+            <p className="text-sm">Nenhuma negociação cadastrada.</p>
           </div>
         ) : (
           <>
@@ -1230,10 +1230,10 @@ function StrategicAlerts({
       <CardHeader>
         <div className="flex items-center gap-2">
           <Shield className="h-5 w-5 text-[#C9A961]" />
-          <CardTitle>Alertas Estrategicos</CardTitle>
+          <CardTitle>Alertas Estratégicos</CardTitle>
         </div>
         <CardDescription>
-          Situacoes que requerem atencao imediata
+          Situações que requerem atenção imediata
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -1241,7 +1241,7 @@ function StrategicAlerts({
           <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
             <Shield className="h-10 w-10 mb-2 opacity-30" />
             <p className="text-sm">
-              Nenhum alerta estrategico no momento.
+              Nenhum alerta estratégico no momento.
             </p>
           </div>
         ) : (

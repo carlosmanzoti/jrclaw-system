@@ -85,7 +85,7 @@ const SUGGESTED_QUESTIONS: Record<string, string[]> = {
     "Quais Black Swans investigar?",
   ],
   ENGAJAMENTO: [
-    "Como abrir a proxima reuniao?",
+    "Como abrir a próxima reunião?",
     "Quais labels usar?",
     "Script para criar rapport",
   ],
@@ -466,8 +466,8 @@ export function NegotiationAssistant({
   const contextLabel = negotiation?.titulo
     ? `Analisando: ${negotiation.titulo}`
     : negotiationId
-      ? `Negociacao #${negotiationId.slice(0, 8)}`
-      : "Visao Global";
+      ? `Negociação #${negotiationId.slice(0, 8)}`
+      : "Visão Global";
 
   return (
     <>

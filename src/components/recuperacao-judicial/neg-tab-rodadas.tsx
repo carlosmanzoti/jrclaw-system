@@ -203,7 +203,7 @@ export function NegTabRodadas({ jrcId }: NegTabRodadasProps) {
     <div className="flex h-full flex-col">
       {/* Header */}
       <div className="flex items-center justify-between border-b px-6 py-3">
-        <h2 className="text-sm font-semibold">Rodadas de Negociacao</h2>
+        <h2 className="text-sm font-semibold">Rodadas de Negociação</h2>
         <Dialog open={createOpen} onOpenChange={setCreateOpen}>
           <DialogTrigger asChild>
             <Button size="sm" className="h-8 text-xs">
@@ -212,11 +212,11 @@ export function NegTabRodadas({ jrcId }: NegTabRodadasProps) {
           </DialogTrigger>
           <DialogContent className="max-w-lg">
             <DialogHeader>
-              <DialogTitle>Nova Rodada de Negociacao</DialogTitle>
+              <DialogTitle>Nova Rodada de Negociação</DialogTitle>
             </DialogHeader>
             <div className="space-y-4">
               <div>
-                <Label>Titulo</Label>
+                <Label>Título</Label>
                 <Input
                   value={form.titulo}
                   onChange={(e) => updateField("titulo", e.target.value)}
@@ -349,10 +349,10 @@ export function NegTabRodadas({ jrcId }: NegTabRodadasProps) {
             <div className="flex h-full flex-col items-center justify-center p-6 text-center">
               <Users className="mb-3 h-10 w-10 text-muted-foreground/40" />
               <p className="text-sm font-medium text-muted-foreground">
-                Nenhuma rodada de negociacao
+                Nenhuma rodada de negociação
               </p>
               <p className="mt-1 text-xs text-muted-foreground">
-                Crie uma nova rodada para iniciar as negociacoes com credores.
+                Crie uma nova rodada para iniciar as negociações com credores.
               </p>
             </div>
           ) : (
@@ -704,7 +704,7 @@ export function NegTabRodadas({ jrcId }: NegTabRodadasProps) {
                               Valor Proposto
                             </th>
                             <th className="pb-2 pr-3 text-left">Status</th>
-                            <th className="pb-2 text-left">Acoes</th>
+                            <th className="pb-2 text-left">Ações</th>
                           </tr>
                         </thead>
                         <tbody>

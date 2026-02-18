@@ -465,10 +465,10 @@ export function RecoveryLayout() {
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-2xl font-bold tracking-tight font-heading">
-              Recuperacao de Credito
+              Recuperação de Crédito
             </h1>
             <p className="text-sm text-muted-foreground">
-              Investigacao patrimonial, execucao judicial e recuperacao de ativos
+              Investigação patrimonial, execução judicial e recuperação de ativos
             </p>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
@@ -482,13 +482,13 @@ export function RecoveryLayout() {
             <Button variant="outline" asChild>
               <Link href="/recuperacao-credito/dashboard">
                 <BarChart3 className="size-4 mr-2" />
-                Dashboard Analitico
+                Dashboard Analítico
               </Link>
             </Button>
             <Button variant="outline" asChild>
               <Link href="/recuperacao-credito/investigacao">
                 <Crosshair className="size-4 mr-2" />
-                Investigacao Patrimonial
+                Investigação Patrimonial
               </Link>
             </Button>
           </div>
@@ -532,12 +532,12 @@ export function RecoveryLayout() {
             </CardContent>
           </Card>
 
-          {/* Row 1: Card 2 - Volume em Execucao */}
+          {/* Row 1: Card 2 - Volume em Execução */}
           <Card className="bg-white rounded-lg shadow-sm border">
             <CardHeader className="pb-2">
               <div className="flex items-center justify-between">
                 <p className="text-sm font-medium text-muted-foreground">
-                  Volume em Execucao
+                  Volume em Execução
                 </p>
                 <DollarSign className="size-4 text-[#C9A961]" />
               </div>
@@ -551,7 +551,7 @@ export function RecoveryLayout() {
                     {formatCurrencyCompact(dashboard?.volume_execucao ?? 0)}
                   </p>
                   <p className="text-xs text-muted-foreground mt-1">
-                    Total em execucoes ativas
+                    Total em execuções ativas
                   </p>
                 </>
               )}
@@ -578,8 +578,8 @@ export function RecoveryLayout() {
                   </p>
                   <p className="text-xs text-muted-foreground mt-1">
                     {dashboard?.percentual_recuperado_global != null
-                      ? `${dashboard.percentual_recuperado_global.toFixed(1)}% do total em execucao`
-                      : "0% do total em execucao"}
+                      ? `${dashboard.percentual_recuperado_global.toFixed(1)}% do total em execução`
+                      : "0% do total em execução"}
                   </p>
                 </>
               )}
@@ -620,12 +620,12 @@ export function RecoveryLayout() {
             </CardContent>
           </Card>
 
-          {/* Row 2: Card 5 - Taxa de Recuperacao */}
+          {/* Row 2: Card 5 - Taxa de Recuperação */}
           <Card className="bg-white rounded-lg shadow-sm border">
             <CardHeader className="pb-2">
               <div className="flex items-center justify-between">
                 <p className="text-sm font-medium text-muted-foreground">
-                  Taxa de Recuperacao
+                  Taxa de Recuperação
                 </p>
                 <Target className="size-4 text-[#C9A961]" />
               </div>
@@ -639,19 +639,19 @@ export function RecoveryLayout() {
                     {dashboard?.taxa_recuperacao?.toFixed(1) ?? "0"}%
                   </p>
                   <p className="text-xs text-muted-foreground mt-1">
-                    Media ponderada por valor
+                    Média ponderada por valor
                   </p>
                 </>
               )}
             </CardContent>
           </Card>
 
-          {/* Row 2: Card 6 - Score Medio */}
+          {/* Row 2: Card 6 - Score Médio */}
           <Card className="bg-white rounded-lg shadow-sm border">
             <CardHeader className="pb-2">
               <div className="flex items-center justify-between">
                 <p className="text-sm font-medium text-muted-foreground">
-                  Score Medio IA
+                  Score Médio IA
                 </p>
                 <BarChart3 className="size-4 text-[#C9A961]" />
               </div>
@@ -689,7 +689,7 @@ export function RecoveryLayout() {
                   </div>
                   <p className="text-xs text-muted-foreground mt-1">
                     {getScoreLabel(dashboard?.score_medio ?? 0)} — probabilidade de
-                    recuperacao
+                    recuperação
                   </p>
                 </>
               )}
@@ -722,7 +722,7 @@ export function RecoveryLayout() {
           <div className="relative w-full sm:max-w-xs">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
             <Input
-              placeholder="Buscar por nome, CPF/CNPJ ou codigo..."
+              placeholder="Buscar por nome, CPF/CNPJ ou código..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-9"
@@ -830,12 +830,12 @@ function EmptyState({ onCreateNew }: { onCreateNew: () => void }) {
             <Shield className="size-8 text-muted-foreground" />
           </div>
           <h3 className="text-lg font-semibold mb-2">
-            Nenhum caso de recuperacao de credito
+            Nenhum caso de recuperação de crédito
           </h3>
           <p className="text-sm text-muted-foreground max-w-md mb-6">
-            Inicie um novo caso de recuperacao de credito para gerenciar
-            investigacoes patrimoniais, execucoes judiciais e acompanhar a
-            recuperacao de ativos dos seus clientes.
+            Inicie um novo caso de recuperação de crédito para gerenciar
+            investigações patrimoniais, execuções judiciais e acompanhar a
+            recuperação de ativos dos seus clientes.
           </p>
           <Button
             onClick={onCreateNew}
@@ -1120,7 +1120,7 @@ function TableView({
     <Card className="bg-white rounded-lg shadow-sm border">
       <CardHeader className="pb-4">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-base">Casos de Recuperacao de Credito</CardTitle>
+          <CardTitle className="text-base">Casos de Recuperação de Crédito</CardTitle>
           <Button variant="outline" size="sm">
             <Download className="size-4 mr-2" />
             Exportar
@@ -1192,7 +1192,7 @@ function TableView({
           {responsaveis.length > 0 && (
             <Select value={filterResponsavel} onValueChange={setFilterResponsavel}>
               <SelectTrigger className="w-[160px] h-8 text-xs">
-                <SelectValue placeholder="Responsavel" />
+                <SelectValue placeholder="Responsável" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="ALL">Todos</SelectItem>
@@ -1212,7 +1212,7 @@ function TableView({
             <TableHeader>
               <TableRow className="bg-muted/30">
                 <SortableHeader
-                  label="Codigo"
+                  label="Código"
                   field="codigo"
                   currentField={sortField}
                   currentDirection={sortDirection}
@@ -1247,7 +1247,7 @@ function TableView({
                   onSort={onSort}
                 />
                 <SortableHeader
-                  label="Valor Execucao"
+                  label="Valor Execução"
                   field="valor_total_execucao"
                   currentField={sortField}
                   currentDirection={sortDirection}
@@ -1294,13 +1294,13 @@ function TableView({
                   onSort={onSort}
                 />
                 <SortableHeader
-                  label="Responsavel"
+                  label="Responsável"
                   field="responsavel_nome"
                   currentField={sortField}
                   currentDirection={sortDirection}
                   onSort={onSort}
                 />
-                <TableHead className="whitespace-nowrap">Proxima Acao</TableHead>
+                <TableHead className="whitespace-nowrap">Próxima Ação</TableHead>
                 <SortableHeader
                   label="Prazo"
                   field="data_proxima_acao"
@@ -1464,7 +1464,7 @@ function TableView({
                         )}
                       </TableCell>
 
-                      {/* Proxima Acao */}
+                      {/* Próxima Ação */}
                       <TableCell className="whitespace-nowrap max-w-[180px]">
                         {c.proxima_acao ? (
                           <span className="text-xs truncate block">
@@ -1681,7 +1681,7 @@ function WizardDialog({
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Shield className="size-5 text-[#C9A961]" />
-              Novo Caso de Recuperacao de Credito
+              Novo Caso de Recuperação de Crédito
             </DialogTitle>
           </DialogHeader>
           <div className="py-12 text-center">
@@ -1690,8 +1690,8 @@ function WizardDialog({
             </div>
             <h3 className="text-lg font-semibold mb-2">Assistente de Novo Caso</h3>
             <p className="text-sm text-muted-foreground max-w-sm mx-auto">
-              O componente do assistente de criacao de novos casos sera carregado aqui.
-              Este modulo esta em desenvolvimento.
+              O componente do assistente de criação de novos casos será carregado aqui.
+              Este módulo está em desenvolvimento.
             </p>
           </div>
         </DialogContent>

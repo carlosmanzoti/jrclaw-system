@@ -25,9 +25,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { trpc } from "@/lib/trpc"
 
 const AREA_OPTIONS = [
-  { value: "RECUPERACAO_JUDICIAL", label: "Recuperacao Judicial" },
+  { value: "RECUPERACAO_JUDICIAL", label: "Recuperação Judicial" },
   { value: "FALENCIA", label: "Falencia" },
-  { value: "EXECUCAO", label: "Execucao" },
+  { value: "EXECUCAO", label: "Execução" },
   { value: "AGRONEGOCIO", label: "Agronegócio" },
   { value: "TRABALHISTA", label: "Trabalhista" },
   { value: "TRIBUTARIO", label: "Tributario" },
@@ -276,7 +276,7 @@ export function BibliotecaClippers({ open, onOpenChange }: BibliotecaClippersPro
           <TabsList className="shrink-0 mt-4">
             <TabsTrigger value="jurisprudencia" className="text-xs">Jurisprudencia</TabsTrigger>
             <TabsTrigger value="legislacao" className="text-xs">Legislacao</TabsTrigger>
-            <TabsTrigger value="caso" className="text-xs">Caso Referencia</TabsTrigger>
+            <TabsTrigger value="caso" className="text-xs">Caso Referência</TabsTrigger>
             <TabsTrigger value="livro" className="text-xs">Livro/Doutrina</TabsTrigger>
           </TabsList>
 
@@ -314,7 +314,7 @@ export function BibliotecaClippers({ open, onOpenChange }: BibliotecaClippersPro
 
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1">
-                    <Label className="text-xs">Numero do recurso *</Label>
+                    <Label className="text-xs">Número do recurso *</Label>
                     <Input
                       value={jurNumeroRecurso}
                       onChange={(e) => setJurNumeroRecurso(e.target.value)}
@@ -335,7 +335,7 @@ export function BibliotecaClippers({ open, onOpenChange }: BibliotecaClippersPro
 
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1">
-                    <Label className="text-xs">Orgao julgador</Label>
+                    <Label className="text-xs">Órgão julgador</Label>
                     <Input
                       value={jurOrgaoJulgador}
                       onChange={(e) => setJurOrgaoJulgador(e.target.value)}
@@ -457,11 +457,11 @@ export function BibliotecaClippers({ open, onOpenChange }: BibliotecaClippersPro
                 </div>
 
                 <div className="space-y-1">
-                  <Label className="text-xs">Anotacoes do advogado</Label>
+                  <Label className="text-xs">Anotações do advogado</Label>
                   <Textarea
                     value={legAnotacoes}
                     onChange={(e) => setLegAnotacoes(e.target.value)}
-                    placeholder="Suas anotacoes sobre os dispositivos..."
+                    placeholder="Suas anotações sobre os dispositivos..."
                     rows={4}
                     className="text-xs"
                   />
@@ -491,7 +491,7 @@ export function BibliotecaClippers({ open, onOpenChange }: BibliotecaClippersPro
                 onClick={handleSaveLegislacao}
                 disabled={!legLeiNorma || isPending}
               >
-                {isPending ? "Salvando..." : "Salvar Legislacao"}
+                {isPending ? "Salvando..." : "Salvar Legislação"}
               </Button>
             </DialogFooter>
           </TabsContent>
@@ -500,11 +500,11 @@ export function BibliotecaClippers({ open, onOpenChange }: BibliotecaClippersPro
           <TabsContent value="caso" className="flex-1 min-h-0 overflow-y-auto">
             <div className="space-y-3 pb-4">
                 <div className="space-y-1">
-                  <Label className="text-xs">Titulo do caso *</Label>
+                  <Label className="text-xs">Título do caso *</Label>
                   <Input
                     value={casoTitulo}
                     onChange={(e) => setCasoTitulo(e.target.value)}
-                    placeholder="Ex: Recuperacao judicial - Empresa X"
+                    placeholder="Ex: Recuperação judicial - Empresa X"
                     className="h-8 text-xs"
                   />
                 </div>
@@ -571,7 +571,7 @@ export function BibliotecaClippers({ open, onOpenChange }: BibliotecaClippersPro
                 onClick={handleSaveCasoReferencia}
                 disabled={!casoTitulo || isPending}
               >
-                {isPending ? "Salvando..." : "Salvar Caso Referencia"}
+                {isPending ? "Salvando..." : "Salvar Caso Referência"}
               </Button>
             </DialogFooter>
           </TabsContent>
@@ -581,11 +581,11 @@ export function BibliotecaClippers({ open, onOpenChange }: BibliotecaClippersPro
             <div className="space-y-3 pb-4">
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1">
-                    <Label className="text-xs">Titulo do livro *</Label>
+                    <Label className="text-xs">Título do livro *</Label>
                     <Input
                       value={livroTitulo}
                       onChange={(e) => setLivroTitulo(e.target.value)}
-                      placeholder="Titulo da obra"
+                      placeholder="Título da obra"
                       className="h-8 text-xs"
                     />
                   </div>
@@ -631,7 +631,7 @@ export function BibliotecaClippers({ open, onOpenChange }: BibliotecaClippersPro
                 </div>
 
                 <div className="space-y-1">
-                  <Label className="text-xs">Paginas</Label>
+                  <Label className="text-xs">Páginas</Label>
                   <Input
                     value={livroPaginas}
                     onChange={(e) => setLivroPaginas(e.target.value)}
@@ -641,22 +641,22 @@ export function BibliotecaClippers({ open, onOpenChange }: BibliotecaClippersPro
                 </div>
 
                 <div className="space-y-1">
-                  <Label className="text-xs">Trecho/Citacao relevante</Label>
+                  <Label className="text-xs">Trecho/Citação relevante</Label>
                   <Textarea
                     value={livroTrecho}
                     onChange={(e) => setLivroTrecho(e.target.value)}
-                    placeholder="Cole o trecho ou citacao relevante..."
+                    placeholder="Cole o trecho ou citação relevante..."
                     rows={5}
                     className="text-xs"
                   />
                 </div>
 
                 <div className="space-y-1">
-                  <Label className="text-xs">Comentario do advogado</Label>
+                  <Label className="text-xs">Comentário do advogado</Label>
                   <Textarea
                     value={livroComentario}
                     onChange={(e) => setLivroComentario(e.target.value)}
-                    placeholder="Seu comentario sobre o trecho..."
+                    placeholder="Seu comentário sobre o trecho..."
                     rows={3}
                     className="text-xs"
                   />
