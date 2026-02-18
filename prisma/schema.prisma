@@ -666,6 +666,7 @@ model Person {
   recovery_cases_debtor      CreditRecoveryCase[] @relation("RecoveryDebtor")
   joint_debtor_entries       JointDebtor[] @relation("JointDebtorPerson")
   process_parties            ProcessParty[]
+  whatsapp_conversations     WhatsAppConversation[]
 
   @@map("persons")
 }
@@ -735,6 +736,7 @@ model Case {
   process_parties            ProcessParty[]
   email_links                EmailLink[]
   email_activities           EmailActivity[]
+  whatsapp_conversations     WhatsAppConversation[]
 
   @@map("cases")
 }
@@ -1103,6 +1105,7 @@ model Project {
   chat_messages   ChatMessage[]  @relation("ChatMessageProject")
   email_links     EmailLink[]
   email_activities EmailActivity[]
+  whatsapp_conversations WhatsAppConversation[]
 
   @@map("projects")
 }
@@ -3491,4 +3494,72 @@ model EmailActivityReminder {
   sent_at           DateTime?
 
   @@map("email_activity_reminders")
+}
+
+// ============================================================
+// WHATSAPP INTEGRATION
+// ============================================================
+
+model WhatsAppConversation {
+  id                  String    @id @default(cuid())
+  phone_number        String    @unique
+  person_id           String?
+  person              Person?   @relation(fields: [person_id], references: [id])
+  case_id             String?
+  case_               Case?     @relation(fields: [case_id], references: [id])
+  project_id          String?
+  project             Project?  @relation(fields: [project_id], references: [id])
+  contact_name        String?
+  last_message        String?
+  last_message_at     DateTime?
+  last_interaction_at DateTime?
+  unread_count        Int       @default(0)
+  status              String    @default("ACTIVE") // ACTIVE, ARCHIVED
+  created_at          DateTime  @default(now())
+  updated_at          DateTime  @updatedAt
+
+  messages WhatsAppMessage[]
+
+  @@index([person_id])
+  @@index([case_id])
+  @@index([project_id])
+  @@index([status])
+  @@map("whatsapp_conversations")
+}
+
+model WhatsAppMessage {
+  id              String   @id @default(cuid())
+  conversation_id String
+  conversation    WhatsAppConversation @relation(fields: [conversation_id], references: [id], onDelete: Cascade)
+  direction       String   // INBOUND, OUTBOUND
+  type            String   // TEXT, IMAGE, DOCUMENT, AUDIO, VIDEO, TEMPLATE
+  content         String?  @db.Text
+  media_url       String?
+  media_filename  String?
+  template_name   String?
+  wa_message_id   String?  @unique
+  status          String   @default("SENT") // SENT, DELIVERED, READ, FAILED
+  ocr_text        String?  @db.Text
+  ocr_processed   Boolean  @default(false)
+  created_at      DateTime @default(now())
+
+  @@index([conversation_id])
+  @@index([wa_message_id])
+  @@map("whatsapp_messages")
+}
+
+model WhatsAppTemplate {
+  id               String   @id @default(cuid())
+  name             String   @unique
+  display_name     String
+  category         String   // UTILITY, MARKETING
+  language         String   @default("pt_BR")
+  body_text        String   @db.Text
+  variables        Json?
+  approval_status  String   @default("PENDING") // PENDING, APPROVED, REJECTED
+  rejection_reason String?
+  created_at       DateTime @default(now())
+  updated_at       DateTime @updatedAt
+
+  @@map("whatsapp_templates")
 }

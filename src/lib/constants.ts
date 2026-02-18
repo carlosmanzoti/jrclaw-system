@@ -418,3 +418,16 @@ export const EMAIL_ACTIVITY_STATUS_COLORS: Record<string, string> = {
   CONCLUIDO: "bg-emerald-100 text-emerald-700",
   CANCELADO: "bg-gray-100 text-gray-700",
 };
+
+export const WHATSAPP_MESSAGE_STATUS_LABELS: Record<string, string> = {
+  SENT: "Enviado",
+  DELIVERED: "Entregue",
+  READ: "Lido",
+  FAILED: "Falhou",
+};
+
+export const WHATSAPP_TEMPLATE_STATUS_LABELS: Record<string, string> = {
+  PENDING: "Pendente",
+  APPROVED: "Aprovado",
+  REJECTED: "Rejeitado",
+};
