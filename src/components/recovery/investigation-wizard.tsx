@@ -31,7 +31,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { ScrollArea } from "@/components/ui/scroll-area"
+
 import { Textarea } from "@/components/ui/textarea"
 import {
   Select,
@@ -1265,13 +1265,13 @@ export function InvestigationWizard({
         <Separator />
 
         {/* Content */}
-        <ScrollArea className="flex-1 min-h-0">
+        <div className="flex-1 min-h-0 overflow-y-auto">
           <div className="px-6 py-4">
             {currentStep === 1 && renderStep1()}
             {currentStep === 2 && renderStep2()}
             {currentStep === 3 && renderStep3()}
           </div>
-        </ScrollArea>
+        </div>
 
         <Separator />
 

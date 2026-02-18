@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   Dialog,
   DialogContent,
@@ -41,6 +41,8 @@ import {
   FileText,
   Check,
   AlertTriangle,
+  Loader2,
+  Save,
 } from "lucide-react";
 
 // ============================================================
@@ -219,7 +221,7 @@ const STEPS = [
   { number: 5, label: "One-Sheet", icon: FileText },
 ];
 
-function StepIndicator({ currentStep }: { currentStep: number }) {
+function StepIndicator({ currentStep, onStepClick }: { currentStep: number; onStepClick: (step: number) => void }) {
   return (
     <div className="flex items-center justify-between mb-6">
       {STEPS.map((step, index) => {
@@ -229,14 +231,18 @@ function StepIndicator({ currentStep }: { currentStep: number }) {
 
         return (
           <div key={step.number} className="flex items-center flex-1 last:flex-none">
-            <div className="flex flex-col items-center gap-1">
+            <button
+              type="button"
+              className="flex flex-col items-center gap-1 cursor-pointer group"
+              onClick={() => onStepClick(step.number)}
+            >
               <div
-                className={`flex items-center justify-center size-9 rounded-full border-2 transition-colors ${
+                className={`flex items-center justify-center size-9 rounded-full border-2 transition-colors group-hover:ring-2 group-hover:ring-[#C9A961]/30 ${
                   isCompleted
                     ? "bg-[#C9A961] border-[#C9A961] text-white"
                     : isActive
                       ? "border-[#C9A961] bg-[#C9A961]/10 text-[#C9A961]"
-                      : "border-gray-300 bg-white text-gray-400"
+                      : "border-gray-300 bg-white text-gray-400 group-hover:border-[#C9A961]/50"
                 }`}
               >
                 {isCompleted ? <Check className="size-4" /> : <Icon className="size-4" />}
@@ -248,7 +254,7 @@ function StepIndicator({ currentStep }: { currentStep: number }) {
               >
                 {step.label}
               </span>
-            </div>
+            </button>
             {index < STEPS.length - 1 && (
               <div
                 className={`flex-1 h-px mx-2 mt-[-16px] ${
@@ -288,16 +294,23 @@ export default function StratNegCreateWizard({ open, onOpenChange }: Props) {
   const [step, setStep] = useState(1);
 
   // -- Step 1: Identificacao --
+  const [contexto, setContexto] = useState<"rj" | "avulsa">("rj");
   const [tipo, setTipo] = useState("INDIVIDUAL");
   const [jrcId, setJrcId] = useState("");
   const [credorNome, setCredorNome] = useState("");
+  const [credorPersonId, setCredorPersonId] = useState("");
+  const [credorSearch, setCredorSearch] = useState("");
   const [classeColetiva, setClasseColetiva] = useState("");
   const [titulo, setTitulo] = useState("");
+  const [tituloEditadoManualmente, setTituloEditadoManualmente] = useState(false);
   const [prioridade, setPrioridade] = useState("MEDIA");
   const [valorCredito, setValorCredito] = useState<number>(0);
+  const [valorCreditoDisplay, setValorCreditoDisplay] = useState("");
   const [responsavelId, setResponsavelId] = useState("");
   const [dataLimite, setDataLimite] = useState("");
   const [observacoes, setObservacoes] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState("");
 
   // -- Step 2: Harvard --
   const [nossosInteresses, setNossosInteresses] = useState<Interest[]>([
@@ -374,6 +387,11 @@ export default function StratNegCreateWizard({ open, onOpenChange }: Props) {
 
   // -- tRPC queries --
   const jrcQuery = trpc.rj.cases.list.useQuery();
+  const usersQuery = trpc.users.list.useQuery();
+  const personsQuery = trpc.persons.list.useQuery(
+    { search: credorSearch, limit: 15 },
+    { enabled: credorSearch.length >= 2 }
+  );
   const utils = trpc.useUtils();
 
   const createMutation = trpc.stratNeg.negotiations.create.useMutation({
@@ -381,6 +399,10 @@ export default function StratNegCreateWizard({ open, onOpenChange }: Props) {
       utils.stratNeg.negotiations.list.invalidate();
       onOpenChange(false);
       resetForm();
+    },
+    onError: (error) => {
+      setSubmitError(error.message || "Erro ao criar negociação. Tente novamente.");
+      setIsSubmitting(false);
     },
   });
 
@@ -407,6 +429,31 @@ export default function StratNegCreateWizard({ open, onOpenChange }: Props) {
     poderTempoCre +
     poderAlternativasCre;
 
+  // -- Currency formatting --
+  function formatCurrencyInput(value: string): { display: string; numeric: number } {
+    const cleaned = value.replace(/[^\d]/g, "");
+    if (!cleaned) return { display: "", numeric: 0 };
+    const cents = parseInt(cleaned, 10);
+    const reais = cents / 100;
+    const display = reais.toLocaleString("pt-BR", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+    return { display: `R$ ${display}`, numeric: reais };
+  }
+
+  function handleValorCreditoChange(rawInput: string) {
+    const cleaned = rawInput.replace(/[^\d]/g, "");
+    if (!cleaned) {
+      setValorCreditoDisplay("");
+      setValorCredito(0);
+      return;
+    }
+    const { display, numeric } = formatCurrencyInput(cleaned);
+    setValorCreditoDisplay(display);
+    setValorCredito(numeric);
+  }
+
   // -- Auto-generate titulo --
   function generateTitulo() {
     if (tipo === "INDIVIDUAL" && credorNome) {
@@ -424,19 +471,34 @@ export default function StratNegCreateWizard({ open, onOpenChange }: Props) {
     return "";
   }
 
+  // Auto-update titulo when context changes
+  useEffect(() => {
+    if (!tituloEditadoManualmente) {
+      setTitulo(generateTitulo());
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [credorNome, tipo, classeColetiva, tituloEditadoManualmente]);
+
   // -- Reset form --
   function resetForm() {
     setStep(1);
+    setContexto("rj");
     setTipo("INDIVIDUAL");
     setJrcId("");
     setCredorNome("");
+    setCredorPersonId("");
+    setCredorSearch("");
     setClasseColetiva("");
     setTitulo("");
+    setTituloEditadoManualmente(false);
     setPrioridade("MEDIA");
     setValorCredito(0);
+    setValorCreditoDisplay("");
     setResponsavelId("");
     setDataLimite("");
     setObservacoes("");
+    setIsSubmitting(false);
+    setSubmitError("");
     setNossosInteresses([{ descricao: "", importancia: 3, flexibilidade: 3 }]);
     setInteressesCredor([{ descricao: "", importancia: 3, flexibilidade: 3 }]);
     setBatnaDevedor({ descricao: "", alternativa: "", valor_estimado: 0, probabilidade: 50, tempo_meses: 12 });
@@ -476,14 +538,14 @@ export default function StratNegCreateWizard({ open, onOpenChange }: Props) {
 
   // -- Mutation handler --
   function handleCreate() {
-    const activeCreativeOptions = creativeOptions
-      .filter((o) => o.checked)
-      .map((o) => ({ id: o.id, label: o.label, descricao: o.descricao }));
+    setIsSubmitting(true);
+    setSubmitError("");
 
     const fullData = {
       titulo: titulo || generateTitulo() || "Nova Negociação Estratégica",
       tipo: tipo === "COLETIVA_CLASSE" || tipo === "COLETIVA_COMITE" ? "COLETIVA" : tipo === "EXTRAJUDICIAL" ? "BILATERAL" : "BILATERAL",
       jrc_id: jrcId || undefined,
+      person_id: credorPersonId || undefined,
       contraparte_nome: credorNome || undefined,
       contraparte_tipo: tipo === "INDIVIDUAL" ? "PESSOA_JURIDICA" : undefined,
       prioridade,
@@ -497,7 +559,9 @@ export default function StratNegCreateWizard({ open, onOpenChange }: Props) {
       descricao: buildDescricao(),
     };
 
-    createMutation.mutate(fullData);
+    createMutation.mutate(fullData, {
+      onSettled: () => setIsSubmitting(false),
+    });
   }
 
   function buildDescricao(): string {
@@ -639,12 +703,39 @@ export default function StratNegCreateWizard({ open, onOpenChange }: Props) {
   // ============================================================
 
   function renderStep1() {
+    const [showCredorDropdown, setShowCredorDropdown] = useState(false);
+
     return (
       <div className="space-y-4">
+        {/* Context toggle */}
+        <div className="space-y-2">
+          <Label>Contexto da Negociação</Label>
+          <div className="flex gap-2">
+            <Button
+              type="button"
+              variant={contexto === "rj" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setContexto("rj")}
+              className={contexto === "rj" ? "bg-[#C9A961] hover:bg-[#B8944E] text-white" : ""}
+            >
+              Vinculada a RJ
+            </Button>
+            <Button
+              type="button"
+              variant={contexto === "avulsa" ? "default" : "outline"}
+              size="sm"
+              onClick={() => { setContexto("avulsa"); setJrcId(""); }}
+              className={contexto === "avulsa" ? "bg-[#C9A961] hover:bg-[#B8944E] text-white" : ""}
+            >
+              Extrajudicial / Avulsa
+            </Button>
+          </div>
+        </div>
+
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label htmlFor="tipo">Tipo de Negociação</Label>
-            <Select value={tipo} onValueChange={(v) => { setTipo(v); setTitulo(""); }}>
+            <Select value={tipo} onValueChange={(v) => { setTipo(v); }}>
               <SelectTrigger className="w-full">
                 <SelectValue placeholder="Selecione o tipo" />
               </SelectTrigger>
@@ -658,40 +749,88 @@ export default function StratNegCreateWizard({ open, onOpenChange }: Props) {
             </Select>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="jrc_id">RJ Vinculada</Label>
-            <Select value={jrcId} onValueChange={setJrcId}>
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Selecione a RJ" />
-              </SelectTrigger>
-              <SelectContent>
-                {jrcQuery.data?.map((jrc) => (
-                  <SelectItem key={jrc.id} value={jrc.id}>
-                    {jrc.case_?.numero_processo || "Sem numero"} - {jrc.case_?.cliente?.nome || "N/A"}
-                  </SelectItem>
-                ))}
-                {(!jrcQuery.data || jrcQuery.data.length === 0) && (
-                  <SelectItem value="_none" disabled>
-                    Nenhuma RJ cadastrada
-                  </SelectItem>
-                )}
-              </SelectContent>
-            </Select>
-          </div>
+          {contexto === "rj" && (
+            <div className="space-y-2">
+              <Label htmlFor="jrc_id">RJ Vinculada</Label>
+              <Select value={jrcId} onValueChange={setJrcId}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Selecione a RJ" />
+                </SelectTrigger>
+                <SelectContent>
+                  {jrcQuery.data?.map((jrc: any) => (
+                    <SelectItem key={jrc.id} value={jrc.id}>
+                      {jrc.case_?.numero_processo || "Sem numero"} - {jrc.case_?.cliente?.nome || "N/A"}
+                    </SelectItem>
+                  ))}
+                  {(!jrcQuery.data || jrcQuery.data.length === 0) && (
+                    <SelectItem value="_none" disabled>
+                      Nenhuma RJ cadastrada
+                    </SelectItem>
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
         </div>
 
+        {/* Credor autocomplete */}
         {tipo === "INDIVIDUAL" && (
           <div className="space-y-2">
-            <Label htmlFor="credor_nome">Credor</Label>
-            <Input
-              id="credor_nome"
-              value={credorNome}
-              onChange={(e) => {
-                setCredorNome(e.target.value);
-                if (!titulo) setTitulo("");
-              }}
-              placeholder="Nome do credor"
-            />
+            <Label>Credor / Contraparte</Label>
+            <div className="relative">
+              <Input
+                value={credorPersonId ? credorNome : credorSearch}
+                onChange={(e) => {
+                  setCredorSearch(e.target.value);
+                  setCredorNome(e.target.value);
+                  setCredorPersonId("");
+                  setShowCredorDropdown(true);
+                }}
+                onFocus={() => { if (credorSearch.length >= 2) setShowCredorDropdown(true); }}
+                onBlur={() => { setTimeout(() => setShowCredorDropdown(false), 200); }}
+                placeholder="Buscar por nome ou CPF/CNPJ..."
+              />
+              {credorPersonId && (
+                <Badge
+                  variant="secondary"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] cursor-pointer"
+                  onClick={() => { setCredorPersonId(""); setCredorSearch(credorNome); }}
+                >
+                  Vinculado ✕
+                </Badge>
+              )}
+              {showCredorDropdown && credorSearch.length >= 2 && !credorPersonId && (
+                <div className="absolute z-50 w-full mt-1 border rounded-lg bg-white shadow-lg max-h-48 overflow-y-auto">
+                  {personsQuery.isLoading && (
+                    <div className="p-3 text-sm text-gray-500 flex items-center gap-2">
+                      <Loader2 className="size-3 animate-spin" /> Buscando...
+                    </div>
+                  )}
+                  {personsQuery.data?.items?.map((p: any) => (
+                    <button
+                      key={p.id}
+                      type="button"
+                      className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 border-b last:border-b-0 flex items-center justify-between"
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={() => {
+                        setCredorNome(p.nome || p.razao_social || "");
+                        setCredorPersonId(p.id);
+                        setCredorSearch("");
+                        setShowCredorDropdown(false);
+                      }}
+                    >
+                      <span>{p.nome || p.razao_social}</span>
+                      {p.cpf_cnpj && <span className="text-xs text-gray-400 ml-2">{p.cpf_cnpj}</span>}
+                    </button>
+                  ))}
+                  {personsQuery.data?.items?.length === 0 && !personsQuery.isLoading && (
+                    <div className="p-3 text-sm text-gray-500">
+                      Nenhum resultado — o nome será usado como texto livre
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
         )}
 
@@ -713,12 +852,13 @@ export default function StratNegCreateWizard({ open, onOpenChange }: Props) {
           </div>
         )}
 
+        {/* Título auto-gerado mas editável */}
         <div className="space-y-2">
           <Label htmlFor="titulo">Título</Label>
           <Input
             id="titulo"
             value={titulo || generateTitulo()}
-            onChange={(e) => setTitulo(e.target.value)}
+            onChange={(e) => { setTitulo(e.target.value); setTituloEditadoManualmente(true); }}
             placeholder="Título da negociação (gerado automaticamente)"
           />
         </div>
@@ -740,27 +880,34 @@ export default function StratNegCreateWizard({ open, onOpenChange }: Props) {
             </Select>
           </div>
 
+          {/* Currency-masked valor */}
           <div className="space-y-2">
             <Label htmlFor="valor_credito">Valor do Crédito (R$)</Label>
             <Input
               id="valor_credito"
-              type="number"
-              value={valorCredito || ""}
-              onChange={(e) => setValorCredito(parseFloat(e.target.value) || 0)}
-              placeholder="0,00"
+              value={valorCreditoDisplay}
+              onChange={(e) => handleValorCreditoChange(e.target.value)}
+              placeholder="R$ 0,00"
             />
           </div>
         </div>
 
         <div className="grid grid-cols-2 gap-4">
+          {/* User select for responsável */}
           <div className="space-y-2">
             <Label htmlFor="responsavel_id">Responsável</Label>
-            <Input
-              id="responsavel_id"
-              value={responsavelId}
-              onChange={(e) => setResponsavelId(e.target.value)}
-              placeholder="Nome do responsável"
-            />
+            <Select value={responsavelId} onValueChange={setResponsavelId}>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Selecione o responsável" />
+              </SelectTrigger>
+              <SelectContent>
+                {usersQuery.data?.map((u: any) => (
+                  <SelectItem key={u.id} value={u.id}>
+                    {u.name} {u.oab_number ? `(OAB ${u.oab_number})` : ""}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="space-y-2">
@@ -1912,7 +2059,7 @@ export default function StratNegCreateWizard({ open, onOpenChange }: Props) {
           </DialogTitle>
         </DialogHeader>
 
-        <StepIndicator currentStep={step} />
+        <StepIndicator currentStep={step} onStepClick={setStep} />
 
         <div className="flex-1 overflow-y-auto pr-1 min-h-0">
           {step === 1 && renderStep1()}
@@ -1923,6 +2070,15 @@ export default function StratNegCreateWizard({ open, onOpenChange }: Props) {
         </div>
 
         <DialogFooter className="shrink-0 border-t pt-4 mt-4">
+          {submitError && (
+            <div className="w-full mb-3 p-3 rounded-lg bg-red-50 border border-red-200 flex items-start gap-2">
+              <AlertTriangle className="size-4 text-red-500 mt-0.5 shrink-0" />
+              <div className="flex-1">
+                <p className="text-sm text-red-700">{submitError}</p>
+              </div>
+              <button type="button" onClick={() => setSubmitError("")} className="text-red-400 hover:text-red-600 text-xs">✕</button>
+            </div>
+          )}
           <div className="flex items-center justify-between w-full">
             <Button
               type="button"
@@ -1955,16 +2111,26 @@ export default function StratNegCreateWizard({ open, onOpenChange }: Props) {
                   <ChevronRight className="size-4 ml-1" />
                 </Button>
               )}
-              {step === 5 && (
-                <Button
-                  type="button"
-                  onClick={handleCreate}
-                  disabled={createMutation.isPending}
-                  className="bg-[#C9A961] hover:bg-[#B8944E] text-white"
-                >
-                  {createMutation.isPending ? "Criando..." : "Criar Negociação"}
-                </Button>
-              )}
+              <Button
+                type="button"
+                onClick={handleCreate}
+                disabled={isSubmitting}
+                className="bg-[#C9A961] hover:bg-[#B8944E] text-white"
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="size-4 mr-1 animate-spin" />
+                    Criando...
+                  </>
+                ) : step < 5 ? (
+                  <>
+                    <Save className="size-4 mr-1" />
+                    Salvar Rascunho
+                  </>
+                ) : (
+                  "Criar Negociação"
+                )}
+              </Button>
             </div>
           </div>
         </DialogFooter>

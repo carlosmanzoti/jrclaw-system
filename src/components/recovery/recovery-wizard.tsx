@@ -403,17 +403,38 @@ export function RecoveryWizard({ onClose, onSuccess }: RecoveryWizardProps) {
           },
         }),
       });
+
       if (!res.ok) {
-        throw new Error("Falha na analise. Tente novamente.");
+        const status = res.status;
+        if (status === 401) throw new Error("Sessão expirada. Faça login novamente.");
+        if (status === 429) throw new Error("Limite de requisições atingido. Aguarde alguns minutos.");
+        throw new Error(`Falha na análise (HTTP ${status}). Tente novamente.`);
       }
-      const data = await res.json();
-      setAiAnalysis(data);
-      setOverrideScore(String(data.score));
-      setOverrideStrategy(data.estrategia);
+
+      const responseData = await res.json();
+      if (!responseData.success) {
+        throw new Error(responseData.error || "Falha na análise. Tente novamente.");
+      }
+
+      // API returns { success, data: { score_recuperacao, estrategia_recomendada, ... } }
+      const analysis = responseData.data;
+      const normalizedAnalysis = {
+        ...analysis,
+        score: analysis.score_recuperacao ?? analysis.score ?? 50,
+        estrategia: analysis.estrategia_recomendada ?? analysis.estrategia_principal ?? analysis.estrategia ?? "",
+      };
+
+      setAiAnalysis(normalizedAnalysis);
+      setOverrideScore(String(normalizedAnalysis.score));
+      setOverrideStrategy(normalizedAnalysis.estrategia);
     } catch (err) {
-      setAiError(
-        err instanceof Error ? err.message : "Erro ao analisar com IA."
-      );
+      if (err instanceof TypeError && err.message.includes("fetch")) {
+        setAiError("Erro de conexão. Verifique sua internet e tente novamente.");
+      } else {
+        setAiError(
+          err instanceof Error ? err.message : "Erro ao analisar com IA."
+        );
+      }
     } finally {
       setAiLoading(false);
     }
@@ -1367,7 +1388,10 @@ export function RecoveryWizard({ onClose, onSuccess }: RecoveryWizardProps) {
           <div className="size-16 rounded-full bg-red-50 flex items-center justify-center">
             <AlertTriangle className="size-8 text-red-500" />
           </div>
-          <p className="text-sm text-red-600">{aiError}</p>
+          <p className="text-sm text-red-600 text-center max-w-md">{aiError}</p>
+          <p className="text-xs text-[#999999] text-center max-w-sm">
+            A análise por IA é opcional. Você pode prosseguir e definir score e estratégia manualmente.
+          </p>
           <div className="flex gap-2">
             <Button
               type="button"
@@ -1379,12 +1403,12 @@ export function RecoveryWizard({ onClose, onSuccess }: RecoveryWizardProps) {
             </Button>
             <Button
               type="button"
-              variant="ghost"
+              variant="default"
               size="sm"
               onClick={() => setAiSkipped(true)}
-              className="text-[#999999]"
+              className="bg-[#C9A961] hover:bg-[#B8944E] text-white"
             >
-              Pular Analise IA
+              Continuar sem IA
             </Button>
           </div>
         </div>

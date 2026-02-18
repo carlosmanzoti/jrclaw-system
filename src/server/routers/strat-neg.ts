@@ -148,6 +148,10 @@ const negotiationsSubRouter = router({
         data_inicio: z.date().optional(),
         data_limite: z.date().optional(),
         observacoes: z.string().optional(),
+        descricao: z.string().optional(),
+        contraparte_nome: z.string().optional(),
+        contraparte_tipo: z.string().optional(),
+        batna: z.string().optional(),
       })
     )
     .mutation(async ({ ctx, input }) => {
@@ -167,8 +171,19 @@ const negotiationsSubRouter = router({
         valor_pedido_credor,
         zopa_min,
         zopa_max,
+        descricao,
+        contraparte_nome,
+        contraparte_tipo,
+        batna,
         ...rest
       } = input;
+
+      // Build observacoes combining explicit observacoes + descricao + contraparte info
+      const obsParts: string[] = [];
+      if (rest.observacoes) obsParts.push(rest.observacoes);
+      if (contraparte_nome) obsParts.push(`CONTRAPARTE: ${contraparte_nome}${contraparte_tipo ? ` (${contraparte_tipo})` : ""}`);
+      if (descricao) obsParts.push(descricao);
+      const fullObservacoes = obsParts.length > 0 ? obsParts.join("\n\n") : undefined;
 
       return ctx.db.stratNegotiation.create({
         data: {
@@ -191,7 +206,8 @@ const negotiationsSubRouter = router({
           zopa_max: toBigIntOrNull(zopa_max),
           data_inicio: rest.data_inicio || new Date(),
           data_limite: rest.data_limite,
-          observacoes: rest.observacoes,
+          observacoes: fullObservacoes,
+          ...(batna && { batna_devedor: { descricao: batna } }),
         },
       });
     }),

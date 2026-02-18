@@ -688,18 +688,21 @@ export async function POST(req: Request) {
   }
 
   const body = await req.json()
-  const { type, recoveryCaseId, eventId, data } = body
-
-  if (!recoveryCaseId) {
-    return Response.json(
-      { success: false, error: "recoveryCaseId is required" },
-      { status: 400 }
-    )
-  }
+  const { type, recoveryCaseId, eventId, data, devedor, caso } = body
 
   if (!type || !VALID_TYPES.has(type)) {
     return Response.json(
       { success: false, error: `Invalid type. Valid types: ${[...VALID_TYPES].join(", ")}` },
+      { status: 400 }
+    )
+  }
+
+  // For initial_analysis from the wizard, allow raw devedor/caso data without recoveryCaseId
+  const isWizardCall = !recoveryCaseId && type === "initial_analysis" && devedor
+
+  if (!recoveryCaseId && !isWizardCall) {
+    return Response.json(
+      { success: false, error: "recoveryCaseId is required" },
       { status: 400 }
     )
   }
@@ -711,30 +714,72 @@ export async function POST(req: Request) {
     ? MODEL_CONFIGS.premium
     : MODEL_CONFIGS.standard
 
-  // Load recovery case with all relations
-  const recoveryCase = await db.creditRecoveryCase.findUnique({
-    where: { id: recoveryCaseId },
-    include: RECOVERY_CASE_INCLUDE,
-  })
-
-  if (!recoveryCase) {
-    return Response.json(
-      { success: false, error: "Recovery case not found" },
-      { status: 404 }
-    )
-  }
-
-  // Load event if needed
+  let recoveryCase: any = null
   let event = null
-  if (type === "event_analysis" && eventId) {
-    event = await db.recoveryEvent.findUnique({
-      where: { id: eventId },
+
+  if (isWizardCall) {
+    // Build a virtual recovery case from wizard data for prompt building
+    recoveryCase = {
+      codigo: "NOVO",
+      titulo: caso?.titulo || "Novo caso",
+      tipo: caso?.tipo || "EXECUCAO",
+      fase: "ANALISE_INICIAL",
+      status: "ATIVO",
+      prioridade: caso?.prioridade || "MEDIA",
+      valor_original: caso?.valores?.valor_original ?? null,
+      valor_atualizado: caso?.valores?.total ?? null,
+      valor_total_execucao: null,
+      valor_recuperado: null,
+      valor_bloqueado: null,
+      valor_penhorado: null,
+      percentual_recuperado: null,
+      score_recuperacao: null,
+      devedor_nome: devedor?.nome || "N/I",
+      devedor_cpf_cnpj: devedor?.cpf_cnpj || "N/I",
+      devedor_tipo: devedor?.tipo || "N/I",
+      devedor_atividade: devedor?.atividade || null,
+      titulo_tipo: null,
+      titulo_numero: null,
+      risco_prescricao: null,
+      risco_insolvencia: null,
+      estrategia_ia: null,
+      observacoes: null,
+      bens: [],
+      penhoras: [],
+      acoes_cobranca: [],
+      investigacoes: [],
+      acordos: [],
+      devedores_solidarios: [],
+      incidentes_desconsidera: [],
+      eventos: [],
+      case_: caso?.processo_vinculado ? { numero_processo: caso.processo_vinculado } : null,
+      person: null,
+    }
+  } else {
+    // Load recovery case with all relations
+    recoveryCase = await db.creditRecoveryCase.findUnique({
+      where: { id: recoveryCaseId },
+      include: RECOVERY_CASE_INCLUDE,
     })
-    if (!event) {
+
+    if (!recoveryCase) {
       return Response.json(
-        { success: false, error: "Event not found" },
+        { success: false, error: "Recovery case not found" },
         { status: 404 }
       )
+    }
+
+    // Load event if needed
+    if (type === "event_analysis" && eventId) {
+      event = await db.recoveryEvent.findUnique({
+        where: { id: eventId },
+      })
+      if (!event) {
+        return Response.json(
+          { success: false, error: "Event not found" },
+          { status: 404 }
+        )
+      }
     }
   }
 
@@ -769,76 +814,78 @@ export async function POST(req: Request) {
     }
 
     // ---------------------------------------------------------------------------
-    // Post-processing: update DB based on analysis type
+    // Post-processing: update DB based on analysis type (skip for wizard calls)
     // ---------------------------------------------------------------------------
 
-    // SCORING / INITIAL_ANALYSIS: update CreditRecoveryCase with score
-    if ((type === "scoring" || type === "initial_analysis") && parsed) {
-      const updateData: Record<string, unknown> = {}
+    if (!isWizardCall) {
+      // SCORING / INITIAL_ANALYSIS: update CreditRecoveryCase with score
+      if ((type === "scoring" || type === "initial_analysis") && parsed) {
+        const updateData: Record<string, unknown> = {}
 
-      if (typeof parsed.score_recuperacao === "number") {
-        updateData.score_recuperacao = parsed.score_recuperacao
-      }
-      if (parsed.score_fatores) {
-        updateData.score_fatores = parsed.score_fatores
-      }
-      if (type === "initial_analysis" && parsed.estrategia_recomendada) {
-        updateData.estrategia_ia = parsed.estrategia_recomendada
+        if (typeof parsed.score_recuperacao === "number") {
+          updateData.score_recuperacao = parsed.score_recuperacao
+        }
+        if (parsed.score_fatores) {
+          updateData.score_fatores = parsed.score_fatores
+        }
+        if (type === "initial_analysis" && parsed.estrategia_recomendada) {
+          updateData.estrategia_ia = parsed.estrategia_recomendada
+        }
+
+        if (Object.keys(updateData).length > 0) {
+          await db.creditRecoveryCase.update({
+            where: { id: recoveryCaseId },
+            data: updateData as never,
+          }).catch(() => {}) // non-critical
+        }
       }
 
-      if (Object.keys(updateData).length > 0) {
+      // STRATEGY: update CreditRecoveryCase with strategy
+      if (type === "strategy" && parsed?.estrategia_principal) {
         await db.creditRecoveryCase.update({
           where: { id: recoveryCaseId },
-          data: updateData as never,
+          data: {
+            estrategia_ia: parsed.estrategia_principal,
+          },
         }).catch(() => {}) // non-critical
       }
-    }
 
-    // STRATEGY: update CreditRecoveryCase with strategy
-    if (type === "strategy" && parsed?.estrategia_principal) {
-      await db.creditRecoveryCase.update({
-        where: { id: recoveryCaseId },
+      // EVENT_ANALYSIS: update the RecoveryEvent with AI analysis
+      if (type === "event_analysis" && eventId && parsed) {
+        await db.recoveryEvent.update({
+          where: { id: eventId },
+          data: {
+            sentimento: parsed.sentimento || undefined,
+            analise_ia: parsed.analise || undefined,
+            acao_recomendada: parsed.acao_recomendada || undefined,
+          },
+        }).catch(() => {}) // non-critical
+      }
+
+      // Create a RecoveryEvent logging the AI analysis
+      const eventTypeMap: Record<string, string> = {
+        initial_analysis: "Analise inicial IA",
+        scoring: `Score IA: ${parsed.score_recuperacao ?? "N/A"}/100`,
+        strategy: "Estrategia IA gerada",
+        event_analysis: "Analise de evento IA",
+        fraud_detection: `Deteccao de fraude IA (score: ${parsed.score_fraude ?? "N/A"})`,
+        penhorability: "Analise de penhorabilidade IA",
+        petition: `Peticao gerada IA: ${parsed.tipo_peticao ?? ""}`,
+        investigation_plan: "Plano de investigacao IA",
+        portfolio: "Analise de portfolio IA",
+      }
+
+      await db.recoveryEvent.create({
         data: {
-          estrategia_ia: parsed.estrategia_principal,
+          recovery_case_id: recoveryCaseId,
+          data: new Date(),
+          tipo: "ALERTA_IA",
+          descricao: eventTypeMap[type] || `Analise IA: ${type}`,
+          analise_ia: JSON.stringify(parsed).substring(0, 5000),
+          responsavel_id: session.user.id,
         },
       }).catch(() => {}) // non-critical
     }
-
-    // EVENT_ANALYSIS: update the RecoveryEvent with AI analysis
-    if (type === "event_analysis" && eventId && parsed) {
-      await db.recoveryEvent.update({
-        where: { id: eventId },
-        data: {
-          sentimento: parsed.sentimento || undefined,
-          analise_ia: parsed.analise || undefined,
-          acao_recomendada: parsed.acao_recomendada || undefined,
-        },
-      }).catch(() => {}) // non-critical
-    }
-
-    // Create a RecoveryEvent logging the AI analysis
-    const eventTypeMap: Record<string, string> = {
-      initial_analysis: "Analise inicial IA",
-      scoring: `Score IA: ${parsed.score_recuperacao ?? "N/A"}/100`,
-      strategy: "Estrategia IA gerada",
-      event_analysis: "Analise de evento IA",
-      fraud_detection: `Deteccao de fraude IA (score: ${parsed.score_fraude ?? "N/A"})`,
-      penhorability: "Analise de penhorabilidade IA",
-      petition: `Peticao gerada IA: ${parsed.tipo_peticao ?? ""}`,
-      investigation_plan: "Plano de investigacao IA",
-      portfolio: "Analise de portfolio IA",
-    }
-
-    await db.recoveryEvent.create({
-      data: {
-        recovery_case_id: recoveryCaseId,
-        data: new Date(),
-        tipo: "ALERTA_IA",
-        descricao: eventTypeMap[type] || `Analise IA: ${type}`,
-        analise_ia: JSON.stringify(parsed).substring(0, 5000),
-        responsavel_id: session.user.id,
-      },
-    }).catch(() => {}) // non-critical
 
     // Log AI usage
     const usage = aiResult.usage
