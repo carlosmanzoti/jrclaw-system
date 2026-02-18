@@ -562,7 +562,7 @@ export function BibliotecaForm({ open, onOpenChange, entryId, prefill }: Bibliot
                     ref={fileInputRef}
                     type="file"
                     className="hidden"
-                    accept=".pdf,.docx,.txt,.xlsx,.csv,.rtf,.md,.jpg,.jpeg,.png"
+                    accept=".pdf,.docx,.txt,.xlsx,.xls,.csv,.rtf,.md,.jpg,.jpeg,.png"
                     onChange={(e) => {
                       const file = e.target.files?.[0]
                       if (file) handleFileUpload(file)

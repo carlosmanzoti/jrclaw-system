@@ -50,7 +50,7 @@ export async function POST(req: NextRequest) {
         text = result.value
       } else if (name.endsWith(".txt") || name.endsWith(".md")) {
         text = buffer.toString("utf-8")
-      } else if (name.endsWith(".xlsx") || name.endsWith(".csv")) {
+      } else if (name.endsWith(".xlsx") || name.endsWith(".xls") || name.endsWith(".csv")) {
         const XLSX = await import("xlsx")
         const workbook = XLSX.read(buffer, { type: "buffer" })
         const lines: string[] = []

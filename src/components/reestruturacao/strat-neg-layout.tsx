@@ -172,9 +172,6 @@ export function StratNegLayout() {
             <h1 className="text-2xl font-bold tracking-tight font-heading">
               Reestruturacao &amp; Negociacoes
             </h1>
-            <p className="text-sm text-muted-foreground">
-              Gestao estrategica baseada em Harvard, Voss e Teoria dos Jogos
-            </p>
           </div>
           <div className="flex items-center gap-2">
             <Button
@@ -182,7 +179,7 @@ export function StratNegLayout() {
               className="bg-[#C9A961] text-[#2A2A2A] hover:bg-[#B8984F]"
             >
               <Plus className="size-4 mr-2" />
-              + Nova Negociacao
+              Nova Negociacao
             </Button>
             <Button variant="outline" asChild>
               <Link href="/reestruturacao/estrategico">
@@ -394,7 +391,7 @@ export function StratNegLayout() {
                   className="bg-[#C9A961] text-[#2A2A2A] hover:bg-[#B8984F]"
                 >
                   <Plus className="size-4 mr-2" />
-                  + Nova Negociacao
+                  Nova Negociacao
                 </Button>
               </div>
             </CardContent>

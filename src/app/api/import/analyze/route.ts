@@ -35,6 +35,24 @@ export async function POST(req: NextRequest) {
     const fieldDescription = buildFieldDescriptionForAI(entityType)
     const config = MODEL_CONFIGS.standard
 
+    // Truncate large content to avoid exceeding AI context/output limits
+    const MAX_INPUT_CHARS = 30000
+    let inputText = text
+    let wasTruncated = false
+    if (text.length > MAX_INPUT_CHARS) {
+      inputText = text.slice(0, MAX_INPUT_CHARS)
+      // Avoid cutting mid-line
+      const lastNewline = inputText.lastIndexOf("\n")
+      if (lastNewline > MAX_INPUT_CHARS * 0.8) {
+        inputText = inputText.slice(0, lastNewline)
+      }
+      wasTruncated = true
+    }
+
+    const truncationNote = wasTruncated
+      ? `\nNOTE: The file was truncated for analysis (original: ${text.length} chars, analyzing first ${inputText.length} chars). Extract all records visible in the provided portion.`
+      : ""
+
     const systemPrompt = `You are a legal data extraction specialist for JRCLaw, a Brazilian law firm management system.
 Analyze the following text extracted from a file and extract structured records.
 
@@ -56,6 +74,7 @@ Rules:
 - If the text appears to be tabular (CSV, spreadsheet), each row is typically one record
 - If the text is a legal document (PDF), identify distinct entities mentioned
 - Always return the fieldMapping showing which source column/pattern maps to which target field
+${truncationNote}
 
 IMPORTANT: You MUST respond with ONLY a valid JSON object (no markdown, no explanation, no code fences).
 The JSON must follow this exact structure:
@@ -75,10 +94,10 @@ The JSON must follow this exact structure:
 
     const result = await generateText({
       model: anthropic(config.model),
-      maxOutputTokens: config.maxOutputTokens,
+      maxOutputTokens: 16384,
       temperature: config.temperature,
       system: systemPrompt,
-      prompt: `Extract structured ${entityType} records from the following text:\n\n${text.slice(0, 50000)}`,
+      prompt: `Extract structured ${entityType} records from the following text:\n\n${inputText}`,
     })
 
     // Parse JSON from AI response (handle possible markdown code fences)
@@ -107,7 +126,40 @@ The JSON must follow this exact structure:
           { status: 500 }
         )
       }
-      aiResult = JSON.parse(jsonMatch[0])
+      try {
+        aiResult = JSON.parse(jsonMatch[0])
+      } catch {
+        // Attempt to repair truncated JSON
+        let partial = jsonMatch[0]
+        // Remove last incomplete element after the last comma
+        const lastComma = partial.lastIndexOf(",")
+        if (lastComma > 0) {
+          partial = partial.slice(0, lastComma)
+        }
+        // Close any open brackets/braces
+        let braces = 0, brackets = 0
+        let inStr = false, esc = false
+        for (const ch of partial) {
+          if (esc) { esc = false; continue }
+          if (ch === "\\") { esc = true; continue }
+          if (ch === '"') { inStr = !inStr; continue }
+          if (inStr) continue
+          if (ch === "{") braces++
+          if (ch === "}") braces--
+          if (ch === "[") brackets++
+          if (ch === "]") brackets--
+        }
+        while (brackets > 0) { partial += "]"; brackets-- }
+        while (braces > 0) { partial += "}"; braces-- }
+        try {
+          aiResult = JSON.parse(partial)
+        } catch {
+          return NextResponse.json(
+            { error: "Não foi possível processar o arquivo. Tente com um arquivo menor ou em formato CSV." },
+            { status: 500 }
+          )
+        }
+      }
     }
 
     // Validate minimal structure

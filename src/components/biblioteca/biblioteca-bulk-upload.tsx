@@ -59,7 +59,7 @@ const LIBRARY_AREAS: Record<string, string> = {
 }
 
 const ACCEPTED_EXTENSIONS = [
-  ".pdf", ".docx", ".txt", ".xlsx", ".csv", ".rtf", ".md",
+  ".pdf", ".docx", ".txt", ".xlsx", ".xls", ".csv", ".rtf", ".md",
   ".jpg", ".jpeg", ".png",
 ]
 
@@ -68,6 +68,7 @@ const ACCEPTED_MIME_TYPES = [
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
   "text/plain",
   "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  "application/vnd.ms-excel",
   "text/csv",
   "application/rtf",
   "text/markdown",

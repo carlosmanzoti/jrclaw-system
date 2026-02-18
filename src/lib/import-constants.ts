@@ -114,6 +114,7 @@ export const ACCEPTED_FILE_TYPES = [
   "application/pdf",
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
   "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  "application/vnd.ms-excel",
   "text/csv",
   "text/plain",
   "application/rtf",
@@ -122,7 +123,7 @@ export const ACCEPTED_FILE_TYPES = [
   "application/xml",
 ]
 
-export const ACCEPTED_EXTENSIONS = ".pdf,.docx,.xlsx,.csv,.txt,.rtf,.json,.xml"
+export const ACCEPTED_EXTENSIONS = ".pdf,.docx,.xlsx,.xls,.csv,.txt,.rtf,.json,.xml"
 
 export function buildFieldDescriptionForAI(entityType: ImportEntityTypeKey): string {
   const fields = IMPORT_ENTITY_FIELDS[entityType]

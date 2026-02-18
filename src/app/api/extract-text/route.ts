@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
       text = result.value
     } else if (name.endsWith(".txt") || name.endsWith(".md")) {
       text = buffer.toString("utf-8")
-    } else if (name.endsWith(".xlsx") || name.endsWith(".csv")) {
+    } else if (name.endsWith(".xlsx") || name.endsWith(".xls") || name.endsWith(".csv")) {
       const XLSX = await import("xlsx")
       const workbook = XLSX.read(buffer, { type: "buffer" })
       const lines: string[] = []
@@ -46,7 +46,7 @@ export async function POST(req: NextRequest) {
         .trim()
     } else {
       return NextResponse.json(
-        { error: "Formato não suportado. Use PDF, DOCX, TXT, XLSX, CSV, RTF ou MD." },
+        { error: "Formato não suportado. Use PDF, DOCX, TXT, XLSX, XLS, CSV, RTF ou MD." },
         { status: 400 }
       )
     }

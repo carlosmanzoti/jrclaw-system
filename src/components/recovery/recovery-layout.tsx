@@ -1663,42 +1663,39 @@ function WizardDialog({
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
-  // Lazy import to keep the main bundle lean.
-  // The RecoveryWizard component will be created by another agent.
-  let WizardContent: React.ReactNode;
+  if (!open) return null;
 
+  // Lazy import to keep the main bundle lean.
   try {
-    // Dynamic import pattern — will render placeholder if component is not yet available
     const { RecoveryWizard } = require("@/components/recovery/recovery-wizard");
-    WizardContent = (
-      <RecoveryWizard onSuccess={() => onOpenChange(false)} onCancel={() => onOpenChange(false)} />
+    return (
+      <RecoveryWizard
+        onClose={() => onOpenChange(false)}
+        onSuccess={() => onOpenChange(false)}
+      />
     );
   } catch {
-    WizardContent = (
-      <div className="py-12 text-center">
-        <div className="size-12 rounded-full bg-muted flex items-center justify-center mx-auto mb-4">
-          <Plus className="size-6 text-muted-foreground" />
-        </div>
-        <h3 className="text-lg font-semibold mb-2">Assistente de Novo Caso</h3>
-        <p className="text-sm text-muted-foreground max-w-sm mx-auto">
-          O componente do assistente de criacao de novos casos sera carregado aqui.
-          Este modulo esta em desenvolvimento.
-        </p>
-      </div>
+    return (
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Shield className="size-5 text-[#C9A961]" />
+              Novo Caso de Recuperacao de Credito
+            </DialogTitle>
+          </DialogHeader>
+          <div className="py-12 text-center">
+            <div className="size-12 rounded-full bg-muted flex items-center justify-center mx-auto mb-4">
+              <Plus className="size-6 text-muted-foreground" />
+            </div>
+            <h3 className="text-lg font-semibold mb-2">Assistente de Novo Caso</h3>
+            <p className="text-sm text-muted-foreground max-w-sm mx-auto">
+              O componente do assistente de criacao de novos casos sera carregado aqui.
+              Este modulo esta em desenvolvimento.
+            </p>
+          </div>
+        </DialogContent>
+      </Dialog>
     );
   }
-
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Shield className="size-5 text-[#C9A961]" />
-            Novo Caso de Recuperacao de Credito
-          </DialogTitle>
-        </DialogHeader>
-        {WizardContent}
-      </DialogContent>
-    </Dialog>
-  );
 }

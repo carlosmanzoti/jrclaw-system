@@ -278,7 +278,7 @@ export function ImportStepUpload({
                 : "Arraste um arquivo aqui ou clique para selecionar"}
             </p>
             <p className="mt-1 text-xs text-muted-foreground">
-              PDF, DOCX, XLSX, CSV, TXT, RTF, JSON, XML
+              PDF, DOCX, XLSX, XLS, CSV, TXT, RTF, JSON, XML
             </p>
           </>
         )}

@@ -38,7 +38,7 @@ export async function extractTextFromFile(file: File): Promise<ExtractedFile> {
 }
 
 export const SUPPORTED_EXTENSIONS = [
-  ".pdf", ".docx", ".txt", ".xlsx", ".csv", ".rtf", ".md",
+  ".pdf", ".docx", ".txt", ".xlsx", ".xls", ".csv", ".rtf", ".md",
   ".jpg", ".jpeg", ".png",
 ]
 
