@@ -4,6 +4,7 @@ import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
 import { buildWorkspaceContext, invalidateWorkspaceCache } from "@/lib/ai/workspace-context"
 import { buildWorkspaceSystemPrompt, getActionInstructions } from "@/lib/ai/workspace-system-prompt"
+import { getFullPredictiveInsights } from "@/lib/ai/workspace-predictive-engine"
 
 export const maxDuration = 120
 
@@ -166,6 +167,46 @@ export async function POST(
     console.error("[Workspace AI Error]", error)
     return Response.json(
       { error: "Assistente IA indisponível no momento. Tente novamente." },
+      { status: 500 }
+    )
+  }
+}
+
+// ---------------------------------------------------------------------------
+// GET handler — predictive insights (no AI credits consumed for fast checks)
+// ---------------------------------------------------------------------------
+
+export async function GET(
+  req: Request,
+  { params }: { params: Promise<{ deadlineId: string }> }
+) {
+  const session = await auth()
+  if (!session?.user?.id) {
+    return new Response("Unauthorized", { status: 401 })
+  }
+
+  const { deadlineId } = await params
+  const url = new URL(req.url)
+  const mode = url.searchParams.get("mode") || "full"
+
+  try {
+    const insights = await getFullPredictiveInsights(deadlineId)
+
+    if (mode === "risk") {
+      return Response.json({ risk: insights.risk })
+    }
+    if (mode === "actions") {
+      return Response.json({ nextActions: insights.nextActions })
+    }
+    if (mode === "gaps") {
+      return Response.json({ gaps: insights.gaps })
+    }
+
+    return Response.json(insights)
+  } catch (error) {
+    console.error("[Workspace AI GET Error]", error)
+    return Response.json(
+      { error: "Análise preditiva indisponível" },
       { status: 500 }
     )
   }
