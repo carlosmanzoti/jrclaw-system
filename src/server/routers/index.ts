@@ -16,6 +16,7 @@ import { stratNegRouter } from "./strat-neg";
 import { recoveryRouter } from "./recovery";
 import { emailActivityRouter } from "./email-activity";
 import { whatsappRouter } from "./whatsapp";
+import { crjNegotiationsRouter } from "./crj-negotiations";
 
 export const appRouter = router({
   users: usersRouter,
@@ -35,6 +36,7 @@ export const appRouter = router({
   recovery: recoveryRouter,
   emailActivity: emailActivityRouter,
   whatsapp: whatsappRouter,
+  crjNeg: crjNegotiationsRouter,
 });
 
 export type AppRouter = typeof appRouter;
