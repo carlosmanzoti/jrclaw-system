@@ -551,6 +551,8 @@ model User {
   recovery_actions           CollectionAction[] @relation("CollectionActionResponsavel")
   recovery_agreements        RecoveryAgreement[] @relation("AgreementResponsavel")
   recovery_events            RecoveryEvent[] @relation("RecoveryEventResponsavel")
+  deadline_responsavel       DeadlineNew[] @relation("deadline_responsavel")
+  deadline_backup            DeadlineNew[] @relation("deadline_backup")
 
   @@map("users")
 }
@@ -622,6 +624,7 @@ model Person {
   strat_negotiations StratNegotiation[]    @relation("StratNegPerson")
   recovery_cases_debtor      CreditRecoveryCase[] @relation("RecoveryDebtor")
   joint_debtor_entries       JointDebtor[] @relation("JointDebtorPerson")
+  process_parties            ProcessParty[]
 
   @@map("persons")
 }
@@ -687,6 +690,8 @@ model Case {
   judicialRecoveryCase JudicialRecoveryCase?
   strat_negotiations  StratNegotiation[]    @relation("StratNegCase")
   recovery_cases             CreditRecoveryCase[] @relation("CaseRecovery")
+  deadlines_new              DeadlineNew[]
+  process_parties            ProcessParty[]
 
   @@map("cases")
 }
@@ -2990,4 +2995,298 @@ model RecoveryEvent {
 
   @@index([recovery_case_id])
   @@map("recovery_events")
+}
+
+// ============================================================
+// DEADLINE / COURT CALENDAR / PROCESS PARTY MODELS
+// ============================================================
+
+model DeadlineNew {
+  id                          String    @id @default(cuid())
+  case_id                     String?
+  case_                       Case?     @relation(fields: [case_id], references: [id])
+  rj_case_id                  String?
+  recovery_case_id            String?
+  negotiation_id              String?
+
+  codigo                      String    @unique
+  titulo                      String
+  descricao                   String?   @db.Text
+
+  // Tipo do prazo (String, not enum)
+  tipo                        String    // CONTESTACAO, RECONVENCAO, REPLICA, APELACAO, AGRAVO_INSTRUMENTO, AGRAVO_INTERNO, EMBARGOS_DECLARACAO, RECURSO_ESPECIAL, RECURSO_EXTRAORDINARIO, EMBARGOS_EXECUCAO, IMPUGNACAO_CUMPRIMENTO, EMENDA_PI, MANIFESTACAO_DOCUMENTOS, ESPECIFICACAO_PROVAS, ALEGACOES_FINAIS, PAGAMENTO_VOLUNTARIO, PAGAMENTO_EXECUCAO, PARCELAMENTO_916, HABILITACAO_CREDITO_RJ, PLANO_RECUPERACAO, OBJECAO_PLANO, IMPUGNACAO_CREDITO_RJ, STAY_PERIOD, AGC, SUPERVISAO_RJ, INVENTARIO_DECLARACOES, MANDADO_SEGURANCA, ACAO_RESCISORIA, EXECUCAO_FISCAL_EMBARGOS, TUTELA_ANTECIPADA_ADITAMENTO, TUTELA_CAUTELAR_PRINCIPAL, MONITORIA_EMBARGOS, IMPEDIMENTO_SUSPEICAO, SUBSTITUICAO_BEM, COMPROVACAO_IMPENHORAVEL, ALIMENTOS_PAGAR_JUSTIFICAR, PERITO_PROPOSTA, MANIFESTACAO_LAUDO, ASSISTENTE_TECNICO, CUSTOM
+  categoria                   String    // PARTE, RECURSAL, JUIZ, PERITO, OUTROS, RJ_ESTATUTARIO, RJ_RECURSAL, MATERIAL
+  contagem_tipo               String    // DIAS_UTEIS, DIAS_CORRIDOS
+
+  prazo_dias                  Int
+  prazo_dias_efetivo          Int?
+  prazo_horas                 Int?
+
+  // Dobra de prazo
+  dobra_aplicada              Boolean   @default(false)
+  dobra_motivo                String?
+  dobra_fator                 Float?
+
+  lei_especifica_prazo        Boolean   @default(false)
+  interrompido_embargos       Boolean   @default(false)
+  embargos_data_oposicao      DateTime?
+  embargos_data_decisao       DateTime?
+  prazo_reiniciou             Boolean   @default(false)
+  dias_restantes_pre_embargos Int?
+
+  // Datas de contagem
+  data_evento_gatilho         DateTime
+  metodo_intimacao            String?
+  data_disponibilizacao       DateTime?
+  data_publicacao             DateTime?
+  data_inicio_contagem        DateTime
+  data_fim_prazo              DateTime
+  data_fim_prazo_fatal        DateTime?
+  data_cumprimento            DateTime?
+
+  suspensoes_aplicadas        Json?
+  recesso_impactou            Boolean   @default(false)
+
+  // Status e prioridade (String, not enum)
+  status                      String    // FUTURO, CORRENDO, PROXIMO, URGENTE, HOJE, VENCIDO, CUMPRIDO, CANCELADO, SUSPENSO, INTERROMPIDO
+  prioridade                  String    // FATAL, ALTA, MEDIA, BAIXA
+
+  // Tribunal / jurisdicao
+  tribunal_codigo             String?
+  tribunal_nome               String?
+  uf                          String?
+  municipio                   String?
+  municipio_ibge              String?
+  vara                        String?
+  numero_processo             String?
+
+  // Responsaveis
+  responsavel_id              String?
+  responsavel                 User?     @relation("deadline_responsavel", fields: [responsavel_id], references: [id])
+  responsavel_backup_id       String?
+  responsavel_backup          User?     @relation("deadline_backup", fields: [responsavel_backup_id], references: [id])
+
+  // Notificacoes de antecedencia
+  notificado_d7               Boolean   @default(false)
+  notificado_d3               Boolean   @default(false)
+  notificado_d1               Boolean   @default(false)
+  notificado_d0               Boolean   @default(false)
+  notificado_vencido          Boolean   @default(false)
+
+  // Calculo e conferencia
+  calculado_por               String?
+  calculado_em                DateTime?
+  conferido_por               String?
+  conferido_em                DateTime?
+  log_calculo                 Json?
+
+  // Encadeamento de prazos
+  parent_deadline_id          String?
+  parent_deadline             DeadlineNew?  @relation("deadline_chain", fields: [parent_deadline_id], references: [id])
+  child_deadlines             DeadlineNew[] @relation("deadline_chain")
+
+  // IA e observacoes
+  sugestao_ia                 String?   @db.Text
+  risco_ia                    String?
+  observacoes                 String?   @db.Text
+  documento_id                String?
+
+  created_at                  DateTime  @default(now())
+  updated_at                  DateTime  @updatedAt
+
+  // Relations
+  notificacoes                DeadlineNotification[]
+  historico                   DeadlineHistory[]
+
+  @@index([case_id])
+  @@index([status])
+  @@index([data_fim_prazo])
+  @@index([responsavel_id])
+  @@map("deadlines_new")
+}
+
+model CourtCalendar {
+  id                String    @id @default(cuid())
+  tribunal_codigo   String
+  tribunal_nome     String
+  tribunal_tipo     String    // STF, STJ, TST, TSE, STM, TJ, TRF, TRT, TRE
+  uf                String?
+  ano               Int
+  portaria_numero   String?
+  portaria_data     DateTime?
+  portaria_url      String?
+  atualizado_em     DateTime
+  atualizado_por    String?
+
+  created_at        DateTime  @default(now())
+  updated_at        DateTime  @updatedAt
+
+  // Relations
+  feriados          CourtHoliday[]
+  suspensoes        CourtSuspension[]
+
+  @@unique([tribunal_codigo, ano])
+  @@map("court_calendars")
+}
+
+model CourtHoliday {
+  id                    String        @id @default(cuid())
+  calendar_id           String
+  calendar              CourtCalendar @relation(fields: [calendar_id], references: [id], onDelete: Cascade)
+
+  data                  DateTime
+  nome                  String
+  tipo                  String        // NACIONAL, ESTADUAL, MUNICIPAL, FORENSE, PONTO_FACULTATIVO
+  uf                    String?
+  municipio             String?
+  municipio_ibge        String?
+
+  suspende_expediente   Boolean       @default(true)
+  expediente_parcial    Boolean       @default(false)
+  horario_expediente    String?
+  prazos_prorrogados    Boolean       @default(true)
+  fundamento_legal      String?
+  observacoes           String?
+
+  created_at            DateTime      @default(now())
+
+  @@index([data])
+  @@index([calendar_id, data])
+  @@map("court_holidays")
+}
+
+model CourtSuspension {
+  id                    String        @id @default(cuid())
+  calendar_id           String
+  calendar              CourtCalendar @relation(fields: [calendar_id], references: [id], onDelete: Cascade)
+
+  tipo                  String        // RECESSO_DEZ_JAN, FERIAS_JULHO, SUSPENSAO_PRAZOS_ART220, SUSPENSAO_PORTARIA, INDISPONIBILIDADE_SISTEMA, LUTO_OFICIAL, CALAMIDADE, ELEICOES, OPERACAO_ESPECIAL
+  data_inicio           DateTime
+  data_fim              DateTime
+
+  suspende_prazos       Boolean       @default(true)
+  suspende_audiencias   Boolean       @default(true)
+  suspende_sessoes      Boolean       @default(true)
+  plantao_disponivel    Boolean       @default(false)
+  horario_plantao       String?
+
+  sistema_afetado       String?
+  duracao_minutos       Int?
+  certidao_numero       String?
+  prorroga_prazo        Boolean       @default(false)
+  fundamento_legal      String?
+
+  nome                  String
+  observacoes           String?
+
+  created_at            DateTime      @default(now())
+
+  @@index([data_inicio, data_fim])
+  @@index([calendar_id, data_inicio])
+  @@map("court_suspensions")
+}
+
+model DeadlineNotification {
+  id                    String      @id @default(cuid())
+  deadline_id           String
+  deadline              DeadlineNew @relation(fields: [deadline_id], references: [id], onDelete: Cascade)
+
+  tipo                  String      // D_MINUS_7, D_MINUS_3, D_MINUS_1_FATAL, D_ZERO, VENCIDO, ESCALACAO
+  canal                 String      // EMAIL, SMS, WHATSAPP, PUSH, IN_APP, TELEFONE
+  destinatario_id       String?
+  destinatario_tipo     String      // RESPONSAVEL, BACKUP, GESTOR, SOCIO
+  destinatario_email    String?
+  destinatario_telefone String?
+
+  data_envio            DateTime
+  data_leitura          DateTime?
+  status                String      // PENDENTE, ENVIADO, ENTREGUE, LIDO, ERRO
+  mensagem              String?     @db.Text
+  erro_detalhes         String?
+
+  created_at            DateTime    @default(now())
+
+  @@index([deadline_id])
+  @@map("deadline_notifications")
+}
+
+model DeadlineHistory {
+  id                    String      @id @default(cuid())
+  deadline_id           String
+  deadline              DeadlineNew @relation(fields: [deadline_id], references: [id], onDelete: Cascade)
+
+  acao                  String      // CRIADO, CALCULADO, RECALCULADO, INTERROMPIDO_EMBARGOS, REINICIADO_EMBARGOS, SUSPENSO_RECESSO, RETOMADO_RECESSO, SUSPENSO_INDISPONIBILIDADE, PRORROGADO, CUMPRIDO, CANCELADO, CONFERIDO, EDITADO_MANUAL, NOTIFICACAO_ENVIADA
+  dados_antes           Json?
+  dados_depois          Json?
+  usuario_id            String?
+  motivo                String?
+
+  created_at            DateTime    @default(now())
+
+  @@index([deadline_id])
+  @@map("deadline_history")
+}
+
+model DeadlineCatalog {
+  id                        String    @id @default(cuid())
+  codigo                    String    @unique
+  nome                      String
+  descricao                 String    @db.Text
+
+  dias                      Int
+  contagem_tipo             String    // DIAS_UTEIS, DIAS_CORRIDOS
+  tipo_prazo                String    // PEREMPTORIO, DILATATORIO, IMPROPRIO
+  categoria                 String    // PARTE, RECURSAL, JUIZ, MP, PERITO, AUXILIAR, RJ_ESTATUTARIO
+  subcategoria              String?
+
+  artigo                    String
+  lei                       String
+  paragrafos                String?
+
+  admite_dobra              Boolean   @default(true)
+  excecao_dobra             String?
+  admite_litisconsorcio     Boolean   @default(true)
+  excecao_litisconsorcio    String?
+
+  efeito_nao_cumprimento    String?
+  efeito_recursal           String?
+
+  termo_inicial             String
+  observacoes               String?   @db.Text
+  jurisprudencia            String?   @db.Text
+
+  prazo_resposta_dias       Int?
+  prazo_resposta_ref        String?
+
+  ativo                     Boolean   @default(true)
+
+  created_at                DateTime  @default(now())
+  updated_at                DateTime  @updatedAt
+
+  @@map("deadline_catalog")
+}
+
+model ProcessParty {
+  id                        String    @id @default(cuid())
+  case_id                   String
+  case_                     Case      @relation(fields: [case_id], references: [id], onDelete: Cascade)
+  person_id                 String?
+  person                    Person?   @relation(fields: [person_id], references: [id])
+
+  nome                      String
+  cpf_cnpj                  String?
+
+  polo                      String    // AUTOR, REU, TERCEIRO, ASSISTENTE, LITISCONSORTE, MP, AMICUS
+  tipo_parte                String    // PRIVADO, FAZENDA_FEDERAL, FAZENDA_ESTADUAL, FAZENDA_MUNICIPAL, AUTARQUIA, FUNDACAO_PUBLICA, MP_FEDERAL, MP_ESTADUAL, DEFENSORIA, EMPRESA_PUBLICA, SEM
+
+  prazo_dobro               Boolean   @default(false)
+  fundamento_dobro          String?
+  advogado_escritorio       String?
+  advogados_diferentes      Boolean   @default(false)
+  processo_eletronico       Boolean   @default(true)
+
+  created_at                DateTime  @default(now())
+
+  @@index([case_id])
+  @@map("process_parties")
 }

@@ -90,6 +90,11 @@ const navMain = [
     title: "Prazos",
     url: "/prazos",
     icon: Clock,
+    items: [
+      { title: "Painel de Prazos", url: "/prazos" },
+      { title: "Catálogo de Prazos", url: "/prazos/catalogo" },
+      { title: "Calendário Judicial", url: "/prazos/calendario-judicial" },
+    ],
   },
 ]
 
