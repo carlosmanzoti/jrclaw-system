@@ -3124,6 +3124,7 @@ model CourtCalendar {
   // Relations
   feriados          CourtHoliday[]
   suspensoes        CourtSuspension[]
+  repositories      CalendarRepository[]
 
   @@unique([tribunal_codigo, ano])
   @@map("court_calendars")
@@ -3289,4 +3290,34 @@ model ProcessParty {
 
   @@index([case_id])
   @@map("process_parties")
+}
+
+model CalendarRepository {
+  id                    String         @id @default(cuid())
+  tribunal_codigo       String
+  tribunal_nome         String
+  tribunal_tipo         String         // STF, STJ, TJ, TRF, TRT, TRE, etc.
+  uf                    String?
+  ano                   Int
+  tipo_documento        String         // PORTARIA, RESOLUCAO, PROVIMENTO, ATO
+  numero_documento      String?
+  data_documento        DateTime?
+  ementa                String?        @db.Text
+  arquivo_url           String?
+  arquivo_nome          String?
+  texto_extraido        String?        @db.Text
+  status                String         @default("PENDENTE") // PENDENTE, PROCESSANDO, PROCESSADO, ERRO
+  feriados_extraidos    Int            @default(0)
+  suspensoes_extraidas  Int            @default(0)
+  calendar_id           String?
+  calendar              CourtCalendar? @relation(fields: [calendar_id], references: [id])
+  processado_por_ia     Boolean        @default(false)
+  erro_processamento    String?
+  uploaded_by           String?
+  created_at            DateTime       @default(now())
+  updated_at            DateTime       @updatedAt
+
+  @@index([tribunal_codigo, ano])
+  @@index([status])
+  @@map("calendar_repositories")
 }

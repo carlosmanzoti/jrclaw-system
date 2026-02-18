@@ -1432,6 +1432,287 @@ export const deadlinesRouter = router({
           suspensoes_no_periodo: suspensoesNoPeriodo,
         };
       }),
+
+    /**
+     * Create a court calendar with holidays and suspensions
+     */
+    createCalendar: protectedProcedure
+      .input(
+        z.object({
+          tribunal_codigo: z.string(),
+          tribunal_nome: z.string(),
+          tribunal_tipo: z.string(),
+          uf: z.string().nullable(),
+          ano: z.number().int(),
+          portaria_numero: z.string().optional(),
+          portaria_data: z.coerce.date().optional(),
+          portaria_url: z.string().optional(),
+          feriados: z
+            .array(
+              z.object({
+                data: z.coerce.date(),
+                nome: z.string(),
+                tipo: z.string(),
+                uf: z.string().nullable().optional(),
+                suspende_expediente: z.boolean().default(true),
+                prazos_prorrogados: z.boolean().default(true),
+                fundamento_legal: z.string().optional(),
+                observacoes: z.string().optional(),
+              }),
+            )
+            .optional()
+            .default([]),
+          suspensoes: z
+            .array(
+              z.object({
+                tipo: z.string(),
+                data_inicio: z.coerce.date(),
+                data_fim: z.coerce.date(),
+                nome: z.string(),
+                suspende_prazos: z.boolean().default(true),
+                suspende_audiencias: z.boolean().default(true),
+                suspende_sessoes: z.boolean().default(true),
+                plantao_disponivel: z.boolean().default(false),
+                fundamento_legal: z.string().optional(),
+                observacoes: z.string().optional(),
+              }),
+            )
+            .optional()
+            .default([]),
+        }),
+      )
+      .mutation(async ({ ctx, input }) => {
+        // Upsert: if a calendar already exists for this tribunal+year, update it
+        const existing = await ctx.db.courtCalendar.findUnique({
+          where: {
+            tribunal_codigo_ano: {
+              tribunal_codigo: input.tribunal_codigo,
+              ano: input.ano,
+            },
+          },
+        });
+
+        if (existing) {
+          // Delete old holidays and suspensions then recreate
+          await ctx.db.courtHoliday.deleteMany({ where: { calendar_id: existing.id } });
+          await ctx.db.courtSuspension.deleteMany({ where: { calendar_id: existing.id } });
+
+          const updated = await ctx.db.courtCalendar.update({
+            where: { id: existing.id },
+            data: {
+              tribunal_nome: input.tribunal_nome,
+              tribunal_tipo: input.tribunal_tipo,
+              uf: input.uf,
+              portaria_numero: input.portaria_numero,
+              portaria_data: input.portaria_data,
+              portaria_url: input.portaria_url,
+              atualizado_em: new Date(),
+              atualizado_por: ctx.session?.user?.id ?? null,
+              feriados: {
+                create: input.feriados.map((f) => ({
+                  data: f.data,
+                  nome: f.nome,
+                  tipo: f.tipo,
+                  uf: f.uf ?? null,
+                  suspende_expediente: f.suspende_expediente,
+                  prazos_prorrogados: f.prazos_prorrogados,
+                  fundamento_legal: f.fundamento_legal,
+                  observacoes: f.observacoes,
+                })),
+              },
+              suspensoes: {
+                create: input.suspensoes.map((s) => ({
+                  tipo: s.tipo,
+                  data_inicio: s.data_inicio,
+                  data_fim: s.data_fim,
+                  nome: s.nome,
+                  suspende_prazos: s.suspende_prazos,
+                  suspende_audiencias: s.suspende_audiencias,
+                  suspende_sessoes: s.suspende_sessoes,
+                  plantao_disponivel: s.plantao_disponivel,
+                  fundamento_legal: s.fundamento_legal,
+                  observacoes: s.observacoes,
+                })),
+              },
+            },
+            include: { _count: { select: { feriados: true, suspensoes: true } } },
+          });
+          return updated;
+        }
+
+        return ctx.db.courtCalendar.create({
+          data: {
+            tribunal_codigo: input.tribunal_codigo,
+            tribunal_nome: input.tribunal_nome,
+            tribunal_tipo: input.tribunal_tipo,
+            uf: input.uf,
+            ano: input.ano,
+            portaria_numero: input.portaria_numero,
+            portaria_data: input.portaria_data,
+            portaria_url: input.portaria_url,
+            atualizado_em: new Date(),
+            atualizado_por: ctx.session?.user?.id ?? null,
+            feriados: {
+              create: input.feriados.map((f) => ({
+                data: f.data,
+                nome: f.nome,
+                tipo: f.tipo,
+                uf: f.uf ?? null,
+                suspende_expediente: f.suspende_expediente,
+                prazos_prorrogados: f.prazos_prorrogados,
+                fundamento_legal: f.fundamento_legal,
+                observacoes: f.observacoes,
+              })),
+            },
+            suspensoes: {
+              create: input.suspensoes.map((s) => ({
+                tipo: s.tipo,
+                data_inicio: s.data_inicio,
+                data_fim: s.data_fim,
+                nome: s.nome,
+                suspende_prazos: s.suspende_prazos,
+                suspende_audiencias: s.suspende_audiencias,
+                suspende_sessoes: s.suspende_sessoes,
+                plantao_disponivel: s.plantao_disponivel,
+                fundamento_legal: s.fundamento_legal,
+                observacoes: s.observacoes,
+              })),
+            },
+          },
+          include: { _count: { select: { feriados: true, suspensoes: true } } },
+        });
+      }),
+
+    /**
+     * List calendar repository entries with filters
+     */
+    repositoryList: protectedProcedure
+      .input(
+        z
+          .object({
+            tribunal_tipo: z.string().optional(),
+            uf: z.string().optional(),
+            ano: z.number().int().optional(),
+            status: z.string().optional(),
+          })
+          .optional(),
+      )
+      .query(async ({ ctx, input }) => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const where: Record<string, any> = {};
+        if (input?.tribunal_tipo) where.tribunal_tipo = input.tribunal_tipo;
+        if (input?.uf) where.uf = input.uf;
+        if (input?.ano) where.ano = input.ano;
+        if (input?.status) where.status = input.status;
+
+        return ctx.db.calendarRepository.findMany({
+          where,
+          include: {
+            calendar: { select: { id: true, tribunal_codigo: true, tribunal_nome: true } },
+          },
+          orderBy: [{ created_at: "desc" }],
+        });
+      }),
+
+    /**
+     * Create a calendar repository entry
+     */
+    repositoryCreate: protectedProcedure
+      .input(
+        z.object({
+          tribunal_codigo: z.string(),
+          tribunal_nome: z.string(),
+          tribunal_tipo: z.string(),
+          uf: z.string().nullable(),
+          ano: z.number().int(),
+          tipo_documento: z.string(),
+          numero_documento: z.string().optional(),
+          data_documento: z.coerce.date().optional(),
+          ementa: z.string().optional(),
+          arquivo_url: z.string().optional(),
+          arquivo_nome: z.string().optional(),
+          texto_extraido: z.string().optional(),
+        }),
+      )
+      .mutation(async ({ ctx, input }) => {
+        return ctx.db.calendarRepository.create({
+          data: {
+            ...input,
+            uploaded_by: ctx.session?.user?.id ?? null,
+          },
+        });
+      }),
+
+    /**
+     * Update repository entry status (after AI processing)
+     */
+    repositoryUpdateStatus: protectedProcedure
+      .input(
+        z.object({
+          id: z.string(),
+          status: z.string(),
+          feriados_extraidos: z.number().int().optional(),
+          suspensoes_extraidas: z.number().int().optional(),
+          calendar_id: z.string().optional(),
+          processado_por_ia: z.boolean().optional(),
+          erro_processamento: z.string().nullable().optional(),
+          texto_extraido: z.string().optional(),
+        }),
+      )
+      .mutation(async ({ ctx, input }) => {
+        const { id, ...data } = input;
+        return ctx.db.calendarRepository.update({
+          where: { id },
+          data,
+        });
+      }),
+
+    /**
+     * Coverage stats: how many tribunals have calendars for a given year
+     */
+    coverageStats: protectedProcedure
+      .input(z.object({ ano: z.number().int() }))
+      .query(async ({ ctx, input }) => {
+        const calendars = await ctx.db.courtCalendar.findMany({
+          where: { ano: input.ano },
+          select: {
+            tribunal_codigo: true,
+            tribunal_nome: true,
+            tribunal_tipo: true,
+            uf: true,
+            _count: { select: { feriados: true, suspensoes: true } },
+          },
+        });
+
+        const calendarMap = new Map(
+          calendars.map((c) => [c.tribunal_codigo, c]),
+        );
+
+        return {
+          ano: input.ano,
+          total_tribunais: 92,
+          total_com_calendario: calendars.length,
+          percentual_cobertura: Math.round((calendars.length / 92) * 100),
+          calendars: calendars.map((c) => ({
+            tribunal_codigo: c.tribunal_codigo,
+            tribunal_nome: c.tribunal_nome,
+            tribunal_tipo: c.tribunal_tipo,
+            uf: c.uf,
+            feriados: c._count.feriados,
+            suspensoes: c._count.suspensoes,
+          })),
+          calendarMap: Object.fromEntries(calendarMap),
+        };
+      }),
+
+    /**
+     * Returns the full list of Brazilian tribunals (static data)
+     */
+    tribunalsList: protectedProcedure.query(() => {
+      // Import dynamically to keep router clean
+      const { TRIBUNAIS_BRASIL } = require("@/lib/tribunais-brasil");
+      return TRIBUNAIS_BRASIL;
+    }),
   }),
 
   // ============================================================
