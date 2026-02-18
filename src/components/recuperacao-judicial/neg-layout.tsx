@@ -29,6 +29,7 @@ import { NegTabComunicacoes } from "./neg-tab-comunicacoes";
 import { NegTabMediacao } from "./neg-tab-mediacao";
 import { NegTabComparativo } from "./neg-tab-comparativo";
 import { CRJCreateWizard } from "./crj-create-wizard";
+import { CRJNegotiationDetail } from "./crj-negotiation-detail";
 import {
   Plus,
   Download,
@@ -43,6 +44,7 @@ export function NegLayout() {
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [importing, setImporting] = useState(false);
   const [wizardOpen, setWizardOpen] = useState(false);
+  const [selectedNegId, setSelectedNegId] = useState<string | null>(null);
 
   const { data: cases, isLoading: loadingCases } = trpc.rj.cases.list.useQuery();
 
@@ -258,7 +260,17 @@ export function NegLayout() {
                 <CRJTabDashboard jrcId={jrcId} />
               </TabsContent>
               <TabsContent value="individuais" className="m-0 h-full">
-                <CRJTabNegotiations jrcId={jrcId} />
+                {selectedNegId ? (
+                  <CRJNegotiationDetail
+                    negotiationId={selectedNegId}
+                    onBack={() => setSelectedNegId(null)}
+                  />
+                ) : (
+                  <CRJTabNegotiations
+                    jrcId={jrcId}
+                    onSelectNegotiation={(id) => setSelectedNegId(id)}
+                  />
+                )}
               </TabsContent>
               <TabsContent value="rodadas" className="m-0 h-full">
                 <NegTabRodadas jrcId={jrcId} />

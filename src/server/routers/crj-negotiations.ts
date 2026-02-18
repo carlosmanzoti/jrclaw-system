@@ -160,6 +160,9 @@ const negotiationsRouter = router({
           },
           emails: {
             orderBy: { sent_at: "desc" },
+            include: {
+              proposal: { select: { id: true, version: true, status: true } },
+            },
           },
           installment_schedule: {
             orderBy: { installment_number: "asc" },
