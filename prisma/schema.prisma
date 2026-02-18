@@ -510,6 +510,40 @@ enum InstallmentStatus {
 }
 
 // ============================================================
+// EMAIL ACTIVITY ENUMS
+// ============================================================
+
+enum EmailActivityType {
+  PRAZO
+  AUDIENCIA
+  REUNIAO
+  DESPACHO
+  DILIGENCIA
+  PETICAO
+  RECURSO
+  PROVIDENCIA
+  OUTRO
+}
+
+enum EmailActivityStatus {
+  PENDENTE
+  EM_ANDAMENTO
+  CONCLUIDO
+  CANCELADO
+}
+
+enum DeadlineCountType {
+  DIAS_UTEIS
+  DIAS_CORRIDOS
+}
+
+enum ReminderChannel {
+  SISTEMA
+  EMAIL
+  WHATSAPP
+}
+
+// ============================================================
 // MODELS
 // ============================================================
 
@@ -558,6 +592,8 @@ model User {
   deadline_backup            DeadlineNew[] @relation("deadline_backup")
   microsoft_account          MicrosoftAccount?
   email_links                EmailLink[]
+  email_activities_responsible EmailActivity[] @relation("ActivityResponsible")
+  email_activities_created     EmailActivity[] @relation("ActivityCreator")
 
   @@map("users")
 }
@@ -698,6 +734,7 @@ model Case {
   deadlines_new              DeadlineNew[]
   process_parties            ProcessParty[]
   email_links                EmailLink[]
+  email_activities           EmailActivity[]
 
   @@map("cases")
 }
@@ -745,6 +782,8 @@ model Deadline {
 
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
+
+  email_activity EmailActivity? @relation("DeadlineFromEmail")
 
   @@map("deadlines")
 }
@@ -896,6 +935,7 @@ model CalendarEvent {
   created_by    User?               @relation("EventCreator", fields: [created_by_id], references: [id])
 
   activities Activity[]
+  email_activity EmailActivity? @relation("CalendarEventFromEmail")
 
   @@map("calendar_events")
 }
@@ -1062,6 +1102,7 @@ model Project {
   library_entries LibraryEntry[] @relation("LibraryProjects")
   chat_messages   ChatMessage[]  @relation("ChatMessageProject")
   email_links     EmailLink[]
+  email_activities EmailActivity[]
 
   @@map("projects")
 }
@@ -3378,4 +3419,76 @@ model EmailLink {
   @@index([projectId])
   @@index([userId])
   @@map("email_links")
+}
+
+// ============================================================
+// EMAIL ACTIVITY (generate activities/deadlines from email)
+// ============================================================
+
+model EmailActivity {
+  id                String              @id @default(cuid())
+  outlook_message_id String
+  email_subject     String?
+  email_from        String?
+  email_received_at DateTime?
+
+  tipo              EmailActivityType
+  titulo            String
+  descricao         String?             @db.Text
+  status            EmailActivityStatus @default(PENDENTE)
+
+  // Links
+  case_id           String?
+  case_             Case?               @relation(fields: [case_id], references: [id])
+  project_id        String?
+  project           Project?            @relation(fields: [project_id], references: [id])
+
+  // Generated items
+  deadline_id       String?             @unique
+  deadline          Deadline?           @relation("DeadlineFromEmail", fields: [deadline_id], references: [id])
+  calendar_event_id String?             @unique
+  calendar_event    CalendarEvent?      @relation("CalendarEventFromEmail", fields: [calendar_event_id], references: [id])
+
+  // Deadline-specific fields
+  data_limite       DateTime?
+  contagem_tipo     DeadlineCountType?
+  dias_prazo        Int?
+
+  // Meeting-specific fields
+  data_evento       DateTime?
+  local_evento      String?
+  link_virtual      String?
+
+  // Responsibility
+  responsavel_id    String?
+  responsavel       User?               @relation("ActivityResponsible", fields: [responsavel_id], references: [id])
+
+  // Metadata
+  extracted_data    Json?
+  created_by_id     String
+  created_by        User                @relation("ActivityCreator", fields: [created_by_id], references: [id])
+  created_at        DateTime            @default(now())
+  updated_at        DateTime            @updatedAt
+
+  // Relations
+  reminders         EmailActivityReminder[]
+
+  @@index([outlook_message_id])
+  @@index([case_id])
+  @@index([project_id])
+  @@index([responsavel_id])
+  @@index([status])
+  @@map("email_activities")
+}
+
+model EmailActivityReminder {
+  id                String          @id @default(cuid())
+  email_activity_id String
+  email_activity    EmailActivity   @relation(fields: [email_activity_id], references: [id], onDelete: Cascade)
+  channel           ReminderChannel
+  offset_minutes    Int
+  sent              Boolean         @default(false)
+  sent_at           DateTime?
+
+  @@map("email_activity_reminders")
 }

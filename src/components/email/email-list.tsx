@@ -1,6 +1,6 @@
 "use client"
 
-import { Paperclip, AlertCircle, Scale, Flag } from "lucide-react"
+import { Paperclip, AlertCircle, Scale, Flag, ListTodo } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Skeleton } from "@/components/ui/skeleton"
 import type { OutlookMessage } from "@/lib/microsoft-graph"
@@ -10,6 +10,7 @@ interface EmailListProps {
   selectedId: string | null
   loading: boolean
   onSelect: (msg: OutlookMessage) => void
+  messageActivityIds?: Set<string>
 }
 
 function formatDate(iso: string): string {
@@ -23,7 +24,7 @@ function formatDate(iso: string): string {
   return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })
 }
 
-export function EmailList({ messages, selectedId, loading, onSelect }: EmailListProps) {
+export function EmailList({ messages, selectedId, loading, onSelect, messageActivityIds }: EmailListProps) {
   if (loading && messages.length === 0) {
     return (
       <div className="space-y-1 p-2">
@@ -75,6 +76,7 @@ export function EmailList({ messages, selectedId, loading, onSelect }: EmailList
               {msg.importance === "high" && <AlertCircle className="size-3 text-red-500" />}
               {msg.linkedCaseId && <Scale className="size-3 text-[#C9A961]" />}
               {msg.flag.flagStatus === "flagged" && <Flag className="size-3 text-orange-500 fill-orange-500" />}
+              {messageActivityIds?.has(msg.id) && <ListTodo className="size-3 text-emerald-500" />}
             </div>
           </div>
         </button>

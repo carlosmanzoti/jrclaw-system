@@ -392,3 +392,29 @@ export function deadlineColor(date: Date | string): string {
   if (days <= 5) return "text-amber-600 bg-amber-50";
   return "text-emerald-600 bg-emerald-50";
 }
+
+export const EMAIL_ACTIVITY_TYPE_LABELS: Record<string, string> = {
+  PRAZO: "Prazo",
+  AUDIENCIA: "Audiência",
+  REUNIAO: "Reunião",
+  DESPACHO: "Despacho",
+  DILIGENCIA: "Diligência",
+  PETICAO: "Petição",
+  RECURSO: "Recurso",
+  PROVIDENCIA: "Providência",
+  OUTRO: "Outro",
+};
+
+export const EMAIL_ACTIVITY_STATUS_LABELS: Record<string, string> = {
+  PENDENTE: "Pendente",
+  EM_ANDAMENTO: "Em andamento",
+  CONCLUIDO: "Concluído",
+  CANCELADO: "Cancelado",
+};
+
+export const EMAIL_ACTIVITY_STATUS_COLORS: Record<string, string> = {
+  PENDENTE: "bg-amber-100 text-amber-700",
+  EM_ANDAMENTO: "bg-blue-100 text-blue-700",
+  CONCLUIDO: "bg-emerald-100 text-emerald-700",
+  CANCELADO: "bg-gray-100 text-gray-700",
+};

@@ -14,6 +14,7 @@ import { rjRouter } from "./rj";
 import { importRouter } from "./import";
 import { stratNegRouter } from "./strat-neg";
 import { recoveryRouter } from "./recovery";
+import { emailActivityRouter } from "./email-activity";
 
 export const appRouter = router({
   users: usersRouter,
@@ -31,6 +32,7 @@ export const appRouter = router({
   import: importRouter,
   stratNeg: stratNegRouter,
   recovery: recoveryRouter,
+  emailActivity: emailActivityRouter,
 });
 
 export type AppRouter = typeof appRouter;

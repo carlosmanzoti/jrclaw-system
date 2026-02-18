@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import DOMPurify from "dompurify"
-import { Reply, Forward, MoreHorizontal, ArrowLeft, Paperclip, Download, Sparkles, Scale, Flag, MailOpen } from "lucide-react"
+import { Reply, Forward, MoreHorizontal, ArrowLeft, Paperclip, Download, Sparkles, Scale, Flag, MailOpen, ListTodo } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
@@ -11,6 +11,9 @@ import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu"
 import type { OutlookMessage } from "@/lib/microsoft-graph"
+import { EmailActivityButton } from "./email-activity-button"
+import { EmailSmartBanner } from "./email-smart-banner"
+import { EmailActivityCard } from "./email-activity-card"
 
 interface EmailViewerProps {
   message: OutlookMessage
@@ -131,6 +134,7 @@ export function EmailViewer({ message, onReply, onForward, onBack, isMock }: Ema
           <Button variant="outline" size="sm" className="h-7 text-xs gap-1 text-[#C9A961] border-[#C9A961]/30 hover:bg-[#C9A961]/5" onClick={handleAiReply} disabled={aiLoading}>
             <Sparkles className="size-3" /> Harvey IA
           </Button>
+          <EmailActivityButton message={message} isMock={isMock} />
 
           <div className="flex-1" />
 
@@ -157,7 +161,13 @@ export function EmailViewer({ message, onReply, onForward, onBack, isMock }: Ema
 
       {/* Body */}
       <ScrollArea className="flex-1">
-        <div className="p-4">
+        <div className="p-4 space-y-3">
+          {/* Smart banner — auto-detects deadlines/meetings */}
+          <EmailSmartBanner message={message} />
+
+          {/* Existing activities for this email */}
+          <EmailActivityCard messageId={message.id} />
+
           <div className="email-body" dangerouslySetInnerHTML={{ __html: sanitizedHtml }} />
         </div>
 

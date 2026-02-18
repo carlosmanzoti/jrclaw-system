@@ -1,6 +1,7 @@
 {
   "crons": [
     { "path": "/api/cron/prazos", "schedule": "0 10 * * *" },
-    { "path": "/api/cron/calendar-sync", "schedule": "*/15 * * * *" }
+    { "path": "/api/cron/calendar-sync", "schedule": "*/15 * * * *" },
+    { "path": "/api/cron/email-activity-reminders", "schedule": "*/30 * * * *" }
   ]
 }
