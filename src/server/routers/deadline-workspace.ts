@@ -1,6 +1,14 @@
 import { z } from "zod";
 import { router, protectedProcedure } from "@/server/trpc";
 import { TRPCError } from "@trpc/server";
+import {
+  onDocumentUploaded,
+  onContentSaved,
+  onThesisCompleted,
+  onReviewComment,
+  onApprovalRejected,
+  onWorkspaceCreated,
+} from "@/lib/ai/workspace-reactive-engine";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -175,6 +183,9 @@ export const workspaceRouter = router({
         },
       });
 
+      // Fire-and-forget: AI generates briefing + initial theses
+      onWorkspaceCreated(workspace.id, input.deadlineId).catch(() => {});
+
       return { deadline, workspace };
     }),
 
@@ -305,6 +316,10 @@ export const workspaceRouter = router({
           estimated_pages: Math.max(1, Math.ceil((input.wordCount || 0) / 300)),
         },
       });
+
+      // Fire-and-forget: detect sections, auto-check checklist
+      onContentSaved(input.workspaceId).catch(() => {});
+
       return ws;
     }),
 
@@ -456,6 +471,9 @@ export const workspaceRouter = router({
         },
       });
 
+      // Fire-and-forget: classify severity, detect correction patterns
+      onReviewComment(input.workspaceId, comment.id).catch(() => {});
+
       return comment;
     }),
 
@@ -580,7 +598,7 @@ export const workspaceRouter = router({
     }))
     .mutation(async ({ ctx, input }) => {
       const { thesisId, legalRefs, caseRefs, doctrineRefs, ...rest } = input;
-      return ctx.db.workspaceThesis.update({
+      const thesis = await ctx.db.workspaceThesis.update({
         where: { id: thesisId },
         data: {
           ...rest,
@@ -589,6 +607,13 @@ export const workspaceRouter = router({
           ...(doctrineRefs !== undefined ? { doctrine_refs: doctrineRefs } : {}),
         },
       });
+
+      // Fire-and-forget: check if completed thesis is incorporated in draft
+      if (input.status === "APROVADA") {
+        onThesisCompleted(thesis.workspace_id, thesis.id).catch(() => {});
+      }
+
+      return thesis;
     }),
 
   deleteThesis: protectedProcedure
@@ -762,6 +787,11 @@ export const workspaceRouter = router({
         },
       });
 
+      // Fire-and-forget: AI generates correction plan on rejection
+      if (input.status === "REPROVADO") {
+        onApprovalRejected(approval.workspace_id, approval.id).catch(() => {});
+      }
+
       return approval;
     }),
 
@@ -810,6 +840,9 @@ export const workspaceRouter = router({
           user_name: ctx.session.user.name || "Sistema",
         },
       });
+
+      // Fire-and-forget: AI classifies document, auto-checks checklist
+      onDocumentUploaded(input.workspaceId, doc.id).catch(() => {});
 
       return doc;
     }),
