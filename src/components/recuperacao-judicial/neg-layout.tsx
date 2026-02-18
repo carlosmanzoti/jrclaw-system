@@ -30,6 +30,7 @@ import { NegTabMediacao } from "./neg-tab-mediacao";
 import { NegTabComparativo } from "./neg-tab-comparativo";
 import { CRJCreateWizard } from "./crj-create-wizard";
 import { CRJNegotiationDetail } from "./crj-negotiation-detail";
+import { CRJAIAssistant } from "./crj-ai-assistant";
 import {
   Plus,
   Download,
@@ -72,6 +73,12 @@ export function NegLayout() {
   const { data: qgcCreditors } = trpc.rj.creditors.list.useQuery(
     { jrc_id: jrcId! },
     { enabled: !!jrcId && importDialogOpen }
+  );
+
+  // Get selected negotiation summary for AI assistant
+  const { data: selectedNeg } = trpc.crjNeg.negotiations.getById.useQuery(
+    { id: selectedNegId! },
+    { enabled: !!selectedNegId }
   );
 
   const handleImportAll = () => {
@@ -318,6 +325,16 @@ export function NegLayout() {
           open={wizardOpen}
           onOpenChange={setWizardOpen}
           jrcId={jrcId}
+        />
+      )}
+
+      {/* Harvey Specter AI Assistant */}
+      {jrcId && (
+        <CRJAIAssistant
+          negotiationId={selectedNegId}
+          jrcId={jrcId}
+          negotiationStatus={selectedNeg?.status || null}
+          negotiationTitle={selectedNeg?.title || null}
         />
       )}
     </div>

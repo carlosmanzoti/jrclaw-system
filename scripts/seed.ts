@@ -21,6 +21,8 @@ async function main() {
   await prisma.negotiation.deleteMany();
   await prisma.creditor.deleteMany();
   // CRJ module cleanup
+  await prisma.cRJAIConfig.deleteMany();
+  await prisma.cRJAIInsight.deleteMany();
   await prisma.cRJCollectiveRoundLink.deleteMany();
   await prisma.cRJInstallmentSchedule.deleteMany();
   await prisma.cRJNegotiationEmail.deleteMany();

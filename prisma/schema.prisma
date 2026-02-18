@@ -3665,6 +3665,27 @@ enum CRJEmailDirection {
   RECEBIDO
 }
 
+enum CRJAIInsightType {
+  OPORTUNIDADE
+  RISCO
+  SUGESTAO
+  ANALISE
+  CONEXAO
+  URGENCIA
+  CHECKLIST
+}
+
+enum CRJAIActionType {
+  GERAR_PROPOSTA
+  ENVIAR_EMAIL
+  NOVA_RODADA
+  MUDAR_STATUS
+  ABRIR_NEGOCIACAO
+  FOLLOW_UP
+  VER_NEGOCIACAO
+  GERAR_CHECKLIST
+}
+
 // ============================================================
 // CRJ MODELS
 // ============================================================
@@ -3738,6 +3759,7 @@ model CRJNegotiation {
   emails                CRJNegotiationEmail[]
   installment_schedule  CRJInstallmentSchedule[]
   collective_round_links CRJCollectiveRoundLink[]
+  ai_insights           CRJAIInsight[]
 
   @@index([jrc_id])
   @@index([creditor_id])
@@ -3922,4 +3944,74 @@ model CRJCollectiveRoundLink {
   @@index([rj_negotiation_id])
   @@index([crj_negotiation_id])
   @@map("crj_collective_round_links")
+}
+
+model CRJAIInsight {
+  id                    String               @id @default(cuid())
+  negotiation_id        String?
+  negotiation           CRJNegotiation?      @relation(fields: [negotiation_id], references: [id], onDelete: Cascade)
+  jrc_id                String?
+
+  type                  CRJAIInsightType
+  title                 String
+  description           String               @db.Text
+  suggested_action      String?
+  action_type           CRJAIActionType?
+  action_payload        Json?
+
+  is_read               Boolean              @default(false)
+  is_dismissed          Boolean              @default(false)
+  confidence            Float                @default(0.8)
+  trigger_source        String?
+
+  created_at            DateTime             @default(now())
+
+  @@index([negotiation_id])
+  @@index([jrc_id])
+  @@index([is_read])
+  @@index([is_dismissed])
+  @@map("crj_ai_insights")
+}
+
+// ---------------------------------------------------------------------------
+// CRJ AI Configuration — per-JRC AI settings
+// ---------------------------------------------------------------------------
+model CRJAIConfig {
+  id                      String   @id @default(cuid())
+  jrc_id                  String?  @unique
+
+  // Section 1: Model & Performance
+  default_model           String   @default("standard") // "standard" | "premium"
+  proactive_ai            Boolean  @default(true)
+  briefing_frequency      String   @default("daily") // "login" | "daily" | "disabled"
+  autocomplete_enabled    Boolean  @default(true)
+
+  // Section 2: Triggers (individual on/off)
+  trigger_on_create       Boolean  @default(true)
+  trigger_on_proposal     Boolean  @default(true)
+  trigger_on_counter      Boolean  @default(true)
+  trigger_on_status       Boolean  @default(true)
+  trigger_on_deadline     Boolean  @default(true)
+  trigger_on_patterns     Boolean  @default(true)
+  trigger_on_email        Boolean  @default(true)
+  days_inactive_alert     Int      @default(14)
+  days_no_response        Int      @default(10)
+  days_before_target      Int      @default(7)
+
+  // Section 3: Prompt Templates
+  custom_system_prompt    String?  @db.Text
+  prompt_proposal         String?  @db.Text
+  prompt_email            String?  @db.Text
+  prompt_analysis         String?  @db.Text
+  persistent_instructions String?  @db.Text
+
+  // Section 4: Reference Data
+  class_conditions        Json     @default("{}")
+  vpn_discount_rate       Float    @default(12.0)
+  correction_indices      String[] @default(["INPC", "IPCA", "IGPM", "CDI"])
+
+  created_at              DateTime @default(now())
+  updated_at              DateTime @updatedAt
+
+  @@map("crj_ai_configs")
 }

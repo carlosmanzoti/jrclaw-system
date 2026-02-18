@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { router, protectedProcedure } from "@/server/trpc";
 import { TRPCError } from "@trpc/server";
+import type { CRJNegContext } from "@/lib/ai/crj-harvey-prompts";
 
 // ========== Helpers ==========
 
@@ -1276,6 +1277,490 @@ Forneça entre 3 e 6 sugestões. Seja prático e específico.`;
     }
   });
 
+// ========== AI Insights ==========
+
+const insightsRouter = router({
+  list: protectedProcedure
+    .input(
+      z.object({
+        negotiation_id: z.string().optional(),
+        jrc_id: z.string().optional(),
+        include_dismissed: z.boolean().default(false),
+        limit: z.number().int().min(1).max(50).default(20),
+      })
+    )
+    .query(async ({ ctx, input }) => {
+      const where: Record<string, unknown> = {};
+      if (input.negotiation_id) where.negotiation_id = input.negotiation_id;
+      if (input.jrc_id) where.jrc_id = input.jrc_id;
+      if (!input.include_dismissed) where.is_dismissed = false;
+
+      return ctx.db.cRJAIInsight.findMany({
+        where: where as never,
+        orderBy: { created_at: "desc" },
+        take: input.limit,
+      });
+    }),
+
+  unreadCount: protectedProcedure
+    .input(
+      z.object({
+        negotiation_id: z.string().optional(),
+        jrc_id: z.string().optional(),
+      })
+    )
+    .query(async ({ ctx, input }) => {
+      const where: Record<string, unknown> = {
+        is_read: false,
+        is_dismissed: false,
+      };
+      if (input.negotiation_id) where.negotiation_id = input.negotiation_id;
+      if (input.jrc_id) where.jrc_id = input.jrc_id;
+
+      return ctx.db.cRJAIInsight.count({ where: where as never });
+    }),
+
+  markRead: protectedProcedure
+    .input(z.object({ ids: z.array(z.string()) }))
+    .mutation(async ({ ctx, input }) => {
+      await ctx.db.cRJAIInsight.updateMany({
+        where: { id: { in: input.ids } },
+        data: { is_read: true },
+      });
+      return { updated: input.ids.length };
+    }),
+
+  dismiss: protectedProcedure
+    .input(z.object({ id: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      return ctx.db.cRJAIInsight.update({
+        where: { id: input.id },
+        data: { is_dismissed: true },
+      });
+    }),
+
+  generate: protectedProcedure
+    .input(
+      z.object({
+        negotiation_id: z.string().optional(),
+        jrc_id: z.string().optional(),
+        trigger_source: z.string().default("MANUAL"),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const { buildInsightGenerationPrompt } = await import(
+        "@/lib/ai/crj-harvey-prompts"
+      );
+
+      const negCtx: CRJNegContext = {};
+
+      // Load negotiation if provided
+      if (input.negotiation_id) {
+        const neg = await ctx.db.cRJNegotiation.findUnique({
+          where: { id: input.negotiation_id },
+          include: {
+            creditor: {
+              select: {
+                nome: true,
+                cpf_cnpj: true,
+                classe: true,
+                natureza: true,
+                valor_original: true,
+                valor_atualizado: true,
+                valor_garantia: true,
+                tipo_garantia: true,
+                person: {
+                  select: { nome: true, segmento: true, cidade: true, estado: true, email: true },
+                },
+              },
+            },
+            rounds: {
+              orderBy: { round_number: "asc" as const },
+              select: {
+                round_number: true,
+                type: true,
+                date: true,
+                description: true,
+                proposed_by_us: true,
+                value_proposed: true,
+                outcome: true,
+                creditor_response: true,
+                next_steps: true,
+              },
+            },
+            proposals: {
+              orderBy: { version: "desc" as const },
+              take: 5,
+              select: {
+                version: true,
+                template_type: true,
+                status: true,
+                sent_via_email: true,
+                created_at: true,
+              },
+            },
+            emails: {
+              orderBy: { sent_at: "desc" as const },
+              take: 10,
+              select: { direction: true, subject: true, body_preview: true, sent_at: true },
+            },
+            installment_schedule: {
+              orderBy: { installment_number: "asc" as const },
+              select: { installment_number: true, due_date: true, amount: true, status: true },
+            },
+            jrc: {
+              select: {
+                status_rj: true,
+                total_credores: true,
+                total_credito: true,
+                case_: {
+                  select: {
+                    numero_processo: true,
+                    vara: true,
+                    comarca: true,
+                    uf: true,
+                    cliente: { select: { nome: true } },
+                  },
+                },
+              },
+            },
+          },
+        });
+        if (neg) {
+          negCtx.negotiation = neg as any;
+          negCtx.jrc = neg.jrc as any;
+        }
+      }
+
+      // Load JRC data
+      const effectiveJrcId = input.jrc_id || negCtx.negotiation?.jrc_id;
+      if (effectiveJrcId) {
+        if (!negCtx.jrc) {
+          const jrc = await ctx.db.judicialRecoveryCase.findUnique({
+            where: { id: effectiveJrcId },
+            select: {
+              status_rj: true,
+              total_credores: true,
+              total_credito: true,
+              case_: {
+                select: {
+                  numero_processo: true,
+                  vara: true,
+                  comarca: true,
+                  uf: true,
+                  cliente: { select: { nome: true } },
+                },
+              },
+            },
+          });
+          if (jrc) negCtx.jrc = jrc as any;
+        }
+
+        // Portfolio summary
+        const negotiations = await ctx.db.cRJNegotiation.findMany({
+          where: { jrc_id: effectiveJrcId },
+          select: { status: true, credit_amount: true, agreed_amount: true, discount_percentage: true },
+        });
+        const byStatus: Record<string, number> = {};
+        let totalCredit = BigInt(0);
+        let totalAgreed = BigInt(0);
+        let discountSum = 0;
+        let discountCount = 0;
+        for (const n of negotiations) {
+          byStatus[n.status] = (byStatus[n.status] || 0) + 1;
+          totalCredit += n.credit_amount;
+          if (n.agreed_amount) totalAgreed += n.agreed_amount;
+          if (n.discount_percentage != null) {
+            discountSum += n.discount_percentage;
+            discountCount++;
+          }
+        }
+        negCtx.portfolio = {
+          total: negotiations.length,
+          byStatus,
+          avgDiscount: discountCount > 0 ? discountSum / discountCount : 0,
+          totalCreditAmount: totalCredit,
+          totalAgreedAmount: totalAgreed,
+        };
+      }
+
+      // Generate insights via AI
+      const prompt = buildInsightGenerationPrompt(negCtx, input.trigger_source);
+
+      try {
+        const { generateText } = await import("ai");
+        const { anthropic } = await import("@/lib/ai");
+
+        const { text } = await generateText({
+          model: anthropic("claude-sonnet-4-5-20250929"),
+          prompt,
+          maxOutputTokens: 4096,
+          temperature: 0.3,
+        });
+
+        // Clean JSON
+        let cleaned = text.trim();
+        if (cleaned.startsWith("```json")) cleaned = cleaned.slice(7);
+        else if (cleaned.startsWith("```")) cleaned = cleaned.slice(3);
+        if (cleaned.endsWith("```")) cleaned = cleaned.slice(0, -3);
+
+        const parsed = JSON.parse(cleaned.trim());
+        const insightsData = parsed.insights || [];
+
+        // Save insights to DB
+        const created = [];
+        for (const ins of insightsData) {
+          const insight = await ctx.db.cRJAIInsight.create({
+            data: {
+              negotiation_id: input.negotiation_id || null,
+              jrc_id: effectiveJrcId || null,
+              type: ins.type || "SUGESTAO",
+              title: ins.title || "Insight",
+              description: ins.description || "",
+              suggested_action: ins.suggested_action || null,
+              action_type: ins.action_type || null,
+              action_payload: ins.action_payload || null,
+              confidence: ins.confidence || 0.8,
+              trigger_source: input.trigger_source,
+            },
+          });
+          created.push(insight);
+        }
+
+        return { generated: created.length, insights: created };
+      } catch (err) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: `Erro ao gerar insights: ${err instanceof Error ? err.message : "Erro desconhecido"}`,
+        });
+      }
+    }),
+});
+
+// ========== AI Config ==========
+
+const DEFAULT_CLASS_CONDITIONS = {
+  I_TRABALHISTA: {
+    desagio_padrao: 0,
+    prazo_anos: 1,
+    carencia_meses: 12,
+    correcao: "INPC",
+    juros: 0,
+    observacoes: "Art. 54, Lei 11.101 — pagamento em até 1 ano",
+  },
+  II_GARANTIA_REAL: {
+    desagio_padrao: 20,
+    prazo_anos: 10,
+    carencia_meses: 24,
+    correcao: "IPCA",
+    juros: 1,
+    observacoes: "Limitado ao valor da garantia",
+  },
+  III_QUIROGRAFARIO: {
+    desagio_padrao: 60,
+    prazo_anos: 15,
+    carencia_meses: 36,
+    correcao: "IPCA",
+    juros: 0,
+    observacoes: "Classe principal para negociação",
+  },
+  IV_ME_EPP: {
+    desagio_padrao: 50,
+    prazo_anos: 5,
+    carencia_meses: 12,
+    correcao: "INPC",
+    juros: 0,
+    observacoes: "Art. 71, Lei 11.101 — parcelamento em até 36 meses",
+  },
+};
+
+const aiConfigRouter = router({
+  get: protectedProcedure
+    .input(z.object({ jrc_id: z.string().optional() }))
+    .query(async ({ ctx, input }) => {
+      let config = await ctx.db.cRJAIConfig.findFirst({
+        where: input.jrc_id ? { jrc_id: input.jrc_id } : {},
+      });
+
+      if (!config) {
+        // Return default config (not yet saved)
+        return {
+          id: null,
+          jrc_id: input.jrc_id || null,
+          default_model: "standard",
+          proactive_ai: true,
+          briefing_frequency: "daily",
+          autocomplete_enabled: true,
+          trigger_on_create: true,
+          trigger_on_proposal: true,
+          trigger_on_counter: true,
+          trigger_on_status: true,
+          trigger_on_deadline: true,
+          trigger_on_patterns: true,
+          trigger_on_email: true,
+          days_inactive_alert: 14,
+          days_no_response: 10,
+          days_before_target: 7,
+          custom_system_prompt: null as string | null,
+          prompt_proposal: null as string | null,
+          prompt_email: null as string | null,
+          prompt_analysis: null as string | null,
+          persistent_instructions: null as string | null,
+          class_conditions: DEFAULT_CLASS_CONDITIONS,
+          vpn_discount_rate: 12.0,
+          correction_indices: ["INPC", "IPCA", "IGPM", "CDI"],
+        };
+      }
+
+      // Ensure class_conditions has defaults if empty
+      if (
+        !config.class_conditions ||
+        Object.keys(config.class_conditions as object).length === 0
+      ) {
+        config = {
+          ...config,
+          class_conditions: DEFAULT_CLASS_CONDITIONS,
+        };
+      }
+
+      return config;
+    }),
+
+  update: protectedProcedure
+    .input(
+      z.object({
+        jrc_id: z.string().optional(),
+        // Section 1
+        default_model: z.string().optional(),
+        proactive_ai: z.boolean().optional(),
+        briefing_frequency: z.string().optional(),
+        autocomplete_enabled: z.boolean().optional(),
+        // Section 2
+        trigger_on_create: z.boolean().optional(),
+        trigger_on_proposal: z.boolean().optional(),
+        trigger_on_counter: z.boolean().optional(),
+        trigger_on_status: z.boolean().optional(),
+        trigger_on_deadline: z.boolean().optional(),
+        trigger_on_patterns: z.boolean().optional(),
+        trigger_on_email: z.boolean().optional(),
+        days_inactive_alert: z.number().int().optional(),
+        days_no_response: z.number().int().optional(),
+        days_before_target: z.number().int().optional(),
+        // Section 3
+        custom_system_prompt: z.string().optional().nullable(),
+        prompt_proposal: z.string().optional().nullable(),
+        prompt_email: z.string().optional().nullable(),
+        prompt_analysis: z.string().optional().nullable(),
+        persistent_instructions: z.string().optional().nullable(),
+        // Section 4
+        class_conditions: z.record(z.string(), z.any()).optional(),
+        vpn_discount_rate: z.number().optional(),
+        correction_indices: z.array(z.string()).optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const { jrc_id, class_conditions, ...rest } = input;
+
+      const data: Record<string, unknown> = {};
+      for (const [key, value] of Object.entries(rest)) {
+        if (value !== undefined) data[key] = value;
+      }
+      if (class_conditions !== undefined) {
+        data.class_conditions = class_conditions as any;
+      }
+
+      // Upsert: create if not exists, update if exists
+      const existing = await ctx.db.cRJAIConfig.findFirst({
+        where: jrc_id ? { jrc_id } : {},
+      });
+
+      if (existing) {
+        return ctx.db.cRJAIConfig.update({
+          where: { id: existing.id },
+          data: data as never,
+        });
+      }
+
+      return ctx.db.cRJAIConfig.create({
+        data: {
+          jrc_id: jrc_id || null,
+          ...data,
+          class_conditions: (class_conditions as any) || DEFAULT_CLASS_CONDITIONS,
+        } as never,
+      });
+    }),
+
+  insightStats: protectedProcedure
+    .input(z.object({ jrc_id: z.string().optional() }))
+    .query(async ({ ctx, input }) => {
+      const where: Record<string, unknown> = {};
+      if (input.jrc_id) where.jrc_id = input.jrc_id;
+
+      const [total, read, dismissed, byType] = await Promise.all([
+        ctx.db.cRJAIInsight.count({ where: where as never }),
+        ctx.db.cRJAIInsight.count({
+          where: { ...where, is_read: true } as never,
+        }),
+        ctx.db.cRJAIInsight.count({
+          where: { ...where, is_dismissed: true } as never,
+        }),
+        ctx.db.cRJAIInsight.groupBy({
+          by: ["type"],
+          where: where as never,
+          _count: { id: true },
+        }),
+      ]);
+
+      const accepted = read - dismissed;
+      const acceptanceRate = total > 0 ? (accepted / total) * 100 : 0;
+
+      return {
+        total,
+        read,
+        dismissed,
+        accepted,
+        acceptanceRate,
+        byType: byType.map((t) => ({
+          type: t.type,
+          count: t._count.id,
+        })),
+      };
+    }),
+
+  insightHistory: protectedProcedure
+    .input(
+      z.object({
+        jrc_id: z.string().optional(),
+        limit: z.number().int().min(1).max(100).default(50),
+        cursor: z.string().optional(),
+      })
+    )
+    .query(async ({ ctx, input }) => {
+      const where: Record<string, unknown> = {};
+      if (input.jrc_id) where.jrc_id = input.jrc_id;
+
+      const items = await ctx.db.cRJAIInsight.findMany({
+        where: where as never,
+        orderBy: { created_at: "desc" },
+        take: input.limit + 1,
+        cursor: input.cursor ? { id: input.cursor } : undefined,
+        include: {
+          negotiation: {
+            select: { id: true, title: true, creditor: { select: { nome: true } } },
+          },
+        },
+      });
+
+      let nextCursor: string | undefined;
+      if (items.length > input.limit) {
+        const next = items.pop();
+        nextCursor = next!.id;
+      }
+
+      return { items, nextCursor };
+    }),
+});
+
 // ========== Main Router ==========
 
 export const crjNegotiationsRouter = router({
@@ -1286,5 +1771,7 @@ export const crjNegotiationsRouter = router({
   installments: installmentsRouter,
   emails: emailsRouter,
   templates: templatesRouter,
+  insights: insightsRouter,
+  aiConfig: aiConfigRouter,
   aiAnalyze: aiAnalyzeProcedure,
 });
