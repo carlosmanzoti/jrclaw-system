@@ -74,6 +74,8 @@ import {
 import { CRJProposalGenerator } from "./crj-proposal-generator";
 import { CRJEmailComposer } from "./crj-email-composer";
 import { CRJConversationView } from "./crj-conversation-view";
+import { CRJCalculator } from "./crj-calculator";
+import { CRJAISuggestions } from "./crj-ai-suggestions";
 
 // Icon map for timeline events
 const EVENT_ICONS: Record<string, React.ReactNode> = {
@@ -210,6 +212,8 @@ export function CRJNegotiationDetail({
             <TabsTrigger value="timeline" className="text-xs">Timeline</TabsTrigger>
             <TabsTrigger value="parcelas" className="text-xs">Parcelas</TabsTrigger>
             <TabsTrigger value="emails" className="text-xs">E-mails</TabsTrigger>
+            <TabsTrigger value="calculadora" className="text-xs">Calculadora</TabsTrigger>
+            <TabsTrigger value="ia" className="text-xs">IA</TabsTrigger>
             <TabsTrigger value="conversa" className="text-xs">Conversa</TabsTrigger>
           </TabsList>
         </div>
@@ -232,6 +236,12 @@ export function CRJNegotiationDetail({
           </TabsContent>
           <TabsContent value="emails" className="m-0">
             <TabEmails neg={neg} />
+          </TabsContent>
+          <TabsContent value="calculadora" className="m-0">
+            <CRJCalculator negotiationId={neg.id} />
+          </TabsContent>
+          <TabsContent value="ia" className="m-0">
+            <CRJAISuggestions negotiationId={neg.id} />
           </TabsContent>
           <TabsContent value="conversa" className="m-0 h-full">
             <CRJConversationView negotiationId={neg.id} />

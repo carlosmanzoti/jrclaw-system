@@ -1108,6 +1108,174 @@ const templatesRouter = router({
     }),
 });
 
+// ========== AI Analysis ==========
+
+const aiAnalyzeProcedure = protectedProcedure
+  .input(z.object({ negotiation_id: z.string() }))
+  .mutation(async ({ ctx, input }) => {
+    // Fetch full negotiation data for AI context
+    const neg = await ctx.db.cRJNegotiation.findUnique({
+      where: { id: input.negotiation_id },
+      include: {
+        creditor: {
+          select: {
+            nome: true,
+            classe: true,
+            natureza: true,
+            valor_original: true,
+            valor_atualizado: true,
+            valor_garantia: true,
+            tipo_garantia: true,
+            desagio_percentual: true,
+            carencia_meses: true,
+            parcelas: true,
+            indexador: true,
+            juros_percentual: true,
+            observacoes: true,
+            person: {
+              select: { nome: true, segmento: true, cidade: true, estado: true },
+            },
+          },
+        },
+        rounds: { orderBy: { round_number: "asc" } },
+        proposals: { orderBy: { version: "desc" }, take: 3 },
+        events: {
+          orderBy: { created_at: "desc" },
+          take: 20,
+          select: { type: true, description: true, created_at: true },
+        },
+        jrc: {
+          select: {
+            status_rj: true,
+            case_: { select: { tipo: true, vara: true, comarca: true, uf: true } },
+          },
+        },
+      },
+    });
+
+    if (!neg) {
+      throw new TRPCError({ code: "NOT_FOUND", message: "Negociação não encontrada" });
+    }
+
+    // Build context for AI
+    const creditAmount = fromBigInt(neg.credit_amount);
+    const proposedAmount = neg.proposed_amount ? fromBigInt(neg.proposed_amount) : null;
+    const agreedAmount = neg.agreed_amount ? fromBigInt(neg.agreed_amount) : null;
+
+    const roundsSummary = neg.rounds.map((r) => ({
+      number: r.round_number,
+      type: r.type,
+      date: r.date,
+      proposed_by_us: r.proposed_by_us,
+      value: r.value_proposed ? fromBigInt(r.value_proposed) : null,
+      outcome: r.outcome,
+      creditor_response: r.creditor_response,
+      next_steps: r.next_steps,
+    }));
+
+    const prompt = `Você é um consultor jurídico especialista em recuperação judicial brasileira (Lei 11.101/2005). Analise os dados desta negociação individual com credor e forneça sugestões estratégicas.
+
+## Dados da Negociação
+
+**Credor:** ${neg.creditor?.nome || "N/A"}
+**Classe:** ${neg.creditor?.classe || "N/A"}
+**Natureza:** ${neg.creditor?.natureza || "N/A"}
+**Localidade:** ${neg.creditor?.person?.cidade || "N/A"}/${neg.creditor?.person?.estado || "N/A"}
+**Segmento:** ${neg.creditor?.person?.segmento || "N/A"}
+
+**Valor do crédito original:** R$ ${creditAmount.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+**Valor atualizado:** R$ ${neg.creditor?.valor_atualizado ? fromBigInt(neg.creditor.valor_atualizado).toLocaleString("pt-BR", { minimumFractionDigits: 2 }) : "N/A"}
+${neg.creditor?.valor_garantia ? `**Valor da garantia real:** R$ ${fromBigInt(neg.creditor.valor_garantia).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}` : ""}
+${neg.creditor?.tipo_garantia ? `**Tipo de garantia:** ${neg.creditor.tipo_garantia}` : ""}
+
+**Status atual:** ${neg.status}
+**Tipo de negociação:** ${neg.type}
+**Prioridade:** ${neg.priority}
+${proposedAmount ? `**Valor proposto:** R$ ${proposedAmount.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}` : ""}
+${agreedAmount ? `**Valor acordado:** R$ ${agreedAmount.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}` : ""}
+${neg.discount_percentage != null ? `**Deságio atual:** ${neg.discount_percentage.toFixed(1)}%` : ""}
+${neg.installments ? `**Parcelas previstas:** ${neg.installments}` : ""}
+${neg.grace_period_months ? `**Carência:** ${neg.grace_period_months} meses` : ""}
+${neg.monetary_correction ? `**Correção monetária:** ${neg.monetary_correction}` : ""}
+${neg.has_rotating_credit ? `**Crédito rotativo:** Sim` : ""}
+${neg.has_credit_insurance ? `**Seguro de crédito:** ${neg.insurer_name || "Sim"}` : ""}
+${neg.has_assignment ? `**Cessão de crédito:** ${neg.assignment_partner || "Sim"} (${neg.assignment_percentage || "?"}%)` : ""}
+
+**Processo:** ${neg.jrc?.case_?.tipo || "N/A"} — ${neg.jrc?.case_?.vara || ""} — ${neg.jrc?.case_?.comarca || ""}/${neg.jrc?.case_?.uf || ""}
+**Status da RJ:** ${neg.jrc?.status_rj || "N/A"}
+
+**Observações:** ${neg.notes || "Sem observações"}
+
+## Histórico de Rodadas (${roundsSummary.length})
+${roundsSummary.length > 0 ? JSON.stringify(roundsSummary, null, 2) : "Nenhuma rodada registrada"}
+
+## Eventos Recentes
+${neg.events.map((e) => `- [${e.type}] ${e.description} (${new Date(e.created_at).toLocaleDateString("pt-BR")})`).join("\n")}
+
+---
+
+Responda EXCLUSIVAMENTE em JSON válido com a seguinte estrutura:
+{
+  "summary": "Resumo geral da situação negocial em 2-3 frases",
+  "suggestions": [
+    {
+      "category": "ESTRATEGIA|RISCO|DESAGIO|ARGUMENTO|PROXIMO_PASSO",
+      "title": "Título curto",
+      "content": "Descrição detalhada da sugestão com fundamentação jurídica quando aplicável",
+      "confidence": "ALTA|MEDIA|BAIXA"
+    }
+  ],
+  "recommendedDiscount": {
+    "min": 25,
+    "max": 40,
+    "justification": "Justificativa para a faixa de deságio"
+  },
+  "riskFactors": ["Risco 1", "Risco 2"],
+  "negotiationStrength": "FORTE|MODERADA|FRACA",
+  "strengthJustification": "Justificativa para a avaliação de força"
+}
+
+Considere:
+- Classe do crédito e implicações na votação do PRJ (arts. 45, 56, 58 da Lei 11.101)
+- Garantias reais e seu impacto no poder de barganha
+- Deságios praticados no mercado brasileiro para a classe
+- Histórico das rodadas e evolução da negociação
+- Argumentos jurídicos aplicáveis (ex: cram down, novação, consolidação processual)
+- Riscos de impugnação, litígio, ou bloqueio da aprovação do plano
+
+Forneça entre 3 e 6 sugestões. Seja prático e específico.`;
+
+    try {
+      const { generateText } = await import("ai");
+      const { anthropic } = await import("@/lib/ai");
+
+      const { text } = await generateText({
+        model: anthropic("claude-sonnet-4-5-20250929"),
+        prompt,
+        maxOutputTokens: 4096,
+        temperature: 0.3,
+      });
+
+      // Clean JSON from markdown fences if present
+      let cleaned = text.trim();
+      if (cleaned.startsWith("```json")) {
+        cleaned = cleaned.slice(7);
+      } else if (cleaned.startsWith("```")) {
+        cleaned = cleaned.slice(3);
+      }
+      if (cleaned.endsWith("```")) {
+        cleaned = cleaned.slice(0, -3);
+      }
+
+      return { result: cleaned.trim() };
+    } catch (err) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: `Erro na análise IA: ${err instanceof Error ? err.message : "Erro desconhecido"}`,
+      });
+    }
+  });
+
 // ========== Main Router ==========
 
 export const crjNegotiationsRouter = router({
@@ -1118,4 +1286,5 @@ export const crjNegotiationsRouter = router({
   installments: installmentsRouter,
   emails: emailsRouter,
   templates: templatesRouter,
+  aiAnalyze: aiAnalyzeProcedure,
 });
