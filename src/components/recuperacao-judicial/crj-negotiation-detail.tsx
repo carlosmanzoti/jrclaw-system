@@ -73,6 +73,7 @@ import {
 } from "lucide-react";
 import { CRJProposalGenerator } from "./crj-proposal-generator";
 import { CRJEmailComposer } from "./crj-email-composer";
+import { CRJConversationView } from "./crj-conversation-view";
 
 // Icon map for timeline events
 const EVENT_ICONS: Record<string, React.ReactNode> = {
@@ -209,6 +210,7 @@ export function CRJNegotiationDetail({
             <TabsTrigger value="timeline" className="text-xs">Timeline</TabsTrigger>
             <TabsTrigger value="parcelas" className="text-xs">Parcelas</TabsTrigger>
             <TabsTrigger value="emails" className="text-xs">E-mails</TabsTrigger>
+            <TabsTrigger value="conversa" className="text-xs">Conversa</TabsTrigger>
           </TabsList>
         </div>
 
@@ -230,6 +232,9 @@ export function CRJNegotiationDetail({
           </TabsContent>
           <TabsContent value="emails" className="m-0">
             <TabEmails neg={neg} />
+          </TabsContent>
+          <TabsContent value="conversa" className="m-0 h-full">
+            <CRJConversationView negotiationId={neg.id} />
           </TabsContent>
         </div>
       </Tabs>
