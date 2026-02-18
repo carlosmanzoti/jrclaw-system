@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { router, protectedProcedure } from "@/server/trpc";
 import { TRPCError } from "@trpc/server";
+import { workspaceRouter } from "./deadline-workspace";
 
 // ---------------------------------------------------------------------------
 // Helper utilities
@@ -2046,4 +2047,7 @@ export const deadlinesRouter = router({
       take: 200,
     });
   }),
+
+  // Workspace sub-router
+  workspace: workspaceRouter,
 });

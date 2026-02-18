@@ -8,7 +8,7 @@ import {
   List, Calendar as CalendarIcon, MoreHorizontal,
   Pencil, Trash2, ExternalLink, BookOpen, Scale,
   LayoutGrid, Timer, Activity, Search,
-  Flame, ShieldAlert, CalendarDays, TrendingUp,
+  Flame, ShieldAlert, CalendarDays, TrendingUp, FileText,
 } from "lucide-react"
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
@@ -794,7 +794,9 @@ function DeadlineRow({ deadline: d }: { deadline: any }) {
 
         {/* Description */}
         <TableCell className="max-w-[250px] truncate text-sm" title={d.descricao}>
-          {d.descricao}
+          <Link href={`/prazos/${d.id}/workspace`} className="hover:underline hover:text-primary">
+            {d.descricao}
+          </Link>
         </TableCell>
 
         {/* Date */}
@@ -854,6 +856,12 @@ function DeadlineRow({ deadline: d }: { deadline: any }) {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
+                <DropdownMenuItem asChild>
+                  <Link href={`/prazos/${d.id}/workspace`}>
+                    <FileText className="mr-2 size-4" />
+                    Abrir Workspace
+                  </Link>
+                </DropdownMenuItem>
                 <DropdownMenuItem asChild>
                   <Link href={`/processos/${d.case_.id}`}>
                     <ExternalLink className="mr-2 size-4" />

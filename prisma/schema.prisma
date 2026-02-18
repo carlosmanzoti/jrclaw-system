@@ -3160,6 +3160,7 @@ model DeadlineNew {
   // Relations
   notificacoes                DeadlineNotification[]
   historico                   DeadlineHistory[]
+  workspace                   DeadlineWorkspace?
 
   @@index([case_id])
   @@index([status])
@@ -4014,4 +4015,250 @@ model CRJAIConfig {
   updated_at              DateTime @updatedAt
 
   @@map("crj_ai_configs")
+}
+
+// ============================================================
+// DEADLINE WORKSPACE — Autonomous workspace for each deadline
+// ============================================================
+
+model DeadlineWorkspace {
+  id                    String    @id @default(cuid())
+  deadline_id           String    @unique
+  deadline              DeadlineNew @relation(fields: [deadline_id], references: [id], onDelete: Cascade)
+
+  // Phase pipeline: RASCUNHO → REVISAO → APROVACAO → PROTOCOLO → CONCLUIDO
+  phase                 String    @default("RASCUNHO") // RASCUNHO, REVISAO, APROVACAO, PROTOCOLO, CONCLUIDO
+  phase_changed_at      DateTime  @default(now())
+  phase_changed_by      String?
+
+  // Editor content (Tiptap JSON + HTML)
+  editor_content        String?   @db.Text  // JSON (Tiptap)
+  editor_html           String?   @db.Text  // Rendered HTML
+  editor_saved_at       DateTime?
+
+  // Protocol fields
+  protocol_number       String?
+  protocol_date         DateTime?
+  protocol_system       String?   // PJe, ESAJ, PROJUDI, etc.
+  protocol_receipt_url  String?
+
+  // Metadata
+  total_words           Int       @default(0)
+  total_characters      Int       @default(0)
+  estimated_pages       Int       @default(0)
+
+  // Locked for editing?
+  locked                Boolean   @default(false)
+  locked_by             String?
+  locked_at             DateTime?
+
+  created_at            DateTime  @default(now())
+  updated_at            DateTime  @updatedAt
+
+  // Relations
+  documents             WorkspaceDocument[]
+  document_versions     WorkspaceDocVersion[]
+  comments              WorkspaceComment[]
+  theses                WorkspaceThesis[]
+  checklist_items       WorkspaceChecklist[]
+  approvals             WorkspaceApproval[]
+  activities            WorkspaceActivity[]
+
+  @@index([phase])
+  @@map("deadline_workspaces")
+}
+
+model WorkspaceDocument {
+  id                    String    @id @default(cuid())
+  workspace_id          String
+  workspace             DeadlineWorkspace @relation(fields: [workspace_id], references: [id], onDelete: Cascade)
+
+  title                 String
+  file_url              String
+  file_name             String
+  file_size             Int       @default(0)
+  mime_type             String?
+  category              String    @default("ANEXO") // ANEXO, PROVA, PROCURACAO, GUIA, COMPROVANTE, JURISPRUDENCIA, LEGISLACAO, MODELO, RASCUNHO, OUTRO
+  description           String?
+
+  order                 Int       @default(0)
+  is_required           Boolean   @default(false)
+  is_validated          Boolean   @default(false)
+  validated_by          String?
+  validated_at          DateTime?
+
+  uploaded_by           String?
+  created_at            DateTime  @default(now())
+  updated_at            DateTime  @updatedAt
+
+  @@index([workspace_id])
+  @@map("workspace_documents")
+}
+
+model WorkspaceDocVersion {
+  id                    String    @id @default(cuid())
+  workspace_id          String
+  workspace             DeadlineWorkspace @relation(fields: [workspace_id], references: [id], onDelete: Cascade)
+
+  version_number        Int
+  title                 String?
+  content_json          String?   @db.Text
+  content_html          String?   @db.Text
+  change_summary        String?
+  word_count            Int       @default(0)
+
+  created_by            String?
+  created_at            DateTime  @default(now())
+
+  @@index([workspace_id])
+  @@index([workspace_id, version_number])
+  @@map("workspace_doc_versions")
+}
+
+model WorkspaceComment {
+  id                    String    @id @default(cuid())
+  workspace_id          String
+  workspace             DeadlineWorkspace @relation(fields: [workspace_id], references: [id], onDelete: Cascade)
+
+  // Threaded comments
+  parent_id             String?
+  parent                WorkspaceComment?  @relation("CommentThread", fields: [parent_id], references: [id])
+  replies               WorkspaceComment[] @relation("CommentThread")
+
+  // Content
+  content               String    @db.Text
+  type                  String    @default("GERAL") // GERAL, REVISAO, SUGESTAO, APROVACAO, REJEICAO, CORRECAO
+  resolved              Boolean   @default(false)
+  resolved_by           String?
+  resolved_at           DateTime?
+
+  // Inline positioning (for inline comments on text)
+  anchor_from           Int?      // start position in editor
+  anchor_to             Int?      // end position in editor
+  anchor_text           String?   // quoted text snippet
+
+  user_id               String
+  created_at            DateTime  @default(now())
+  updated_at            DateTime  @updatedAt
+
+  @@index([workspace_id])
+  @@index([parent_id])
+  @@map("workspace_comments")
+}
+
+model WorkspaceThesis {
+  id                    String    @id @default(cuid())
+  workspace_id          String
+  workspace             DeadlineWorkspace @relation(fields: [workspace_id], references: [id], onDelete: Cascade)
+
+  // IRAC format
+  title                 String
+  issue                 String?   @db.Text  // Issue (questão jurídica)
+  rule                  String?   @db.Text  // Rule (fundamento legal)
+  analysis              String?   @db.Text  // Analysis (argumentação)
+  conclusion            String?   @db.Text  // Conclusion (pedido/conclusão)
+
+  // Classification
+  type                  String    @default("MERITO") // PRELIMINAR, PREJUDICIAL, MERITO, SUBSIDIARIA
+  status                String    @default("RASCUNHO") // RASCUNHO, REVISAO, APROVADA, DESCARTADA
+  order                 Int       @default(0)
+  strength              String?   // FORTE, MEDIA, FRACA
+
+  // References
+  legal_refs            String[]  @default([])  // ["Art. 333 CPC", "Súmula 301 STJ"]
+  case_refs             String[]  @default([])  // jurisprudence references
+  doctrine_refs         String[]  @default([])  // doctrine references
+
+  // AI suggestion
+  ai_generated          Boolean   @default(false)
+  ai_confidence         Float?
+
+  created_by            String?
+  created_at            DateTime  @default(now())
+  updated_at            DateTime  @updatedAt
+
+  @@index([workspace_id])
+  @@map("workspace_theses")
+}
+
+model WorkspaceChecklist {
+  id                    String    @id @default(cuid())
+  workspace_id          String
+  workspace             DeadlineWorkspace @relation(fields: [workspace_id], references: [id], onDelete: Cascade)
+
+  // Item details
+  title                 String
+  description           String?
+  category              String    @default("GERAL") // REQUISITOS_FORMAIS, DOCUMENTOS, FUNDAMENTACAO, PEDIDOS, ASSINATURAS, CUSTAS, PROTOCOLO, GERAL
+  order                 Int       @default(0)
+
+  // Completion
+  checked               Boolean   @default(false)
+  checked_by            String?
+  checked_at            DateTime?
+  auto_check            Boolean   @default(false)   // auto-verified by system
+  auto_check_rule       String?   // rule for auto-check (e.g., "has_procuracao")
+
+  // Blocking
+  blocks_protocol       Boolean   @default(false)   // must be checked before protocol
+  is_required           Boolean   @default(true)
+
+  // Template origin
+  template_source       String?   // which template generated this item
+
+  created_at            DateTime  @default(now())
+  updated_at            DateTime  @updatedAt
+
+  @@index([workspace_id])
+  @@map("workspace_checklists")
+}
+
+model WorkspaceApproval {
+  id                    String    @id @default(cuid())
+  workspace_id          String
+  workspace             DeadlineWorkspace @relation(fields: [workspace_id], references: [id], onDelete: Cascade)
+
+  // Approval details
+  round                 Int       @default(1)
+  status                String    @default("PENDENTE") // PENDENTE, APROVADO, REPROVADO, APROVADO_COM_RESSALVAS
+  requested_by          String
+  approver_id           String
+  requested_at          DateTime  @default(now())
+  decided_at            DateTime?
+
+  // Feedback
+  feedback              String?   @db.Text
+  corrections_required  String?   @db.Text
+
+  // What was reviewed (snapshot)
+  content_snapshot      String?   @db.Text
+  version_number        Int?
+
+  created_at            DateTime  @default(now())
+
+  @@index([workspace_id])
+  @@index([approver_id])
+  @@index([status])
+  @@map("workspace_approvals")
+}
+
+model WorkspaceActivity {
+  id                    String    @id @default(cuid())
+  workspace_id          String
+  workspace             DeadlineWorkspace @relation(fields: [workspace_id], references: [id], onDelete: Cascade)
+
+  // Activity details
+  action                String    // CREATED, PHASE_CHANGED, CONTENT_EDITED, VERSION_SAVED, COMMENT_ADDED, COMMENT_RESOLVED, THESIS_ADDED, THESIS_UPDATED, CHECKLIST_CHECKED, APPROVAL_REQUESTED, APPROVAL_DECIDED, DOCUMENT_UPLOADED, DOCUMENT_VALIDATED, LOCKED, UNLOCKED, DELEGATED, PROTOCOL_REGISTERED
+  description           String
+  metadata              Json?
+
+  user_id               String?
+  user_name             String?
+  is_system             Boolean   @default(false)
+
+  created_at            DateTime  @default(now())
+
+  @@index([workspace_id])
+  @@index([action])
+  @@map("workspace_activities")
 }

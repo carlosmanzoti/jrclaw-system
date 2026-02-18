@@ -7,6 +7,14 @@ async function main() {
   console.log("🌱 Starting seed...");
 
   // Clean existing data (in reverse dependency order)
+  await prisma.workspaceActivity.deleteMany();
+  await prisma.workspaceApproval.deleteMany();
+  await prisma.workspaceChecklist.deleteMany();
+  await prisma.workspaceThesis.deleteMany();
+  await prisma.workspaceComment.deleteMany();
+  await prisma.workspaceDocVersion.deleteMany();
+  await prisma.workspaceDocument.deleteMany();
+  await prisma.deadlineWorkspace.deleteMany();
   await prisma.projectTaskCheckItem.deleteMany();
   await prisma.projectTaskComment.deleteMany();
   await prisma.projectTask.deleteMany();
