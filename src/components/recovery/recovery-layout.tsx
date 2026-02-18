@@ -318,9 +318,72 @@ export function RecoveryLayout() {
     },
   });
 
-  const dashboard = dashboardQuery.data as DashboardData | undefined;
-  const cases = (listQuery.data ?? []) as unknown as RecoveryCaseItem[];
-  const alerts = (alertsQuery.data ?? []) as unknown as AlertItem[];
+  // Map dashboard data from API shape to component shape
+  const rawDashboard = dashboardQuery.data;
+  const dashboard: DashboardData | undefined = rawDashboard
+    ? {
+        casos_ativos: rawDashboard.total_active ?? 0,
+        by_phase: Object.fromEntries(
+          Object.entries(rawDashboard.by_fase ?? {}).map(([k, v]) => [
+            k,
+            { count: typeof v === "number" ? v : 0 },
+          ])
+        ),
+        volume_execucao: rawDashboard.total_valor_execucao ?? 0,
+        total_recuperado: rawDashboard.total_valor_recuperado ?? 0,
+        percentual_recuperado_global: rawDashboard.avg_percentual_recuperado ?? 0,
+        valor_bloqueado: 0,
+        valor_penhorado: 0,
+        taxa_recuperacao: rawDashboard.avg_percentual_recuperado ?? 0,
+        score_medio: rawDashboard.avg_score_recuperacao ?? 0,
+      }
+    : undefined;
+
+  // Map cases list from paginated API response to flat component shape
+  const rawList = listQuery.data;
+  const cases: RecoveryCaseItem[] = (rawList?.items ?? []).map((item: Record<string, unknown>) => {
+    const person = item.person as Record<string, unknown> | null;
+    const responsavel = item.responsavel as Record<string, unknown> | null;
+    const counts = item._count as Record<string, number> | null;
+    return {
+      id: item.id as string,
+      codigo: item.codigo as string,
+      devedor_nome: (item.devedor_nome as string) || (person?.nome as string) || "Sem nome",
+      devedor_cpf_cnpj: (item.devedor_cpf_cnpj as string | null) ?? (person?.cpf_cnpj as string | null) ?? null,
+      tipo: item.tipo as CaseType,
+      fase: item.fase as CasePhase,
+      status: item.status as CaseStatus,
+      prioridade: item.prioridade as string,
+      valor_total_execucao: (item.valor_total_execucao as number) ?? 0,
+      valor_recuperado: (item.valor_recuperado as number) ?? 0,
+      percentual_recuperado: (item.percentual_recuperado as number) ?? 0,
+      score_recuperacao: (item.score_recuperacao as number) ?? 0,
+      bens_encontrados: counts?.bens ?? 0,
+      responsavel_nome: (responsavel?.name as string | null) ?? null,
+      responsavel_avatar: null,
+      proxima_acao: (item.proxima_acao as string | null) ?? null,
+      data_proxima_acao: (item.data_proxima_acao as string | Date | null) ?? null,
+      data_entrada_fase: (item.data_entrada_fase as string | Date | null) ?? null,
+      alertas_pendentes: 0,
+      created_at: item.created_at as string | Date,
+    };
+  });
+
+  // Map alerts from paginated API response to flat component shape
+  const rawAlerts = alertsQuery.data;
+  const alerts: AlertItem[] = (rawAlerts?.items ?? []).map((item: Record<string, unknown>) => {
+    const monitoring = item.monitoring as Record<string, unknown> | null;
+    return {
+      id: item.id as string,
+      severity: (item.severidade as AlertSeverity) ?? "BAIXA",
+      tipo: item.tipo as string,
+      devedor_nome: "",
+      case_id: (monitoring?.recovery_case_id as string) ?? "",
+      descricao: (item.descricao as string) ?? (item.titulo as string) ?? "",
+      data: (item.created_at as string | Date) ?? new Date(),
+      lido: (item.lido as boolean) ?? false,
+    };
+  });
 
   // Search and filter logic
   const filteredCases = useMemo(() => {
