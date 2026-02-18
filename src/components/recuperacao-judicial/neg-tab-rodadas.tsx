@@ -28,6 +28,10 @@ import {
   Calendar,
   Percent,
   Hash,
+  Link2,
+  Unlink,
+  Handshake,
+  X,
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import {
@@ -40,6 +44,12 @@ import {
   CREDITOR_NEG_STATUS_COLORS,
   CREDIT_CLASS_SHORT_LABELS,
 } from "@/lib/rj-constants";
+import {
+  CRJ_STATUS_LABELS,
+  CRJ_STATUS_COLORS,
+  CRJ_PRIORITY_COLORS,
+  formatBRL,
+} from "@/lib/crj-constants";
 
 interface NegTabRodadasProps {
   jrcId: string;
@@ -71,8 +81,10 @@ export function NegTabRodadas({ jrcId }: NegTabRodadasProps) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
   const [addCreditorOpen, setAddCreditorOpen] = useState(false);
+  const [linkCrjOpen, setLinkCrjOpen] = useState(false);
   const [form, setForm] = useState<CreateFormState>(initialFormState);
   const [creditorSearch, setCreditorSearch] = useState("");
+  const [crjSearch, setCrjSearch] = useState("");
 
   const utils = trpc.useUtils();
 
@@ -88,6 +100,12 @@ export function NegTabRodadas({ jrcId }: NegTabRodadasProps) {
 
   const { data: availableCreditors, isLoading: loadingCreditors } =
     trpc.rj.creditors.list.useQuery({ jrc_id: jrcId });
+
+  // CRJ negotiations for linking
+  const { data: crjNegotiations } = trpc.crjNeg.negotiations.list.useQuery(
+    { jrc_id: jrcId },
+    { enabled: linkCrjOpen }
+  );
 
   // Mutations
   const createMutation = trpc.rj.negotiations.create.useMutation({
@@ -121,6 +139,20 @@ export function NegTabRodadas({ jrcId }: NegTabRodadasProps) {
         utils.rj.negotiations.invalidate();
       },
     });
+
+  const linkCrjMutation = trpc.rj.negotiations.linkCrj.useMutation({
+    onSuccess: () => {
+      utils.rj.negotiations.invalidate();
+      setLinkCrjOpen(false);
+      setCrjSearch("");
+    },
+  });
+
+  const unlinkCrjMutation = trpc.rj.negotiations.unlinkCrj.useMutation({
+    onSuccess: () => {
+      utils.rj.negotiations.invalidate();
+    },
+  });
 
   // Handlers
   const handleCreate = () => {
@@ -163,6 +195,22 @@ export function NegTabRodadas({ jrcId }: NegTabRodadasProps) {
     });
   };
 
+  const handleLinkCrj = (crjNegId: string) => {
+    if (!selectedId) return;
+    linkCrjMutation.mutate({
+      rj_negotiation_id: selectedId,
+      crj_negotiation_ids: [crjNegId],
+    });
+  };
+
+  const handleUnlinkCrj = (crjNegId: string) => {
+    if (!selectedId) return;
+    unlinkCrjMutation.mutate({
+      rj_negotiation_id: selectedId,
+      crj_negotiation_id: crjNegId,
+    });
+  };
+
   const updateField = (field: keyof CreateFormState, value: string) => {
     setForm((prev) => ({ ...prev, [field]: value }));
   };
@@ -179,6 +227,27 @@ export function NegTabRodadas({ jrcId }: NegTabRodadasProps) {
       if (existingCreditorIds.has(c.id)) return false;
       if (creditorSearch) {
         return c.nome.toLowerCase().includes(creditorSearch.toLowerCase());
+      }
+      return true;
+    }
+  );
+
+  // Filtered CRJ negotiations for linking (exclude already linked)
+  const linkedCrjIds = new Set(
+    (selectedNeg?.crj_links || []).map(
+      (l: { crj_negotiation_id: string }) => l.crj_negotiation_id
+    )
+  );
+
+  const filteredCrjNegotiations = (crjNegotiations || []).filter(
+    (n: { id: string; title: string; creditor?: { nome?: string } }) => {
+      if (linkedCrjIds.has(n.id)) return false;
+      if (crjSearch) {
+        const search = crjSearch.toLowerCase();
+        return (
+          n.title.toLowerCase().includes(search) ||
+          (n.creditor?.nome || "").toLowerCase().includes(search)
+        );
       }
       return true;
     }
@@ -220,16 +289,16 @@ export function NegTabRodadas({ jrcId }: NegTabRodadasProps) {
                 <Input
                   value={form.titulo}
                   onChange={(e) => updateField("titulo", e.target.value)}
-                  placeholder="Ex: Rodada 1 - Quirografarios"
+                  placeholder="Ex: Rodada 1 - Quirografários"
                 />
               </div>
               <div>
-                <Label>Descricao</Label>
+                <Label>Descrição</Label>
                 <textarea
                   className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                   value={form.descricao}
                   onChange={(e) => updateField("descricao", e.target.value)}
-                  placeholder="Objetivo e estrategia desta rodada..."
+                  placeholder="Objetivo e estratégia desta rodada..."
                 />
               </div>
               <div className="grid grid-cols-2 gap-3">
@@ -266,7 +335,7 @@ export function NegTabRodadas({ jrcId }: NegTabRodadasProps) {
                 <div>
                   <Label>
                     <Percent className="mr-1 inline h-3 w-3" />
-                    Desagio Proposto (%)
+                    Deságio Proposto (%)
                   </Label>
                   <Input
                     type="number"
@@ -283,7 +352,7 @@ export function NegTabRodadas({ jrcId }: NegTabRodadasProps) {
                 <div>
                   <Label>
                     <Calendar className="mr-1 inline h-3 w-3" />
-                    Carencia (meses)
+                    Carência (meses)
                   </Label>
                   <Input
                     type="number"
@@ -397,6 +466,12 @@ export function NegTabRodadas({ jrcId }: NegTabRodadasProps) {
                               <Users className="h-3 w-3" />
                               {neg._count?.credores ?? 0} credores
                             </span>
+                            {neg._count?.crj_links != null && neg._count.crj_links > 0 && (
+                              <span className="flex items-center gap-1">
+                                <Link2 className="h-3 w-3" />
+                                {neg._count.crj_links} CRJ
+                              </span>
+                            )}
                             {neg.valor_total_original != null && (
                               <span className="font-medium">
                                 {formatCentavos(neg.valor_total_original)}
@@ -447,7 +522,7 @@ export function NegTabRodadas({ jrcId }: NegTabRodadasProps) {
           ) : !selectedNeg ? (
             <div className="flex h-full items-center justify-center">
               <p className="text-sm text-muted-foreground">
-                Rodada nao encontrada
+                Rodada não encontrada
               </p>
             </div>
           ) : (
@@ -533,7 +608,7 @@ export function NegTabRodadas({ jrcId }: NegTabRodadasProps) {
                           : "--"}
                       </p>
                       <p className="text-[10px] text-muted-foreground">
-                        Desagio
+                        Deságio
                       </p>
                     </div>
                     <div className="rounded-lg border p-3 text-center">
@@ -544,7 +619,7 @@ export function NegTabRodadas({ jrcId }: NegTabRodadasProps) {
                           : "--"}
                       </p>
                       <p className="text-[10px] text-muted-foreground">
-                        Carencia
+                        Carência
                       </p>
                     </div>
                     <div className="rounded-lg border p-3 text-center">
@@ -570,6 +645,194 @@ export function NegTabRodadas({ jrcId }: NegTabRodadasProps) {
                       </p>
                     </div>
                   </div>
+                </CardContent>
+              </Card>
+
+              {/* Linked CRJ Individual Negotiations */}
+              <Card>
+                <CardHeader className="pb-2">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="flex items-center gap-2 text-sm">
+                      <Handshake className="h-4 w-4" />
+                      Negociações Individuais (CRJ)
+                      {selectedNeg.crj_links?.length > 0 && (
+                        <Badge variant="outline" className="ml-1 text-[10px]">
+                          {selectedNeg.crj_links.length}
+                        </Badge>
+                      )}
+                    </CardTitle>
+                    <Dialog open={linkCrjOpen} onOpenChange={setLinkCrjOpen}>
+                      <DialogTrigger asChild>
+                        <Button variant="outline" size="sm" className="h-7 text-xs">
+                          <Link2 className="mr-1 h-3 w-3" /> Vincular CRJ
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="max-w-md">
+                        <DialogHeader>
+                          <DialogTitle>Vincular Negociações CRJ</DialogTitle>
+                        </DialogHeader>
+                        <div className="space-y-3">
+                          <p className="text-xs text-muted-foreground">
+                            Vincule negociações individuais (CRJ) a esta rodada coletiva
+                            para acompanhar o progresso de cada credor.
+                          </p>
+                          <Input
+                            placeholder="Buscar por título ou credor..."
+                            value={crjSearch}
+                            onChange={(e) => setCrjSearch(e.target.value)}
+                            className="h-8 text-xs"
+                          />
+                          <div className="max-h-[300px] overflow-y-auto">
+                            {filteredCrjNegotiations.length === 0 ? (
+                              <p className="py-6 text-center text-xs text-muted-foreground">
+                                {crjSearch
+                                  ? "Nenhuma negociação encontrada"
+                                  : "Todas as negociações já estão vinculadas"}
+                              </p>
+                            ) : (
+                              <div className="space-y-1">
+                                {filteredCrjNegotiations.map(
+                                  (n: {
+                                    id: string;
+                                    title: string;
+                                    status: string;
+                                    credit_amount: bigint | number;
+                                    creditor?: { nome?: string; classe?: string };
+                                  }) => (
+                                    <div
+                                      key={n.id}
+                                      className="flex items-center justify-between rounded-md border px-3 py-2 transition-colors hover:bg-muted/50"
+                                    >
+                                      <div className="min-w-0 flex-1">
+                                        <p className="truncate text-xs font-medium">
+                                          {n.title}
+                                        </p>
+                                        <div className="mt-0.5 flex items-center gap-2">
+                                          <Badge
+                                            className={`text-[9px] ${CRJ_STATUS_COLORS[n.status] || ""}`}
+                                          >
+                                            {CRJ_STATUS_LABELS[n.status] || n.status}
+                                          </Badge>
+                                          <span className="text-[10px] text-muted-foreground">
+                                            {n.creditor?.nome || "—"}
+                                          </span>
+                                        </div>
+                                      </div>
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="h-7 shrink-0 text-xs"
+                                        disabled={linkCrjMutation.isPending}
+                                        onClick={() => handleLinkCrj(n.id)}
+                                      >
+                                        <Link2 className="mr-1 h-3 w-3" />
+                                        Vincular
+                                      </Button>
+                                    </div>
+                                  )
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </DialogContent>
+                    </Dialog>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  {!selectedNeg.crj_links || selectedNeg.crj_links.length === 0 ? (
+                    <div className="py-6 text-center">
+                      <Link2 className="mx-auto mb-2 h-8 w-8 text-muted-foreground/30" />
+                      <p className="text-xs text-muted-foreground">
+                        Nenhuma negociação CRJ vinculada a esta rodada.
+                      </p>
+                      <p className="mt-0.5 text-[10px] text-muted-foreground">
+                        Vincule negociações individuais para acompanhar o progresso.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="border-b text-xs text-muted-foreground">
+                            <th className="pb-2 pr-3 text-left">Negociação</th>
+                            <th className="pb-2 pr-3 text-left">Credor</th>
+                            <th className="pb-2 pr-3 text-left">Status</th>
+                            <th className="pb-2 pr-3 text-right">Crédito</th>
+                            <th className="pb-2 pr-3 text-right">Proposto</th>
+                            <th className="pb-2 pr-3 text-right">Deságio</th>
+                            <th className="pb-2"></th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {selectedNeg.crj_links.map(
+                            (link: {
+                              crj_negotiation_id: string;
+                              crj_negotiation: {
+                                id: string;
+                                title: string;
+                                status: string;
+                                priority: string;
+                                credit_amount: bigint | number;
+                                proposed_amount: bigint | number | null;
+                                agreed_amount: bigint | number | null;
+                                discount_percentage: number | null;
+                                creditor: { id: string; nome: string; classe: string } | null;
+                              };
+                            }) => {
+                              const crj = link.crj_negotiation;
+                              return (
+                                <tr key={link.crj_negotiation_id} className="border-b last:border-0">
+                                  <td className="py-2 pr-3">
+                                    <span className="text-xs font-medium">{crj.title}</span>
+                                  </td>
+                                  <td className="py-2 pr-3">
+                                    <div className="flex items-center gap-1">
+                                      <span className="text-xs">{crj.creditor?.nome || "—"}</span>
+                                      {crj.creditor?.classe && (
+                                        <Badge variant="outline" className="text-[9px]">
+                                          {CREDIT_CLASS_SHORT_LABELS[crj.creditor.classe] || crj.creditor.classe}
+                                        </Badge>
+                                      )}
+                                    </div>
+                                  </td>
+                                  <td className="py-2 pr-3">
+                                    <Badge
+                                      className={`text-[10px] ${CRJ_STATUS_COLORS[crj.status] || ""}`}
+                                    >
+                                      {CRJ_STATUS_LABELS[crj.status] || crj.status}
+                                    </Badge>
+                                  </td>
+                                  <td className="py-2 pr-3 text-right text-xs">
+                                    {formatBRL(crj.credit_amount)}
+                                  </td>
+                                  <td className="py-2 pr-3 text-right text-xs font-medium">
+                                    {crj.proposed_amount ? formatBRL(crj.proposed_amount) : "—"}
+                                  </td>
+                                  <td className="py-2 pr-3 text-right text-xs">
+                                    {crj.discount_percentage != null
+                                      ? `${crj.discount_percentage.toFixed(1)}%`
+                                      : "—"}
+                                  </td>
+                                  <td className="py-2 text-right">
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
+                                      onClick={() => handleUnlinkCrj(crj.id)}
+                                      disabled={unlinkCrjMutation.isPending}
+                                    >
+                                      <X className="h-3 w-3" />
+                                    </Button>
+                                  </td>
+                                </tr>
+                              );
+                            }
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
 
@@ -619,7 +882,7 @@ export function NegTabRodadas({ jrcId }: NegTabRodadasProps) {
                               <p className="py-6 text-center text-xs text-muted-foreground">
                                 {creditorSearch
                                   ? "Nenhum credor encontrado"
-                                  : "Todos os credores ja foram adicionados"}
+                                  : "Todos os credores já foram adicionados"}
                               </p>
                             ) : (
                               <div className="space-y-1">

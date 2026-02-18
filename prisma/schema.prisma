@@ -1834,6 +1834,7 @@ model RJNegotiation {
   // Relations
   credores              NegotiationCreditor[]
   atividades            NegotiationActivity[]
+  crj_links             CRJCollectiveRoundLink[]
 
   @@index([jrc_id])
   @@index([fase])
@@ -3736,6 +3737,7 @@ model CRJNegotiation {
   events                CRJNegotiationEvent[]
   emails                CRJNegotiationEmail[]
   installment_schedule  CRJInstallmentSchedule[]
+  collective_round_links CRJCollectiveRoundLink[]
 
   @@index([jrc_id])
   @@index([creditor_id])
@@ -3905,4 +3907,19 @@ model CRJDocumentTemplate {
   updated_at            DateTime             @updatedAt
 
   @@map("crj_document_templates")
+}
+
+model CRJCollectiveRoundLink {
+  id                    String               @id @default(cuid())
+  rj_negotiation_id     String
+  rj_negotiation        RJNegotiation        @relation(fields: [rj_negotiation_id], references: [id], onDelete: Cascade)
+  crj_negotiation_id    String
+  crj_negotiation       CRJNegotiation       @relation(fields: [crj_negotiation_id], references: [id], onDelete: Cascade)
+
+  created_at            DateTime             @default(now())
+
+  @@unique([rj_negotiation_id, crj_negotiation_id])
+  @@index([rj_negotiation_id])
+  @@index([crj_negotiation_id])
+  @@map("crj_collective_round_links")
 }

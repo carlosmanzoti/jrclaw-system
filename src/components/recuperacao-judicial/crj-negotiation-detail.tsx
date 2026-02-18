@@ -68,6 +68,7 @@ import {
   UserCheck,
   Inbox,
   AlertCircle,
+  Link2,
 } from "lucide-react";
 
 // Icon map for timeline events
@@ -429,6 +430,58 @@ function TabResumo({ neg, creditAmountReais, proposedAmountReais, agreedAmountRe
           </CardContent>
         </Card>
       </div>
+
+      {/* Linked collective rounds */}
+      {neg.collective_round_links && neg.collective_round_links.length > 0 && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2 text-sm">
+              <Link2 className="h-4 w-4" />
+              Rodadas Coletivas Vinculadas
+              <Badge variant="outline" className="text-[10px]">
+                {neg.collective_round_links.length}
+              </Badge>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {neg.collective_round_links.map(
+                (link: {
+                  rj_negotiation: {
+                    id: string;
+                    titulo: string;
+                    fase: string;
+                    prioridade: string;
+                    total_credores: number;
+                    valor_total_original: bigint | number;
+                  };
+                }) => (
+                  <div
+                    key={link.rj_negotiation.id}
+                    className="flex items-center justify-between rounded-md border px-3 py-2"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Handshake className="h-4 w-4 text-muted-foreground" />
+                      <div>
+                        <p className="text-xs font-medium">
+                          {link.rj_negotiation.titulo}
+                        </p>
+                        <p className="text-[10px] text-muted-foreground">
+                          {link.rj_negotiation.total_credores} credores |{" "}
+                          {formatBRL(link.rj_negotiation.valor_total_original)}
+                        </p>
+                      </div>
+                    </div>
+                    <Badge variant="outline" className="text-[10px]">
+                      {link.rj_negotiation.fase}
+                    </Badge>
+                  </div>
+                )
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Process info */}
       {neg.jrc?.case_ && (

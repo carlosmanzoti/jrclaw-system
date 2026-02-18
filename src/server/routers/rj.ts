@@ -1277,7 +1277,7 @@ const negotiationsRouter = router({
           ...(input.prioridade && { prioridade: input.prioridade as never }),
         },
         include: {
-          _count: { select: { credores: true, atividades: true } },
+          _count: { select: { credores: true, atividades: true, crj_links: true } },
         },
         orderBy: { updated_at: "desc" },
       });
@@ -1298,7 +1298,26 @@ const negotiationsRouter = router({
             orderBy: { updated_at: "desc" },
           },
           atividades: { orderBy: { data_atividade: "desc" }, take: 20 },
-          _count: { select: { credores: true, atividades: true } },
+          crj_links: {
+            include: {
+              crj_negotiation: {
+                select: {
+                  id: true,
+                  title: true,
+                  status: true,
+                  priority: true,
+                  credit_amount: true,
+                  proposed_amount: true,
+                  agreed_amount: true,
+                  discount_percentage: true,
+                  creditor: {
+                    select: { id: true, nome: true, classe: true },
+                  },
+                },
+              },
+            },
+          },
+          _count: { select: { credores: true, atividades: true, crj_links: true } },
         },
       });
       if (!neg) throw new TRPCError({ code: "NOT_FOUND", message: "Negociação não encontrada" });
@@ -1438,6 +1457,49 @@ const negotiationsRouter = router({
         parceiros,
         recent_activities: recentActivities,
       };
+    }),
+
+  // CRJ individual negotiation linking
+  linkCrj: protectedProcedure
+    .input(z.object({
+      rj_negotiation_id: z.string(),
+      crj_negotiation_ids: z.array(z.string()),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const existing = await ctx.db.cRJCollectiveRoundLink.findMany({
+        where: {
+          rj_negotiation_id: input.rj_negotiation_id,
+          crj_negotiation_id: { in: input.crj_negotiation_ids },
+        },
+        select: { crj_negotiation_id: true },
+      });
+      const existingIds = new Set(existing.map((e) => e.crj_negotiation_id));
+      const toCreate = input.crj_negotiation_ids.filter((id) => !existingIds.has(id));
+
+      if (toCreate.length > 0) {
+        await ctx.db.cRJCollectiveRoundLink.createMany({
+          data: toCreate.map((id) => ({
+            rj_negotiation_id: input.rj_negotiation_id,
+            crj_negotiation_id: id,
+          })),
+        });
+      }
+      return { linked: toCreate.length };
+    }),
+
+  unlinkCrj: protectedProcedure
+    .input(z.object({
+      rj_negotiation_id: z.string(),
+      crj_negotiation_id: z.string(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      await ctx.db.cRJCollectiveRoundLink.deleteMany({
+        where: {
+          rj_negotiation_id: input.rj_negotiation_id,
+          crj_negotiation_id: input.crj_negotiation_id,
+        },
+      });
+      return { unlinked: true };
     }),
 
   // Creditor management within negotiations

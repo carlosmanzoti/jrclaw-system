@@ -167,6 +167,20 @@ const negotiationsRouter = router({
           installment_schedule: {
             orderBy: { installment_number: "asc" },
           },
+          collective_round_links: {
+            include: {
+              rj_negotiation: {
+                select: {
+                  id: true,
+                  titulo: true,
+                  fase: true,
+                  prioridade: true,
+                  total_credores: true,
+                  valor_total_original: true,
+                },
+              },
+            },
+          },
         },
       });
 
