@@ -9,20 +9,38 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { trpc } from "@/lib/trpc";
 import { JR_STATUS_LABELS, JR_STATUS_COLORS } from "@/lib/rj-constants";
-import { NegTabDashboard } from "./neg-tab-dashboard";
+import { CRJTabDashboard } from "./crj-tab-dashboard";
+import { CRJTabNegotiations } from "./crj-tab-negotiations";
 import { NegTabRodadas } from "./neg-tab-rodadas";
 import { NegTabParceiro } from "./neg-tab-parceiro";
 import { NegTabComunicacoes } from "./neg-tab-comunicacoes";
 import { NegTabMediacao } from "./neg-tab-mediacao";
 import { NegTabComparativo } from "./neg-tab-comparativo";
+import {
+  Plus,
+  Download,
+  Upload,
+  Handshake,
+  CheckCircle,
+} from "lucide-react";
 
 export function NegLayout() {
   const [selectedJrcId, setSelectedJrcId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("dashboard");
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
+  const [importing, setImporting] = useState(false);
 
   const { data: cases, isLoading: loadingCases } = trpc.rj.cases.list.useQuery();
 
@@ -32,6 +50,34 @@ export function NegLayout() {
     { id: jrcId! },
     { enabled: !!jrcId }
   );
+
+  // Import creditors from QGC
+  const utils = trpc.useUtils();
+  const bulkCreateMutation = trpc.crjNeg.negotiations.bulkCreate.useMutation({
+    onSuccess: (result) => {
+      utils.crjNeg.invalidate();
+      setImporting(false);
+      setImportDialogOpen(false);
+    },
+    onError: () => {
+      setImporting(false);
+    },
+  });
+
+  // Get QGC creditors for import dialog
+  const { data: qgcCreditors } = trpc.rj.creditors.list.useQuery(
+    { jrc_id: jrcId! },
+    { enabled: !!jrcId && importDialogOpen }
+  );
+
+  const handleImportAll = () => {
+    if (!jrcId || !qgcCreditors?.items?.length) return;
+    setImporting(true);
+    bulkCreateMutation.mutate({
+      jrc_id: jrcId,
+      creditor_ids: qgcCreditors.items.map((c: { id: string }) => c.id),
+    });
+  };
 
   if (loadingCases) {
     return (
@@ -54,10 +100,16 @@ export function NegLayout() {
             Crie um na tela de Processos para começar.
           </p>
           <div className="flex justify-center gap-3 pt-2">
-            <a href="/processos" className="inline-flex items-center rounded-md border px-4 py-2 text-sm font-medium hover:bg-muted">
+            <a
+              href="/processos"
+              className="inline-flex items-center rounded-md border px-4 py-2 text-sm font-medium hover:bg-muted"
+            >
               Ir para Processos
             </a>
-            <a href="/recuperacao-judicial" className="inline-flex items-center rounded-md bg-[#C9A961] px-4 py-2 text-sm font-medium text-[#2A2A2A] hover:bg-[#B8984F]">
+            <a
+              href="/recuperacao-judicial"
+              className="inline-flex items-center rounded-md bg-[#C9A961] px-4 py-2 text-sm font-medium text-[#2A2A2A] hover:bg-[#B8984F]"
+            >
               Dashboard RJ
             </a>
           </div>
@@ -83,7 +135,8 @@ export function NegLayout() {
               <SelectContent>
                 {cases.map((c) => (
                   <SelectItem key={c.id} value={c.id}>
-                    {c.case_?.numero_processo || "Sem número"} — {c.case_?.cliente?.nome}
+                    {c.case_?.numero_processo || "Sem número"} —{" "}
+                    {c.case_?.cliente?.nome}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -95,16 +148,102 @@ export function NegLayout() {
             </Badge>
           )}
         </div>
+
+        {/* Action Buttons */}
+        {jrcId && (
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 text-xs"
+              onClick={() => setActiveTab("individuais")}
+            >
+              <Plus className="mr-1 h-3.5 w-3.5" />
+              Nova Negociação
+            </Button>
+
+            <Dialog open={importDialogOpen} onOpenChange={setImportDialogOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline" size="sm" className="h-8 text-xs">
+                  <Upload className="mr-1 h-3.5 w-3.5" />
+                  Importar do QGC
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-md">
+                <DialogHeader>
+                  <DialogTitle>Importar Credores do QGC</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <p className="text-sm text-muted-foreground">
+                    Importar credores do Quadro Geral de Credores para criar
+                    negociações individuais automaticamente. Credores que já
+                    possuem negociação ativa serão ignorados.
+                  </p>
+                  {qgcCreditors?.items ? (
+                    <div className="rounded-lg border p-4 text-center">
+                      <Handshake className="mx-auto mb-2 h-8 w-8 text-muted-foreground" />
+                      <p className="text-2xl font-bold">
+                        {qgcCreditors.items.length}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        credores disponíveis no QGC
+                      </p>
+                    </div>
+                  ) : (
+                    <Skeleton className="h-24" />
+                  )}
+                  {bulkCreateMutation.isSuccess && (
+                    <div className="flex items-center gap-2 rounded-md border border-green-200 bg-green-50 p-3 text-sm text-green-700">
+                      <CheckCircle className="h-4 w-4" />
+                      <span>
+                        {bulkCreateMutation.data?.created} negociações criadas,{" "}
+                        {bulkCreateMutation.data?.skipped} ignoradas (já
+                        existentes)
+                      </span>
+                    </div>
+                  )}
+                  <Button
+                    className="w-full"
+                    onClick={handleImportAll}
+                    disabled={
+                      importing ||
+                      !qgcCreditors?.items?.length ||
+                      bulkCreateMutation.isSuccess
+                    }
+                  >
+                    {importing
+                      ? "Importando..."
+                      : bulkCreateMutation.isSuccess
+                      ? "Importação concluída"
+                      : "Importar Todos os Credores"}
+                  </Button>
+                </div>
+              </DialogContent>
+            </Dialog>
+
+            <Button variant="outline" size="sm" className="h-8 text-xs">
+              <Download className="mr-1 h-3.5 w-3.5" />
+              Exportar Relatório
+            </Button>
+          </div>
+        )}
       </div>
 
       {/* Main content */}
       {jrcId ? (
         <div className="flex flex-1 flex-col overflow-hidden">
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="flex h-full flex-col">
+          <Tabs
+            value={activeTab}
+            onValueChange={setActiveTab}
+            className="flex h-full flex-col"
+          >
             <div className="border-b px-4">
               <TabsList className="h-10">
                 <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
-                <TabsTrigger value="rodadas">Rodadas de Negociação</TabsTrigger>
+                <TabsTrigger value="individuais">
+                  Negociações Individuais
+                </TabsTrigger>
+                <TabsTrigger value="rodadas">Rodadas Coletivas</TabsTrigger>
                 <TabsTrigger value="parceiro">Credor Parceiro</TabsTrigger>
                 <TabsTrigger value="comunicacoes">Comunicações</TabsTrigger>
                 <TabsTrigger value="mediacao">Mediação</TabsTrigger>
@@ -114,7 +253,10 @@ export function NegLayout() {
 
             <div className="flex-1 overflow-y-auto">
               <TabsContent value="dashboard" className="m-0 h-full">
-                <NegTabDashboard jrcId={jrcId} />
+                <CRJTabDashboard jrcId={jrcId} />
+              </TabsContent>
+              <TabsContent value="individuais" className="m-0 h-full">
+                <CRJTabNegotiations jrcId={jrcId} />
               </TabsContent>
               <TabsContent value="rodadas" className="m-0 h-full">
                 <NegTabRodadas jrcId={jrcId} />
@@ -136,7 +278,9 @@ export function NegLayout() {
         </div>
       ) : (
         <div className="flex flex-1 items-center justify-center">
-          <p className="text-muted-foreground">Selecione um caso de Recuperação Judicial</p>
+          <p className="text-muted-foreground">
+            Selecione um caso de Recuperação Judicial
+          </p>
         </div>
       )}
 
@@ -144,7 +288,8 @@ export function NegLayout() {
       {jrc && (
         <div className="flex items-center justify-between border-t bg-muted/30 px-4 py-1 text-xs text-muted-foreground">
           <span>
-            Processo: {jrc.case_?.numero_processo || "—"} | Cliente: {jrc.case_?.cliente?.nome || "—"}
+            Processo: {jrc.case_?.numero_processo || "—"} | Cliente:{" "}
+            {jrc.case_?.cliente?.nome || "—"}
           </span>
           <span>
             {jrc.total_credores} credores | Plano v{jrc.plano_versao} |{" "}
