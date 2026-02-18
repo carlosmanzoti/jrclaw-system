@@ -556,6 +556,8 @@ model User {
   recovery_events            RecoveryEvent[] @relation("RecoveryEventResponsavel")
   deadline_responsavel       DeadlineNew[] @relation("deadline_responsavel")
   deadline_backup            DeadlineNew[] @relation("deadline_backup")
+  microsoft_account          MicrosoftAccount?
+  email_links                EmailLink[]
 
   @@map("users")
 }
@@ -695,6 +697,7 @@ model Case {
   recovery_cases             CreditRecoveryCase[] @relation("CaseRecovery")
   deadlines_new              DeadlineNew[]
   process_parties            ProcessParty[]
+  email_links                EmailLink[]
 
   @@map("cases")
 }
@@ -1051,6 +1054,7 @@ model Project {
   calendar_events CalendarEvent[]
   library_entries LibraryEntry[] @relation("LibraryProjects")
   chat_messages   ChatMessage[]  @relation("ChatMessageProject")
+  email_links     EmailLink[]
 
   @@map("projects")
 }
@@ -3324,4 +3328,47 @@ model CalendarRepository {
   @@index([tribunal_codigo, ano])
   @@index([status])
   @@map("calendar_repositories")
+}
+
+// ============================================================
+// EMAIL INTEGRATION
+// ============================================================
+
+model MicrosoftAccount {
+  id            String   @id @default(cuid())
+  userId        String   @unique
+  email         String
+  accessToken   String   @db.Text
+  refreshToken  String   @db.Text
+  expiresAt     DateTime
+  scope         String
+  status        String   @default("CONNECTED") // CONNECTED, EXPIRED, DISCONNECTED
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("microsoft_accounts")
+}
+
+model EmailLink {
+  id            String    @id @default(cuid())
+  outlookMsgId  String
+  subject       String?
+  fromEmail     String
+  fromName      String?
+  receivedAt    DateTime?
+  caseId        String?
+  projectId     String?
+  userId        String
+  notes         String?
+  createdAt     DateTime  @default(now())
+  case          Case?     @relation(fields: [caseId], references: [id])
+  project       Project?  @relation(fields: [projectId], references: [id])
+  user          User      @relation(fields: [userId], references: [id])
+
+  @@unique([outlookMsgId, userId])
+  @@index([caseId])
+  @@index([projectId])
+  @@index([userId])
+  @@map("email_links")
 }

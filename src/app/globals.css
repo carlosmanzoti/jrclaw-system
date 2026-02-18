@@ -252,3 +252,86 @@
     background-color: #F2F2F2;
   }
 }
+
+/* === Email Body Rendering === */
+.email-body {
+  font-family: var(--font-body), 'Inter', sans-serif;
+  font-size: 14px;
+  line-height: 1.6;
+  color: #2A2A2A;
+  word-break: break-word;
+  overflow-wrap: break-word;
+}
+
+.email-body p {
+  margin: 0 0 0.75em 0;
+}
+
+.email-body a {
+  color: #C9A961;
+  text-decoration: underline;
+}
+
+.email-body a:hover {
+  opacity: 0.8;
+}
+
+.email-body img {
+  max-width: 100%;
+  height: auto;
+}
+
+.email-body table {
+  border-collapse: collapse;
+  max-width: 100%;
+  margin: 0.5em 0;
+}
+
+.email-body table td,
+.email-body table th {
+  padding: 4px 8px;
+  border: 1px solid #E5E5E5;
+  font-size: 13px;
+}
+
+.email-body blockquote {
+  margin: 0.5em 0;
+  padding: 0.5em 1em;
+  border-left: 3px solid #C9A961;
+  background: rgba(201, 169, 97, 0.05);
+  color: #666666;
+}
+
+.email-body ul, .email-body ol {
+  padding-left: 1.5em;
+  margin: 0.5em 0;
+}
+
+.email-body li {
+  margin: 0.25em 0;
+}
+
+.email-body pre {
+  background: #F2F2F2;
+  padding: 0.75em;
+  border-radius: 4px;
+  overflow-x: auto;
+  font-size: 13px;
+}
+
+.email-body hr {
+  border: none;
+  border-top: 1px solid #E5E5E5;
+  margin: 1em 0;
+}
+
+.email-body h1, .email-body h2, .email-body h3,
+.email-body h4, .email-body h5, .email-body h6 {
+  font-family: var(--font-body), 'Inter', sans-serif;
+  margin: 0.75em 0 0.25em 0;
+  font-weight: 600;
+}
+
+.email-body h1 { font-size: 1.25em; }
+.email-body h2 { font-size: 1.15em; }
+.email-body h3 { font-size: 1.05em; }

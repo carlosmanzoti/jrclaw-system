@@ -1,0 +1,108 @@
+▲ Next.js 16.1.6 (Turbopack)
+- Environments: .env
+- Experiments (use with caution):
+  · optimizePackageImports
+
+  Creating an optimized production build ...
+✓ Compiled successfully in 29.3s
+  Running TypeScript ...
+  Collecting page data using 7 workers ...
+  Generating static pages using 7 workers (0/73) ...
+  Generating static pages using 7 workers (18/73) 
+  Generating static pages using 7 workers (36/73) 
+  Generating static pages using 7 workers (54/73) 
+✓ Generating static pages using 7 workers (73/73) in 513.7ms
+  Finalizing page optimization ...
+
+Route (app)
+┌ ƒ /
+├ ○ /_not-found
+├ ƒ /api/ai/chat
+├ ƒ /api/ai/email-assist
+├ ƒ /api/ai/generate
+├ ƒ /api/ai/neg/analyze
+├ ƒ /api/ai/neg/chat
+├ ƒ /api/ai/prazos/extract-calendar
+├ ƒ /api/ai/prazos/simulate
+├ ƒ /api/ai/recovery/analyze
+├ ƒ /api/ai/recovery/chat
+├ ƒ /api/ai/review
+├ ƒ /api/auth/[...nextauth]
+├ ƒ /api/biblioteca/render-docx
+├ ƒ /api/biblioteca/render-xlsx
+├ ƒ /api/biblioteca/upload
+├ ƒ /api/cron/prazos
+├ ƒ /api/deadlines/audit
+├ ƒ /api/deadlines/conflicts
+├ ƒ /api/deadlines/suggest
+├ ƒ /api/deadlines/workload
+├ ƒ /api/email/contacts/search
+├ ƒ /api/email/folders
+├ ƒ /api/email/messages
+├ ƒ /api/email/messages/[messageId]
+├ ƒ /api/email/messages/[messageId]/attachments/[attId]
+├ ƒ /api/email/messages/[messageId]/classify
+├ ƒ /api/email/messages/[messageId]/forward
+├ ƒ /api/email/messages/[messageId]/link
+├ ƒ /api/email/messages/[messageId]/move
+├ ƒ /api/email/messages/[messageId]/reply
+├ ƒ /api/email/send
+├ ƒ /api/email/unread-count
+├ ƒ /api/extract-text
+├ ƒ /api/health
+├ ƒ /api/import/analyze
+├ ƒ /api/microsoft/auth
+├ ƒ /api/microsoft/callback
+├ ƒ /api/trpc/[trpc]
+├ ƒ /api/upload
+├ ƒ /biblioteca
+├ ƒ /biblioteca/[id]
+├ ƒ /calendario
+├ ƒ /clientes
+├ ƒ /confeccao
+├ ƒ /configuracoes
+├ ƒ /configuracoes/templates-projeto
+├ ƒ /configuracoes/uso-ia
+├ ƒ /dashboard
+├ ƒ /documentos
+├ ƒ /email
+├ ƒ /financeiro
+├ ƒ /importar
+├ ƒ /importar/historico
+├ ƒ /importar/templates
+├ ○ /login
+├ ƒ /monitoramento
+├ ƒ /pessoas
+├ ƒ /pessoas/[id]
+├ ƒ /pessoas/novo
+├ ƒ /prazos
+├ ƒ /prazos/calculadora
+├ ƒ /prazos/calendario-judicial
+├ ƒ /prazos/catalogo
+├ ƒ /prazos/depositario
+├ ƒ /processos
+├ ƒ /processos/[id]
+├ ƒ /processos/novo
+├ ƒ /projetos
+├ ƒ /projetos/[id]
+├ ƒ /projetos/novo
+├ ƒ /recuperacao
+├ ƒ /recuperacao-credito
+├ ƒ /recuperacao-credito/[id]
+├ ƒ /recuperacao-credito/analitico
+├ ƒ /recuperacao-judicial
+├ ƒ /recuperacao-judicial/aprovacao-prj
+├ ƒ /recuperacao-judicial/negociacoes
+├ ƒ /recuperacao-judicial/quadro-credores
+├ ƒ /recuperacao/credores
+├ ƒ /recuperacao/negociacoes
+├ ƒ /reestruturacao
+├ ƒ /reestruturacao/[id]
+├ ƒ /reestruturacao/estrategico
+├ ƒ /relatorios
+└ ƒ /whatsapp
+
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+
