@@ -3,6 +3,9 @@
 import { useState, useCallback, useRef } from "react"
 import Link from "next/link"
 import { trpc } from "@/lib/trpc"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { OneDriveBrowser } from "@/components/documentos/onedrive-browser"
+import { HardDrive, FileText as FileTextIcon2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
@@ -221,7 +224,19 @@ export function DocumentsPageClient() {
   const hasFilters = search || (tipoFilter && tipoFilter !== "all") || (caseFilter && caseFilter !== "all") || (projectFilter && projectFilter !== "all") || iaFilter
 
   return (
-    <>
+    <Tabs defaultValue="documentos" className="space-y-4">
+      <TabsList>
+        <TabsTrigger value="documentos" className="gap-1.5">
+          <FileTextIcon2 className="size-3.5" />
+          Documentos
+        </TabsTrigger>
+        <TabsTrigger value="onedrive" className="gap-1.5">
+          <HardDrive className="size-3.5" />
+          OneDrive
+        </TabsTrigger>
+      </TabsList>
+
+      <TabsContent value="documentos" className="space-y-4">
       {/* Filters */}
       <div className="flex flex-wrap items-center gap-2">
         <Button onClick={() => setUploadOpen(true)} size="sm">
@@ -751,6 +766,11 @@ export function DocumentsPageClient() {
           </div>
         </DialogContent>
       </Dialog>
-    </>
+      </TabsContent>
+
+      <TabsContent value="onedrive">
+        <OneDriveBrowser />
+      </TabsContent>
+    </Tabs>
   )
 }

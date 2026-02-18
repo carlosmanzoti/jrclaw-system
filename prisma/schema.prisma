@@ -788,6 +788,8 @@ model Document {
   criado_por       User?        @relation(fields: [criado_por_id], references: [id])
   compartilhado_portal Boolean  @default(false)
   tags             String[]     @default([])
+  onedrive_item_id   String?
+  onedrive_web_url   String?
   created_at       DateTime     @default(now())
   updated_at       DateTime     @updatedAt
 
@@ -881,7 +883,12 @@ model CalendarEvent {
   lembrete_minutos Int?
   recorrencia   Json?
   sincronizado_outlook Boolean      @default(false)
-  outlook_event_id     String?
+  outlook_event_id     String?      @unique
+  outlook_last_sync    DateTime?
+  outlook_sync_error   String?
+  last_modified_source String?
+  sync_status          String?      @default("SYNCED")
+  sync_conflict_data   Json?
   cor           String?
   created_at    DateTime            @default(now())
   updated_at    DateTime            @updatedAt

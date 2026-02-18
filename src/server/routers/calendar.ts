@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { router, protectedProcedure } from "@/server/trpc";
 import type { ActivityType, Prisma } from "@prisma/client";
+import { MicrosoftGraphCalendarService } from "@/lib/microsoft-graph-calendar";
 
 const EVENT_TYPE_TO_ACTIVITY_TYPE: Record<string, ActivityType> = {
   REUNIAO: "REUNIAO",
@@ -14,6 +15,37 @@ const EVENT_TYPE_TO_ACTIVITY_TYPE: Record<string, ActivityType> = {
   RETORNO_EMAIL: "EMAIL",
   ATIVIDADE_GERAL: "OUTRO",
 };
+
+async function tryPushToOutlook(
+  userId: string,
+  event: {
+    titulo: string;
+    descricao?: string | null;
+    data_inicio: Date;
+    data_fim?: Date | null;
+    dia_inteiro: boolean;
+    local?: string | null;
+    link_virtual?: string | null;
+    lembrete_minutos?: number | null;
+    participantes_externos?: string[];
+    outlook_event_id?: string | null;
+  }
+): Promise<{ outlook_event_id?: string; error?: string }> {
+  try {
+    const calService = new MicrosoftGraphCalendarService(userId);
+    const outlookInput = calService.mapToOutlook(event);
+
+    if (event.outlook_event_id) {
+      await calService.updateEvent(event.outlook_event_id, outlookInput);
+      return { outlook_event_id: event.outlook_event_id };
+    } else {
+      const created = await calService.createEvent(outlookInput);
+      return { outlook_event_id: created.id };
+    }
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : "Falha na sincronização" };
+  }
+}
 
 export const calendarRouter = router({
   list: protectedProcedure
@@ -123,10 +155,11 @@ export const calendarRouter = router({
         project_id: z.string().optional().nullable(),
         task_id: z.string().optional().nullable(),
         cor: z.string().optional().nullable(),
+        sincronizar_outlook: z.boolean().default(false),
       })
     )
     .mutation(async ({ ctx, input }) => {
-      return ctx.db.calendarEvent.create({
+      const event = await ctx.db.calendarEvent.create({
         data: {
           tipo_evento: input.tipo_evento as never,
           titulo: input.titulo,
@@ -146,8 +179,41 @@ export const calendarRouter = router({
           task_id: input.task_id,
           cor: input.cor,
           created_by_id: ctx.session.user.id,
+          sincronizado_outlook: input.sincronizar_outlook,
+          ...(input.sincronizar_outlook && {
+            last_modified_source: "SYSTEM",
+            sync_status: "PENDING_PUSH",
+          }),
         },
       });
+
+      // Attempt immediate push to Outlook
+      if (input.sincronizar_outlook) {
+        const result = await tryPushToOutlook(ctx.session.user.id, {
+          ...input,
+          data_inicio: input.data_inicio,
+          data_fim: input.data_fim,
+        });
+
+        if (result.outlook_event_id) {
+          await ctx.db.calendarEvent.update({
+            where: { id: event.id },
+            data: {
+              outlook_event_id: result.outlook_event_id,
+              sync_status: "SYNCED",
+              outlook_last_sync: new Date(),
+              outlook_sync_error: null,
+            },
+          });
+        } else {
+          await ctx.db.calendarEvent.update({
+            where: { id: event.id },
+            data: { outlook_sync_error: result.error },
+          });
+        }
+      }
+
+      return event;
     }),
 
   update: protectedProcedure
@@ -189,6 +255,16 @@ export const calendarRouter = router({
         }
       }
 
+      // Fetch current event to check sync status
+      const current = await ctx.db.calendarEvent.findUnique({
+        where: { id },
+        select: { sincronizado_outlook: true, outlook_event_id: true },
+      });
+
+      const syncUpdates = current?.sincronizado_outlook && current?.outlook_event_id
+        ? { last_modified_source: "SYSTEM", sync_status: "PENDING_PUSH" }
+        : {};
+
       const updated = await ctx.db.calendarEvent.update({
         where: { id },
         data: {
@@ -218,6 +294,7 @@ export const calendarRouter = router({
           ...(data.project_id !== undefined && { project_id: data.project_id }),
           ...(data.task_id !== undefined && { task_id: data.task_id }),
           ...(data.cor !== undefined && { cor: data.cor }),
+          ...syncUpdates,
         },
         include: {
           case_: { select: { id: true } },
@@ -225,6 +302,38 @@ export const calendarRouter = router({
           task: { select: { id: true } },
         },
       });
+
+      // Attempt immediate push to Outlook if synced
+      if (current?.sincronizado_outlook && current?.outlook_event_id) {
+        const result = await tryPushToOutlook(ctx.session.user.id, {
+          titulo: updated.titulo,
+          descricao: updated.descricao,
+          data_inicio: updated.data_inicio,
+          data_fim: updated.data_fim,
+          dia_inteiro: updated.dia_inteiro,
+          local: updated.local,
+          link_virtual: updated.link_virtual,
+          lembrete_minutos: updated.lembrete_minutos,
+          participantes_externos: updated.participantes_externos,
+          outlook_event_id: current.outlook_event_id,
+        });
+
+        if (result.outlook_event_id) {
+          await ctx.db.calendarEvent.update({
+            where: { id },
+            data: {
+              sync_status: "SYNCED",
+              outlook_last_sync: new Date(),
+              outlook_sync_error: null,
+            },
+          });
+        } else {
+          await ctx.db.calendarEvent.update({
+            where: { id },
+            data: { outlook_sync_error: result.error },
+          });
+        }
+      }
 
       // Auto-create Activity when event is completed
       if (shouldCreateActivity) {
@@ -263,8 +372,30 @@ export const calendarRouter = router({
     }),
 
   delete: protectedProcedure
-    .input(z.object({ id: z.string() }))
+    .input(
+      z.object({
+        id: z.string(),
+        delete_from_outlook: z.boolean().default(false),
+      })
+    )
     .mutation(async ({ ctx, input }) => {
+      // If requested, delete from Outlook first
+      if (input.delete_from_outlook) {
+        const event = await ctx.db.calendarEvent.findUnique({
+          where: { id: input.id },
+          select: { outlook_event_id: true, sincronizado_outlook: true },
+        });
+
+        if (event?.sincronizado_outlook && event?.outlook_event_id) {
+          try {
+            const calService = new MicrosoftGraphCalendarService(ctx.session.user.id);
+            await calService.deleteEvent(event.outlook_event_id);
+          } catch {
+            // Continue with local delete even if Outlook delete fails
+          }
+        }
+      }
+
       return ctx.db.calendarEvent.delete({ where: { id: input.id } });
     }),
 
@@ -278,7 +409,7 @@ export const calendarRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      return ctx.db.calendarEvent.update({
+      const event = await ctx.db.calendarEvent.update({
         where: { id: input.id },
         data: {
           data_inicio: input.data_inicio,
@@ -286,7 +417,71 @@ export const calendarRouter = router({
           ...(input.dia_inteiro !== undefined && { dia_inteiro: input.dia_inteiro }),
         },
       });
+
+      // Push date change to Outlook if synced
+      if (event.sincronizado_outlook && event.outlook_event_id) {
+        const result = await tryPushToOutlook(ctx.session.user.id, {
+          titulo: event.titulo,
+          descricao: event.descricao,
+          data_inicio: event.data_inicio,
+          data_fim: event.data_fim,
+          dia_inteiro: event.dia_inteiro,
+          local: event.local,
+          link_virtual: event.link_virtual,
+          lembrete_minutos: event.lembrete_minutos,
+          participantes_externos: event.participantes_externos,
+          outlook_event_id: event.outlook_event_id,
+        });
+
+        await ctx.db.calendarEvent.update({
+          where: { id: input.id },
+          data: result.outlook_event_id
+            ? { sync_status: "SYNCED", outlook_last_sync: new Date(), outlook_sync_error: null }
+            : { outlook_sync_error: result.error, sync_status: "PENDING_PUSH" },
+        });
+      }
+
+      return event;
     }),
+
+  getSyncStatus: protectedProcedure.query(async ({ ctx }) => {
+    const counts = await ctx.db.calendarEvent.groupBy({
+      by: ["sync_status"],
+      where: {
+        sincronizado_outlook: true,
+        created_by_id: ctx.session.user.id,
+      },
+      _count: true,
+    });
+
+    const result: Record<string, number> = {
+      SYNCED: 0,
+      PENDING_PUSH: 0,
+      PENDING_PULL: 0,
+      CONFLICT: 0,
+    };
+
+    for (const c of counts) {
+      if (c.sync_status) result[c.sync_status] = c._count;
+    }
+
+    return result;
+  }),
+
+  getConflicts: protectedProcedure.query(async ({ ctx }) => {
+    return ctx.db.calendarEvent.findMany({
+      where: {
+        sincronizado_outlook: true,
+        sync_status: "CONFLICT",
+        created_by_id: ctx.session.user.id,
+      },
+      include: {
+        case_: { select: { id: true, numero_processo: true } },
+        project: { select: { id: true, titulo: true, codigo: true } },
+      },
+      orderBy: { updated_at: "desc" },
+    });
+  }),
 
   casesForSelect: protectedProcedure.query(async ({ ctx }) => {
     return ctx.db.case.findMany({

@@ -27,6 +27,8 @@ import {
   CALENDAR_EVENT_TYPE_LABELS,
   CALENDAR_EVENT_TYPE_COLORS,
 } from "@/lib/constants"
+import { Badge } from "@/components/ui/badge"
+import { SYNC_STATUS_LABELS, SYNC_STATUS_COLORS } from "@/lib/constants"
 import { Save, Trash2, Loader2 } from "lucide-react"
 import { EventTypeFields } from "./event-type-fields"
 
@@ -90,6 +92,7 @@ export function CalendarEventModal({
   const [projectId, setProjectId] = useState("")
   const [taskId, setTaskId] = useState("")
   const [camposEspecificos, setCamposEspecificos] = useState<CamposEspecificos>({})
+  const [sincronizarOutlook, setSincronizarOutlook] = useState(false)
 
   // Data queries
   const { data: users } = trpc.users.list.useQuery()
@@ -165,6 +168,7 @@ export function CalendarEventModal({
       setCamposEspecificos(
         (existingEvent.campos_especificos as CamposEspecificos) || {}
       )
+      setSincronizarOutlook(existingEvent.sincronizado_outlook || false)
     } else {
       setTipoEvento("")
       setTitulo("")
@@ -178,6 +182,7 @@ export function CalendarEventModal({
       setProjectId("")
       setTaskId("")
       setCamposEspecificos({})
+      setSincronizarOutlook(false)
     }
   }, [open, isEdit, existingEvent, defaultDate])
 
@@ -203,7 +208,7 @@ export function CalendarEventModal({
     if (isEdit) {
       updateMutation.mutate({ id: eventId!, ...payload })
     } else {
-      createMutation.mutate(payload)
+      createMutation.mutate({ ...payload, sincronizar_outlook: sincronizarOutlook })
     }
   }
 
@@ -394,6 +399,30 @@ export function CalendarEventModal({
                     </Select>
                   </div>
                 )}
+              </div>
+            </div>
+
+            {/* Outlook sync */}
+            <div className="border-t pt-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium">Sincronizar com Outlook</p>
+                  <p className="text-xs text-[#666666]">
+                    Cria ou atualiza o evento no Outlook Calendar
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  {isEdit && existingEvent?.sincronizado_outlook && existingEvent?.sync_status && (
+                    <Badge className={`text-[10px] ${SYNC_STATUS_COLORS[existingEvent.sync_status] || ""}`}>
+                      {SYNC_STATUS_LABELS[existingEvent.sync_status] || existingEvent.sync_status}
+                    </Badge>
+                  )}
+                  <Switch
+                    checked={sincronizarOutlook}
+                    onCheckedChange={setSincronizarOutlook}
+                    disabled={isEdit && existingEvent?.sincronizado_outlook}
+                  />
+                </div>
               </div>
             </div>
 

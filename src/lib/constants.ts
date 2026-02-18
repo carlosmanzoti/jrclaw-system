@@ -340,6 +340,20 @@ export const CALENDAR_EVENT_STATUS_COLORS: Record<string, string> = {
   CANCELADO: "bg-red-100 text-red-700",
 };
 
+export const SYNC_STATUS_LABELS: Record<string, string> = {
+  SYNCED: "Sincronizado",
+  PENDING_PUSH: "Pendente de envio",
+  PENDING_PULL: "Pendente de recebimento",
+  CONFLICT: "Conflito",
+};
+
+export const SYNC_STATUS_COLORS: Record<string, string> = {
+  SYNCED: "bg-emerald-100 text-emerald-700",
+  PENDING_PUSH: "bg-amber-100 text-amber-700",
+  PENDING_PULL: "bg-blue-100 text-blue-700",
+  CONFLICT: "bg-red-100 text-red-700",
+};
+
 export const ESTADOS_BRASIL = [
   "AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO",
   "MA", "MT", "MS", "MG", "PA", "PB", "PR", "PE", "PI",

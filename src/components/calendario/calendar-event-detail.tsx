@@ -19,6 +19,8 @@ import {
   CALENDAR_EVENT_TYPE_COLORS,
   CALENDAR_EVENT_STATUS_LABELS,
   CALENDAR_EVENT_STATUS_COLORS,
+  SYNC_STATUS_LABELS,
+  SYNC_STATUS_COLORS,
   formatCNJ,
 } from "@/lib/constants"
 import {
@@ -34,6 +36,8 @@ import {
   Play,
   CheckCircle,
   XCircle,
+  RefreshCw,
+  AlertTriangle,
 } from "lucide-react"
 
 interface CalendarEventDetailProps {
@@ -42,6 +46,7 @@ interface CalendarEventDetailProps {
   eventId: string | null
   onEdit: (id: string) => void
   onRefresh: () => void
+  onResolveConflict?: (event: unknown) => void
 }
 
 type CamposEspecificos = Record<string, string | undefined>
@@ -147,6 +152,7 @@ export function CalendarEventDetail({
   eventId,
   onEdit,
   onRefresh,
+  onResolveConflict,
 }: CalendarEventDetailProps) {
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
   const utils = trpc.useUtils()
@@ -212,14 +218,47 @@ export function CalendarEventDetail({
               </div>
               <DialogTitle className="text-lg">{event.titulo}</DialogTitle>
             </div>
-            <Badge className={statusColor}>
-              {CALENDAR_EVENT_STATUS_LABELS[event.status]}
-            </Badge>
+            <div className="flex flex-col items-end gap-1">
+              <Badge className={statusColor}>
+                {CALENDAR_EVENT_STATUS_LABELS[event.status]}
+              </Badge>
+              {event.sincronizado_outlook && event.sync_status && (
+                <Badge className={`text-[10px] ${SYNC_STATUS_COLORS[event.sync_status] || ""}`}>
+                  <RefreshCw className="size-2.5 mr-1" />
+                  {SYNC_STATUS_LABELS[event.sync_status] || event.sync_status}
+                </Badge>
+              )}
+            </div>
           </div>
         </DialogHeader>
 
         <ScrollArea className="flex-1 -mx-6 px-6">
           <div className="space-y-4 pb-4">
+            {/* Conflict alert */}
+            {event.sync_status === "CONFLICT" && (
+              <div className="flex items-center gap-2 p-2.5 rounded-lg bg-amber-50 border border-amber-200">
+                <AlertTriangle className="size-4 text-amber-500 shrink-0" />
+                <div className="flex-1">
+                  <p className="text-xs font-medium text-amber-800">
+                    Conflito de sincronização detectado
+                  </p>
+                  <p className="text-xs text-amber-600">
+                    Este evento foi modificado tanto no JRCLaw quanto no Outlook.
+                  </p>
+                </div>
+                {onResolveConflict && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="text-xs border-amber-300 text-amber-700"
+                    onClick={() => onResolveConflict(event)}
+                  >
+                    Resolver
+                  </Button>
+                )}
+              </div>
+            )}
+
             {/* Date & time */}
             <div className="flex items-center gap-2 text-sm">
               <Calendar className="size-4 text-[#666666]" />

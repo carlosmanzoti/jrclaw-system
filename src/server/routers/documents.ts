@@ -94,6 +94,8 @@ export const documentsRouter = router({
         compartilhado_portal: z.boolean().default(false),
         parent_document_id: z.string().optional().nullable(),
         versao: z.number().default(1),
+        onedrive_item_id: z.string().optional().nullable(),
+        onedrive_web_url: z.string().optional().nullable(),
       })
     )
     .mutation(async ({ ctx, input }) => {
@@ -110,6 +112,8 @@ export const documentsRouter = router({
           gerado_por_ia: input.gerado_por_ia,
           compartilhado_portal: input.compartilhado_portal,
           versao: input.versao,
+          onedrive_item_id: input.onedrive_item_id,
+          onedrive_web_url: input.onedrive_web_url,
           criado_por_id: ctx.session.user.id,
         },
       });
