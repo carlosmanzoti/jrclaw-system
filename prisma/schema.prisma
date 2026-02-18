@@ -594,6 +594,8 @@ model User {
   email_links                EmailLink[]
   email_activities_responsible EmailActivity[] @relation("ActivityResponsible")
   email_activities_created     EmailActivity[] @relation("ActivityCreator")
+  crj_negotiations_assigned    CRJNegotiation[] @relation("CRJNegAssignee")
+  crj_events                   CRJNegotiationEvent[] @relation("CRJEventUser")
 
   @@map("users")
 }
@@ -1401,7 +1403,8 @@ model JudicialRecoveryCase {
   financial_projections FinancialProjection[]
   negotiations          RJNegotiation[]
   extraconcursais       ExtraconcursalCreditor[]
-  strat_negotiations  StratNegotiation[]
+  strat_negotiations    StratNegotiation[]
+  crj_negotiations      CRJNegotiation[]
 
   @@map("judicial_recovery_cases")
 }
@@ -1467,7 +1470,8 @@ model RJCreditor {
   impugnacoes           CreditorChallenge[]
   parcelas_pgto         PaymentInstallment[]
   negotiation_creditors NegotiationCreditor[]
-  strat_negotiations  StratNegotiation[]
+  strat_negotiations    StratNegotiation[]
+  crj_negotiations      CRJNegotiation[]
 
   @@index([jrc_id])
   @@index([classe])
@@ -3562,4 +3566,343 @@ model WhatsAppTemplate {
   updated_at       DateTime @updatedAt
 
   @@map("whatsapp_templates")
+}
+
+// ============================================================
+// CRJ — NEGOCIAÇÕES INDIVIDUAIS COM CREDORES DA RJ
+// ============================================================
+
+enum CRJNegotiationType {
+  ACORDO_SIMPLES
+  CREDOR_PARCEIRO
+  CESSAO_CREDITOS
+  SUBCLASSE_ESPECIAL
+  OUTRO
+}
+
+enum CRJNegotiationStatus {
+  MAPEAMENTO
+  CONTATO_INICIAL
+  PROPOSTA_ENVIADA
+  CONTRAPROPOSTA
+  MEDIACAO
+  ACORDO_VERBAL
+  FORMALIZACAO
+  HOMOLOGACAO
+  CONCLUIDA
+  SUSPENSA
+  CANCELADA
+}
+
+enum CRJPriority {
+  BAIXA
+  MEDIA
+  ALTA
+  CRITICA
+}
+
+enum CRJRoundType {
+  PROPOSTA_INICIAL
+  CONTRAPROPOSTA_ESCRITORIO
+  CONTRAPROPOSTA_CREDOR
+  REUNIAO
+  MEDIACAO
+  AJUSTE
+  ACORDO_FINAL
+}
+
+enum CRJRoundOutcome {
+  PENDENTE
+  ACEITA
+  REJEITADA
+  CONTRAPROPOSTA
+  ADIADA
+}
+
+enum CRJTemplateType {
+  ACORDO_SIMPLES
+  CREDOR_PARCEIRO_ROTATIVO
+  CESSAO_CREDITOS
+  SUBCLASSE_MODALIDADES
+  CUSTOMIZADO
+}
+
+enum CRJProposalStatus {
+  RASCUNHO
+  APROVADA_INTERNA
+  ENVIADA
+  RESPONDIDA
+  ACEITA
+  REJEITADA
+}
+
+enum CRJEventType {
+  CRIACAO
+  MUDANCA_STATUS
+  PROPOSTA_ENVIADA
+  PROPOSTA_RECEBIDA
+  REUNIAO
+  LIGACAO
+  EMAIL_ENVIADO
+  EMAIL_RECEBIDO
+  DOCUMENTO_GERADO
+  ACORDO
+  OBSERVACAO
+  LEMBRETE
+  CONTATO_CREDOR
+}
+
+enum CRJInstallmentStatus {
+  PENDENTE
+  PAGO
+  ATRASADO
+  RENEGOCIADO
+}
+
+enum CRJEmailDirection {
+  ENVIADO
+  RECEBIDO
+}
+
+// ============================================================
+// CRJ MODELS
+// ============================================================
+
+model CRJNegotiation {
+  id                    String               @id @default(cuid())
+
+  // Links to existing entities
+  jrc_id                String
+  jrc                   JudicialRecoveryCase @relation(fields: [jrc_id], references: [id], onDelete: Cascade)
+  creditor_id           String
+  creditor              RJCreditor           @relation(fields: [creditor_id], references: [id], onDelete: Cascade)
+  assigned_to_id        String?
+  assigned_to           User?                @relation("CRJNegAssignee", fields: [assigned_to_id], references: [id])
+
+  // Identification
+  title                 String
+  type                  CRJNegotiationType   @default(ACORDO_SIMPLES)
+  status                CRJNegotiationStatus @default(MAPEAMENTO)
+  priority              CRJPriority          @default(MEDIA)
+
+  // Credit data (pulled from QGC)
+  credit_amount         BigInt               @default(0)
+  credit_class          String               @default("")
+
+  // Proposal values
+  proposed_amount       BigInt?
+  agreed_amount         BigInt?
+  discount_percentage   Float?
+  installments          Int?
+
+  // Rotating credit
+  has_rotating_credit   Boolean              @default(false)
+  rotating_credit_value BigInt?
+  rotating_credit_cycles Int?
+
+  // Credit insurance
+  has_credit_insurance  Boolean              @default(false)
+  insurer_name          String?
+
+  // Assignment (cessão)
+  has_assignment        Boolean              @default(false)
+  assignment_partner    String?
+  assignment_percentage Float?
+
+  // Payment terms
+  entry_payment         BigInt?
+  entry_date            DateTime?
+  grace_period_months   Int?
+  payment_term_years    Int?
+  monetary_correction   String?
+
+  // Notes
+  notes                 String?              @db.Text
+
+  // Dates
+  start_date            DateTime             @default(now())
+  target_date           DateTime?
+  closed_date           DateTime?
+
+  // Tags
+  tags                  String[]             @default([])
+
+  created_at            DateTime             @default(now())
+  updated_at            DateTime             @updatedAt
+
+  // Relations
+  rounds                CRJNegotiationRound[]
+  proposals             CRJProposal[]
+  events                CRJNegotiationEvent[]
+  emails                CRJNegotiationEmail[]
+  installment_schedule  CRJInstallmentSchedule[]
+
+  @@index([jrc_id])
+  @@index([creditor_id])
+  @@index([status])
+  @@index([type])
+  @@index([assigned_to_id])
+  @@map("crj_negotiations")
+}
+
+model CRJNegotiationRound {
+  id                    String               @id @default(cuid())
+  negotiation_id        String
+  negotiation           CRJNegotiation       @relation(fields: [negotiation_id], references: [id], onDelete: Cascade)
+
+  round_number          Int
+  type                  CRJRoundType         @default(PROPOSTA_INICIAL)
+  date                  DateTime             @default(now())
+  description           String               @db.Text
+  proposed_by_us        Boolean              @default(true)
+
+  // Values proposed in this round
+  value_proposed        BigInt?
+  discount_proposed     Float?
+  installments_proposed Int?
+  has_rotating_credit   Boolean?
+  rotating_value        BigInt?
+  rotating_cycles       Int?
+  entry_payment         BigInt?
+  payment_term_years    Int?
+  conditions_summary    String?              @db.Text
+
+  // Creditor response
+  creditor_response     String?              @db.Text
+  creditor_counter_value BigInt?
+  outcome               CRJRoundOutcome      @default(PENDENTE)
+  next_steps            String?              @db.Text
+
+  // Attachments
+  attachments           String[]             @default([])
+
+  created_at            DateTime             @default(now())
+  updated_at            DateTime             @updatedAt
+
+  // Relations
+  proposals             CRJProposal[]
+
+  @@index([negotiation_id])
+  @@map("crj_negotiation_rounds")
+}
+
+model CRJProposal {
+  id                    String               @id @default(cuid())
+  negotiation_id        String
+  negotiation           CRJNegotiation       @relation(fields: [negotiation_id], references: [id], onDelete: Cascade)
+  round_id              String?
+  round                 CRJNegotiationRound? @relation(fields: [round_id], references: [id])
+
+  template_type         CRJTemplateType      @default(ACORDO_SIMPLES)
+  version               Int                  @default(1)
+  status                CRJProposalStatus    @default(RASCUNHO)
+
+  // Generated files
+  generated_pdf_path    String?
+  generated_docx_path   String?
+
+  // Email tracking
+  sent_via_email        Boolean              @default(false)
+  sent_at               DateTime?
+  email_id              String?
+
+  // Template data (all filled fields as JSON)
+  data                  Json                 @default("{}")
+
+  created_at            DateTime             @default(now())
+  updated_at            DateTime             @updatedAt
+
+  // Relations
+  emails                CRJNegotiationEmail[] @relation("ProposalEmails")
+  installment_schedule  CRJInstallmentSchedule[]
+
+  @@index([negotiation_id])
+  @@index([round_id])
+  @@map("crj_proposals")
+}
+
+model CRJNegotiationEvent {
+  id                    String               @id @default(cuid())
+  negotiation_id        String
+  negotiation           CRJNegotiation       @relation(fields: [negotiation_id], references: [id], onDelete: Cascade)
+
+  type                  CRJEventType         @default(OBSERVACAO)
+  description           String               @db.Text
+  metadata              Json?
+
+  user_id               String?
+  user                  User?                @relation("CRJEventUser", fields: [user_id], references: [id])
+  is_automatic          Boolean              @default(false)
+
+  created_at            DateTime             @default(now())
+
+  @@index([negotiation_id])
+  @@index([type])
+  @@map("crj_negotiation_events")
+}
+
+model CRJInstallmentSchedule {
+  id                    String               @id @default(cuid())
+  negotiation_id        String
+  negotiation           CRJNegotiation       @relation(fields: [negotiation_id], references: [id], onDelete: Cascade)
+  proposal_id           String?
+  proposal              CRJProposal?         @relation(fields: [proposal_id], references: [id])
+
+  installment_number    Int
+  due_date              DateTime
+  amount                BigInt
+  amount_corrected      BigInt?
+  supply_value          BigInt?
+  remaining_balance     BigInt?
+  status                CRJInstallmentStatus @default(PENDENTE)
+  paid_at               DateTime?
+  paid_amount           BigInt?
+  notes                 String?
+
+  @@index([negotiation_id])
+  @@index([proposal_id])
+  @@map("crj_installment_schedule")
+}
+
+model CRJNegotiationEmail {
+  id                    String               @id @default(cuid())
+  negotiation_id        String
+  negotiation           CRJNegotiation       @relation(fields: [negotiation_id], references: [id], onDelete: Cascade)
+
+  microsoft_message_id  String?
+  direction             CRJEmailDirection    @default(ENVIADO)
+  from_address          String
+  to_addresses          String[]             @default([])
+  cc_addresses          String[]             @default([])
+  subject               String
+  body_preview          String               @db.Text
+  has_attachments       Boolean              @default(false)
+  attachment_paths      String[]             @default([])
+
+  // Link to proposal if email carries one
+  proposal_id           String?
+  proposal              CRJProposal?         @relation("ProposalEmails", fields: [proposal_id], references: [id])
+
+  sent_at               DateTime
+  created_at            DateTime             @default(now())
+
+  @@index([negotiation_id])
+  @@index([microsoft_message_id])
+  @@map("crj_negotiation_emails")
+}
+
+model CRJDocumentTemplate {
+  id                    String               @id @default(cuid())
+  name                  String
+  type                  CRJTemplateType
+  description           String?
+  template_path         String
+  placeholders          Json                 @default("{}")
+  is_active             Boolean              @default(true)
+  version               Int                  @default(1)
+
+  created_at            DateTime             @default(now())
+  updated_at            DateTime             @updatedAt
+
+  @@map("crj_document_templates")
 }
