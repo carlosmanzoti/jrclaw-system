@@ -72,6 +72,7 @@ import {
   Wand2,
 } from "lucide-react";
 import { CRJProposalGenerator } from "./crj-proposal-generator";
+import { CRJEmailComposer } from "./crj-email-composer";
 
 // Icon map for timeline events
 const EVENT_ICONS: Record<string, React.ReactNode> = {
@@ -894,13 +895,28 @@ function TabParcelas({ neg }: { neg: NegData }) {
 // ========== Tab Emails ==========
 
 function TabEmails({ neg }: { neg: NegData }) {
+  const [composeOpen, setComposeOpen] = useState(false);
   const emails = neg.emails || [];
+
+  const creditorEmail = neg.creditor?.person?.email || "";
+  const creditorName = neg.creditor?.nome || "";
 
   return (
     <div className="space-y-4 p-6">
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold">E-mails ({emails.length})</h3>
+        <Button size="sm" className="h-8 text-xs" onClick={() => setComposeOpen(true)}>
+          <Send className="mr-1 h-3 w-3" /> Novo E-mail
+        </Button>
       </div>
+
+      <CRJEmailComposer
+        open={composeOpen}
+        onOpenChange={setComposeOpen}
+        negotiationId={neg.id}
+        creditorEmail={creditorEmail}
+        creditorName={creditorName}
+      />
 
       {emails.length === 0 ? (
         <div className="flex h-40 items-center justify-center text-sm text-muted-foreground">

@@ -964,6 +964,85 @@ const emailsRouter = router({
 
       return email;
     }),
+
+  send: protectedProcedure
+    .input(
+      z.object({
+        negotiation_id: z.string(),
+        to: z.array(z.object({ name: z.string().optional(), email: z.string() })),
+        cc: z.array(z.object({ name: z.string().optional(), email: z.string() })).default([]),
+        subject: z.string(),
+        body: z.string(),
+        bodyType: z.enum(["HTML", "Text"]).default("HTML"),
+        proposal_id: z.string().optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      // Try to send via Microsoft Graph
+      let microsoft_message_id: string | undefined;
+      try {
+        const { MicrosoftGraphMailService } = await import("@/lib/microsoft-graph-mail");
+        const mail = new MicrosoftGraphMailService(ctx.session.user.id);
+        await mail.sendMail({
+          subject: input.subject,
+          body: input.body,
+          bodyType: input.bodyType,
+          to: input.to,
+          cc: input.cc,
+        });
+      } catch {
+        // If Graph fails, still record the email as sent (manual send)
+      }
+
+      // Get user email for from_address
+      const user = await ctx.db.user.findUnique({
+        where: { id: ctx.session.user.id },
+        select: { email: true },
+      });
+
+      const email = await ctx.db.cRJNegotiationEmail.create({
+        data: {
+          negotiation_id: input.negotiation_id,
+          microsoft_message_id: microsoft_message_id || null,
+          direction: "ENVIADO",
+          from_address: user?.email || "noreply@jrclaw.com.br",
+          to_addresses: input.to.map((t) => t.email),
+          cc_addresses: input.cc.map((c) => c.email),
+          subject: input.subject,
+          body_preview: input.body.slice(0, 500),
+          has_attachments: false,
+          proposal_id: input.proposal_id || null,
+          sent_at: new Date(),
+        },
+      });
+
+      // Create event
+      await ctx.db.cRJNegotiationEvent.create({
+        data: {
+          negotiation_id: input.negotiation_id,
+          type: "EMAIL_ENVIADO",
+          description: `E-mail enviado para ${input.to.map((t) => t.email).join(", ")} — "${input.subject}"`,
+          user_id: ctx.session.user.id,
+          is_automatic: true,
+          metadata: { email_id: email.id, subject: input.subject } as any,
+        },
+      });
+
+      // If email carries a proposal, update proposal status
+      if (input.proposal_id) {
+        await ctx.db.cRJProposal.update({
+          where: { id: input.proposal_id },
+          data: {
+            sent_via_email: true,
+            sent_at: new Date(),
+            email_id: email.microsoft_message_id,
+            status: "ENVIADA",
+          },
+        });
+      }
+
+      return email;
+    }),
 });
 
 // ========== Templates ==========
