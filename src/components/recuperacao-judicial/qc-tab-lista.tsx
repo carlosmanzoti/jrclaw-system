@@ -23,7 +23,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, Download, Upload, Trash2, Tags, ArrowUpDown, Filter } from "lucide-react";
+import { Plus, Download, Upload, Trash2, Tags, ArrowUpDown, Filter, Handshake } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import {
   CREDIT_CLASS_SHORT_LABELS,
@@ -34,6 +34,7 @@ import {
   formatCentavos,
   formatPercentage,
 } from "@/lib/rj-constants";
+import { CRJ_STATUS_LABELS, CRJ_STATUS_COLORS } from "@/lib/crj-constants";
 import { CreditorForm } from "./creditor-form";
 import { ImportWizard } from "./import-wizard";
 
@@ -55,6 +56,7 @@ type CreditorRow = {
   parcelas: number | null;
   carencia_meses: number | null;
   subclass: { id: string; nome: string; cor: string | null } | null;
+  crj_negotiations: { id: string; status: string; title: string }[];
 };
 
 export function QCTabLista({ jrcId }: QCTabListaProps) {
@@ -239,6 +241,29 @@ export function QCTabLista({ jrcId }: QCTabListaProps) {
         ),
         size: 120,
       },
+      {
+        id: "crj",
+        header: "Negociação",
+        cell: ({ row }) => {
+          const neg = row.original.crj_negotiations?.[0];
+          if (!neg) {
+            return <span className="text-[10px] text-muted-foreground">—</span>;
+          }
+          return (
+            <a
+              href={`/recuperacao-judicial/negociacoes?neg=${neg.id}`}
+              className="flex items-center gap-1"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <Handshake className="h-3 w-3 text-emerald-600" />
+              <Badge className={`text-[9px] ${CRJ_STATUS_COLORS[neg.status] || "bg-gray-100 text-gray-700"}`}>
+                {CRJ_STATUS_LABELS[neg.status] || neg.status}
+              </Badge>
+            </a>
+          );
+        },
+        size: 120,
+      },
     ],
     []
   );
@@ -400,7 +425,7 @@ export function QCTabLista({ jrcId }: QCTabListaProps) {
                 <td className="px-3 py-2 text-xs font-semibold">
                   {formatCentavos(items.reduce((s, c) => s + BigInt(c.valor_atualizado), BigInt(0)))}
                 </td>
-                <td colSpan={3} />
+                <td colSpan={4} />
               </tr>
             </tfoot>
           )}

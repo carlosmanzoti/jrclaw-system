@@ -22,7 +22,7 @@ import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Save, Trash2, AlertTriangle } from "lucide-react";
+import { Save, Trash2, AlertTriangle, Handshake, ExternalLink, Plus } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import {
   CREDIT_CLASS_SHORT_LABELS,
@@ -32,6 +32,7 @@ import {
   INDEXATION_TYPE_LABELS,
   NATURE_TO_CLASS,
 } from "@/lib/rj-constants";
+import { CRJ_STATUS_LABELS, CRJ_STATUS_COLORS } from "@/lib/crj-constants";
 
 interface CreditorFormProps {
   open: boolean;
@@ -432,6 +433,14 @@ export function CreditorForm({ open, onOpenChange, jrcId, creditorId }: Creditor
                 placeholder="Observações sobre este credor..."
               />
             </section>
+
+            {/* CRJ Negotiation Link */}
+            {isEditing && (
+              <>
+                <Separator />
+                <CRJNegotiationSection creditorId={creditorId!} jrcId={jrcId} />
+              </>
+            )}
           </div>
         </ScrollArea>
 
@@ -461,5 +470,98 @@ export function CreditorForm({ open, onOpenChange, jrcId, creditorId }: Creditor
         </div>
       </SheetContent>
     </Sheet>
+  );
+}
+
+// ========== CRJ Negotiation Section ==========
+
+function CRJNegotiationSection({
+  creditorId,
+  jrcId,
+}: {
+  creditorId: string;
+  jrcId: string;
+}) {
+  const { data: negotiations, isLoading } =
+    trpc.crjNeg.negotiations.list.useQuery({
+      jrc_id: jrcId,
+    });
+
+  const utils = trpc.useUtils();
+  const createMutation = trpc.crjNeg.negotiations.create.useMutation({
+    onSuccess: () => {
+      utils.crjNeg.negotiations.invalidate();
+    },
+  });
+
+  // Filter negotiations for this creditor
+  const creditorNegs = (negotiations || []).filter(
+    (n) => n.creditor_id === creditorId && n.status !== "CANCELADA"
+  );
+
+  const handleQuickCreate = () => {
+    createMutation.mutate({
+      jrc_id: jrcId,
+      creditor_id: creditorId,
+    });
+  };
+
+  return (
+    <section className="space-y-3">
+      <div className="flex items-center justify-between">
+        <h3 className="flex items-center gap-1.5 text-sm font-semibold">
+          <Handshake className="h-4 w-4 text-emerald-600" />
+          Negociação Individual (CRJ)
+        </h3>
+      </div>
+
+      {isLoading ? (
+        <div className="text-xs text-muted-foreground">Carregando...</div>
+      ) : creditorNegs.length > 0 ? (
+        <div className="space-y-2">
+          {creditorNegs.map((neg) => (
+            <a
+              key={neg.id}
+              href={`/recuperacao-judicial/negociacoes?neg=${neg.id}`}
+              className="flex items-center justify-between rounded-md border px-3 py-2 transition-colors hover:bg-muted/50"
+            >
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-xs font-medium">{neg.title}</p>
+                <p className="text-[10px] text-muted-foreground">
+                  {neg._count?.rounds || 0} rodada(s) | {neg._count?.events || 0}{" "}
+                  evento(s)
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <Badge
+                  className={`text-[9px] ${
+                    CRJ_STATUS_COLORS[neg.status] || "bg-gray-100 text-gray-700"
+                  }`}
+                >
+                  {CRJ_STATUS_LABELS[neg.status] || neg.status}
+                </Badge>
+                <ExternalLink className="h-3 w-3 text-muted-foreground" />
+              </div>
+            </a>
+          ))}
+        </div>
+      ) : (
+        <div className="rounded-md border border-dashed px-3 py-4 text-center">
+          <p className="text-xs text-muted-foreground">
+            Nenhuma negociação individual ativa
+          </p>
+          <Button
+            variant="outline"
+            size="sm"
+            className="mt-2 h-7 text-xs"
+            onClick={handleQuickCreate}
+            disabled={createMutation.isPending}
+          >
+            <Plus className="mr-1 h-3 w-3" />
+            {createMutation.isPending ? "Criando..." : "Criar Negociação"}
+          </Button>
+        </div>
+      )}
+    </section>
   );
 }

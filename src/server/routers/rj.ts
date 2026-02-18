@@ -213,6 +213,12 @@ const creditorsRouter = router({
           where,
           include: {
             subclass: { select: { id: true, nome: true, cor: true } },
+            crj_negotiations: {
+              where: { status: { notIn: ["CANCELADA"] } },
+              select: { id: true, status: true, title: true },
+              take: 1,
+              orderBy: { updated_at: "desc" },
+            },
           },
           orderBy: [{ classe: "asc" }, { valor_atualizado: "desc" }],
         }),
@@ -239,6 +245,24 @@ const creditorsRouter = router({
           impugnacoes: true,
           parcelas_pgto: { orderBy: { numero: "asc" } },
           person: { select: { id: true, nome: true, cpf_cnpj: true, email: true, celular: true } },
+          crj_negotiations: {
+            select: {
+              id: true,
+              title: true,
+              status: true,
+              type: true,
+              priority: true,
+              credit_amount: true,
+              proposed_amount: true,
+              agreed_amount: true,
+              discount_percentage: true,
+              start_date: true,
+              target_date: true,
+              updated_at: true,
+              _count: { select: { rounds: true, events: true } },
+            },
+            orderBy: { updated_at: "desc" },
+          },
         },
       });
       if (!creditor) throw new TRPCError({ code: "NOT_FOUND" });
