@@ -17,7 +17,7 @@ import {
 import {
   ArrowLeft, FileText, CheckSquare, Scale, MessageSquare,
   Paperclip, Shield, Activity, Clock, AlertTriangle, Lock, Unlock,
-  Bot, Settings2,
+  Bot, Settings2, RefreshCw, WifiOff,
 } from "lucide-react"
 import { DEADLINE_TYPE_LABELS } from "@/lib/constants"
 import { WorkspaceCommandPalette } from "./workspace-command-palette"
@@ -79,6 +79,79 @@ function Countdown({ date }: { date: string | Date }) {
   return <Badge variant="secondary" className="gap-1"><Clock className="size-3" />{days}d</Badge>
 }
 
+// ─── Error State Component ──────────────────────────────────
+function WorkspaceErrorState({
+  title,
+  message,
+  onRetry,
+  onBack,
+}: {
+  title: string
+  message: string
+  onRetry?: () => void
+  onBack?: () => void
+}) {
+  return (
+    <div className="flex flex-col items-center justify-center h-full min-h-[400px] p-8">
+      <div className="flex flex-col items-center max-w-md text-center space-y-4">
+        <div className="size-16 rounded-full bg-red-50 flex items-center justify-center">
+          <WifiOff className="size-8 text-red-400" />
+        </div>
+        <div>
+          <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
+          <p className="text-sm text-muted-foreground mt-1">{message}</p>
+        </div>
+        <div className="flex items-center gap-3">
+          {onBack && (
+            <Button variant="outline" size="sm" onClick={onBack}>
+              <ArrowLeft className="size-3.5 mr-1.5" />
+              Voltar
+            </Button>
+          )}
+          {onRetry && (
+            <Button size="sm" onClick={onRetry}>
+              <RefreshCw className="size-3.5 mr-1.5" />
+              Tentar novamente
+            </Button>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ─── Tab Error Wrapper ──────────────────────────────────────
+function TabErrorWrapper({
+  children,
+  isError,
+  error,
+  onRetry,
+}: {
+  children: React.ReactNode
+  isError: boolean
+  error?: unknown
+  onRetry?: () => void
+}) {
+  if (isError) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12 px-4">
+        <AlertTriangle className="size-10 text-amber-400 mb-3" />
+        <p className="text-sm font-medium text-gray-700">Erro ao carregar esta aba</p>
+        <p className="text-xs text-muted-foreground mt-1 text-center max-w-sm">
+          {error instanceof Error ? error.message : "Ocorreu um erro inesperado. Tente novamente."}
+        </p>
+        {onRetry && (
+          <Button variant="outline" size="sm" className="mt-4" onClick={onRetry}>
+            <RefreshCw className="size-3.5 mr-1.5" />
+            Recarregar
+          </Button>
+        )}
+      </div>
+    )
+  }
+  return <>{children}</>
+}
+
 // ─── Main Component ──────────────────────────────────────────
 export function WorkspaceView({ deadlineId, onClose }: { deadlineId: string; onClose?: () => void }) {
   const [activeTab, setActiveTab] = useState("editor")
@@ -96,19 +169,22 @@ export function WorkspaceView({ deadlineId, onClose }: { deadlineId: string; onC
   })
 
   const [workspaceId, setWorkspaceId] = useState<string | null>(null)
+  const [loadingTooLong, setLoadingTooLong] = useState(false)
 
-  const { data: workspace, isLoading: wsLoading } = trpc.deadlines.workspace.get.useQuery(
+  const { data: workspace, isLoading: wsLoading, isError: wsError, error: wsQueryError } = trpc.deadlines.workspace.get.useQuery(
     { workspaceId: workspaceId! },
-    { enabled: !!workspaceId }
+    { enabled: !!workspaceId, retry: 2, retryDelay: 1000 }
   )
 
   const { data: stats } = trpc.deadlines.workspace.stats.useQuery(
     { workspaceId: workspaceId! },
-    { enabled: !!workspaceId }
+    { enabled: !!workspaceId, retry: 1 }
   )
 
   // Initialize workspace on mount
   useEffect(() => {
+    setWorkspaceId(null)
+    setLoadingTooLong(false)
     getOrCreate.mutate({ deadlineId }, {
       onSuccess: (data) => {
         setWorkspaceId(data.workspace.id)
@@ -116,6 +192,25 @@ export function WorkspaceView({ deadlineId, onClose }: { deadlineId: string; onC
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [deadlineId])
+
+  // Loading timeout: show hint after 10s
+  useEffect(() => {
+    if (!workspaceId || wsLoading) {
+      const timer = setTimeout(() => setLoadingTooLong(true), 10000)
+      return () => clearTimeout(timer)
+    }
+    setLoadingTooLong(false)
+  }, [workspaceId, wsLoading])
+
+  const retryInit = () => {
+    setWorkspaceId(null)
+    setLoadingTooLong(false)
+    getOrCreate.mutate({ deadlineId }, {
+      onSuccess: (data) => {
+        setWorkspaceId(data.workspace.id)
+      },
+    })
+  }
 
   const changePhase = trpc.deadlines.workspace.changePhase.useMutation({
     onSuccess: () => {
@@ -132,21 +227,63 @@ export function WorkspaceView({ deadlineId, onClose }: { deadlineId: string; onC
     },
   })
 
+  // Error state: getOrCreate failed
+  if (getOrCreate.isError) {
+    return (
+      <WorkspaceErrorState
+        title="Erro ao abrir workspace"
+        message={getOrCreate.error?.message || "Não foi possível inicializar o workspace. Verifique sua conexão e tente novamente."}
+        onRetry={retryInit}
+        onBack={onClose}
+      />
+    )
+  }
+
+  // Loading state: workspace initializing
   if (!workspaceId || getOrCreate.isPending) {
     return (
       <div className="p-6 space-y-4">
         <Skeleton className="h-8 w-64" />
         <Skeleton className="h-4 w-48" />
         <Skeleton className="h-[500px]" />
+        {loadingTooLong && (
+          <div className="flex items-center justify-center gap-3 pt-4">
+            <p className="text-sm text-muted-foreground">Demorando mais que o esperado...</p>
+            <Button variant="outline" size="sm" onClick={retryInit}>
+              <RefreshCw className="size-3.5 mr-1.5" />Tentar novamente
+            </Button>
+          </div>
+        )}
       </div>
     )
   }
 
+  // Error state: workspace query failed
+  if (wsError) {
+    return (
+      <WorkspaceErrorState
+        title="Erro ao carregar workspace"
+        message={wsQueryError?.message || "O workspace foi criado mas não foi possível carregar os dados."}
+        onRetry={() => utils.deadlines.workspace.get.invalidate({ workspaceId })}
+        onBack={onClose}
+      />
+    )
+  }
+
+  // Loading state: workspace data loading
   if (!workspace || wsLoading) {
     return (
       <div className="p-6 space-y-4">
         <Skeleton className="h-8 w-64" />
         <Skeleton className="h-[500px]" />
+        {loadingTooLong && (
+          <div className="flex items-center justify-center gap-3 pt-4">
+            <p className="text-sm text-muted-foreground">Demorando mais que o esperado...</p>
+            <Button variant="outline" size="sm" onClick={() => utils.deadlines.workspace.get.invalidate({ workspaceId })}>
+              <RefreshCw className="size-3.5 mr-1.5" />Recarregar
+            </Button>
+          </div>
+        )}
       </div>
     )
   }
@@ -889,7 +1026,19 @@ function WorkspaceApprovalTab({ workspaceId, approvals, phase }: { workspaceId: 
 }
 
 function WorkspaceActivitiesTab({ workspaceId }: { workspaceId: string }) {
-  const { data } = trpc.deadlines.workspace.listActivities.useQuery({ workspaceId })
+  const utils = trpc.useUtils()
+  const { data, isError, error } = trpc.deadlines.workspace.listActivities.useQuery(
+    { workspaceId },
+    { retry: 2 }
+  )
+
+  if (isError) {
+    return (
+      <TabErrorWrapper isError={true} error={error} onRetry={() => utils.deadlines.workspace.listActivities.invalidate({ workspaceId })}>
+        <span />
+      </TabErrorWrapper>
+    )
+  }
 
   const actionIcons: Record<string, string> = {
     CREATED: "🆕",
