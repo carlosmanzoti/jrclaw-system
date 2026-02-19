@@ -17,9 +17,12 @@ import {
 import {
   ArrowLeft, FileText, CheckSquare, Scale, MessageSquare,
   Paperclip, Shield, Activity, Clock, AlertTriangle, Lock, Unlock,
+  Bot, Settings2,
 } from "lucide-react"
 import { DEADLINE_TYPE_LABELS } from "@/lib/constants"
 import { WorkspaceCommandPalette } from "./workspace-command-palette"
+import { WorkspaceAIChat } from "./workspace-ai-chat"
+import { WorkspaceAIConfigPanel } from "./workspace-ai-config"
 
 // ─── Phase Pipeline ──────────────────────────────────────────────
 const PHASES = [
@@ -79,6 +82,8 @@ function Countdown({ date }: { date: string | Date }) {
 // ─── Main Component ──────────────────────────────────────────
 export function WorkspaceView({ deadlineId }: { deadlineId: string }) {
   const [activeTab, setActiveTab] = useState("editor")
+  const [aiChatOpen, setAiChatOpen] = useState(false)
+  const [aiConfigOpen, setAiConfigOpen] = useState(false)
   const utils = trpc.useUtils()
 
   // Get or create workspace
@@ -193,6 +198,36 @@ export function WorkspaceView({ deadlineId }: { deadlineId: string }) {
               </div>
             )}
 
+            {/* AI Chat toggle */}
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost" size="icon" className="size-8"
+                    onClick={() => setAiChatOpen(true)}
+                  >
+                    <Bot className="size-4 text-purple-500" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Assistente IA (Ctrl+Shift+A)</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+
+            {/* AI Config */}
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost" size="icon" className="size-8"
+                    onClick={() => setAiConfigOpen(true)}
+                  >
+                    <Settings2 className="size-4 text-gray-400" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Configurações da IA</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+
             {/* Lock toggle */}
             <Button
               variant="ghost" size="icon" className="size-8"
@@ -298,8 +333,25 @@ export function WorkspaceView({ deadlineId }: { deadlineId: string }) {
             if (idx < PHASES.length - 1) {
               changePhase.mutate({ workspaceId: workspace.id, phase: PHASES[idx + 1].key as any })
             }
+          } else if (action === "openAIChat") {
+            setAiChatOpen(true)
           }
         }}
+      />
+
+      {/* AI Chat Drawer */}
+      <WorkspaceAIChat
+        deadlineId={deadlineId}
+        open={aiChatOpen}
+        onOpenChange={setAiChatOpen}
+        workspacePhase={phase}
+        deadlineTitle={dl?.titulo}
+      />
+
+      {/* AI Configuration Panel */}
+      <WorkspaceAIConfigPanel
+        open={aiConfigOpen}
+        onOpenChange={setAiConfigOpen}
       />
     </div>
   )
