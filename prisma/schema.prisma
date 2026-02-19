@@ -669,6 +669,7 @@ model Person {
   joint_debtor_entries       JointDebtor[] @relation("JointDebtorPerson")
   process_parties            ProcessParty[]
   whatsapp_conversations     WhatsAppConversation[]
+  portal_messages            PortalMessage[]
 
   @@map("persons")
 }
@@ -4277,6 +4278,29 @@ model WorkspaceActivity {
   @@index([workspace_id])
   @@index([action])
   @@map("workspace_activities")
+}
+
+// ============================================================
+// PORTAL MESSAGES (bidirectional client ↔ office)
+// ============================================================
+
+model PortalMessage {
+  id         String   @id @default(cuid())
+  person_id  String
+  person     Person   @relation(fields: [person_id], references: [id], onDelete: Cascade)
+
+  direction  String   // CLIENTE_PARA_ESCRITORIO | ESCRITORIO_PARA_CLIENTE
+  content    String   @db.Text
+  read       Boolean  @default(false)
+  read_at    DateTime?
+
+  sender_name String? // name of who sent
+  user_id     String? // if sent by internal user
+
+  created_at DateTime @default(now())
+
+  @@index([person_id])
+  @@map("portal_messages")
 }
 
 // ============================================================
