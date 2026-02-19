@@ -23,6 +23,7 @@ import {
   Upload,
   Settings,
   ChevronDown,
+  Search,
 } from "lucide-react"
 import {
   Sidebar,
@@ -137,6 +138,7 @@ const navModules = [
     items: [
       { title: "Todos os Casos", url: "/recuperacao-credito" },
       { title: "Dashboard Analítico", url: "/recuperacao-credito/analitico" },
+      { title: "Investigação Patrimonial", url: "/recuperacao-credito/investigacao" },
     ],
   },
   {

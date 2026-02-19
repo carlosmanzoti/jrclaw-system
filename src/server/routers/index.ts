@@ -20,6 +20,7 @@ import { crjNegotiationsRouter } from "./crj-negotiations";
 import { monitoringRouter } from "./monitoring";
 import { financialRouter } from "./financial";
 import { auditRouter } from "./audit";
+import { investigationRouter } from "./investigation";
 
 export const appRouter = router({
   users: usersRouter,
@@ -43,6 +44,7 @@ export const appRouter = router({
   monitoring: monitoringRouter,
   financial: financialRouter,
   audit: auditRouter,
+  investigation: investigationRouter,
 });
 
 export type AppRouter = typeof appRouter;
