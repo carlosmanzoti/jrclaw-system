@@ -731,6 +731,8 @@ model Case {
   library_entries     LibraryEntry[]      @relation("LibraryCases")
   library_refs        LibraryEntry[]      @relation("LibraryCaseRef")
   financial_releases  FinancialRelease[]
+  fees                Fee[]
+  expenses            Expense[]
   chat_messages       ChatMessage[]       @relation("ChatMessageCase")
   judicialRecoveryCase JudicialRecoveryCase?
   strat_negotiations  StratNegotiation[]    @relation("StratNegCase")
@@ -985,6 +987,79 @@ model Activity {
   @@map("activities")
 }
 
+// ============================================================
+// FEES (honorários)
+// ============================================================
+
+model Fee {
+  id            String    @id @default(cuid())
+  case_id       String?
+  case_         Case?     @relation(fields: [case_id], references: [id])
+  project_id    String?
+  project       Project?  @relation(fields: [project_id], references: [id])
+  person_id     String?   // client
+
+  tipo          String    // FIXO | EXITO | MENSAL | POR_ATO | AD_EXITUM_RJ
+  descricao     String
+  valor         Decimal   @db.Decimal(15, 2)
+  moeda         String    @default("BRL")
+
+  // Installments
+  parcelas      Int       @default(1)
+  parcela_atual Int?
+  parent_fee_id String?   // if this is an installment child
+
+  // Recurrence
+  recorrente    Boolean   @default(false)
+  recorrencia   String?   // MENSAL, TRIMESTRAL, SEMESTRAL, ANUAL
+
+  data_vencimento DateTime  @db.Date
+  data_pagamento  DateTime? @db.Date
+  status          String    @default("PENDENTE") // PENDENTE | PAGO | ATRASADO | CANCELADO
+
+  observacoes   String?   @db.Text
+  created_by_id String?
+  created_at    DateTime  @default(now())
+  updated_at    DateTime  @updatedAt
+
+  @@index([case_id])
+  @@index([project_id])
+  @@index([status])
+  @@map("fees")
+}
+
+// ============================================================
+// EXPENSES (despesas)
+// ============================================================
+
+model Expense {
+  id            String    @id @default(cuid())
+  case_id       String?
+  case_         Case?     @relation(fields: [case_id], references: [id])
+  project_id    String?
+  project       Project?  @relation(fields: [project_id], references: [id])
+
+  categoria     String    // CUSTAS | HONORARIOS_PERITO | CERTIDOES | DILIGENCIA | VIAGEM | REGISTRO | CORREIOS | COPIA | PUBLICACAO | OUTRO
+  descricao     String
+  valor         Decimal   @db.Decimal(15, 2)
+  data          DateTime  @db.Date
+
+  reembolsavel  Boolean   @default(false)
+  reembolsado   Boolean   @default(false)
+  data_reembolso DateTime? @db.Date
+
+  comprovante_url String?
+  observacoes     String?  @db.Text
+
+  created_by_id String?
+  created_at    DateTime  @default(now())
+  updated_at    DateTime  @updatedAt
+
+  @@index([case_id])
+  @@index([project_id])
+  @@map("expenses")
+}
+
 model FinancialRelease {
   id               String   @id @default(cuid())
   tipo             String   // ALVARA, RPV, PRECATORIO
@@ -1106,6 +1181,8 @@ model Project {
   calendar_events CalendarEvent[]
   library_entries LibraryEntry[] @relation("LibraryProjects")
   chat_messages   ChatMessage[]  @relation("ChatMessageProject")
+  fees            Fee[]
+  expenses        Expense[]
   email_links     EmailLink[]
   email_activities EmailActivity[]
   whatsapp_conversations WhatsAppConversation[]
