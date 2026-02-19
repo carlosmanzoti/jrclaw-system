@@ -1,5 +1,6 @@
-import { WorkspaceView } from "@/components/prazos/workspace/workspace-view"
+import { redirect } from "next/navigation"
 
-export default function WorkspacePage({ params }: { params: { id: string } }) {
-  return <WorkspaceView deadlineId={params.id} />
+export default async function WorkspacePage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
+  redirect(`/prazos?workspace=${id}`)
 }

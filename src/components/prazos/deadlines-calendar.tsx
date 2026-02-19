@@ -26,8 +26,8 @@ export default function DeadlinesCalendar({ deadlines }: { deadlines: any[] }) {
   const events = deadlines.map((d) => ({
     id: d.id,
     title: `${DEADLINE_TYPE_LABELS[d.tipo] || d.tipo}: ${d.descricao}`,
-    start: new Date(d.data_limite).toISOString().split("T")[0],
-    backgroundColor: d.status === "CUMPRIDO" ? "#94a3b8" : d.status === "PERDIDO" ? "#1f2937" : TYPE_COLORS[d.tipo] || "#6b7280",
+    start: new Date(d.data_fim_prazo || d.data_limite).toISOString().split("T")[0],
+    backgroundColor: d.status === "CUMPRIDO" ? "#94a3b8" : (d.status === "PERDIDO" || d.status === "VENCIDO") ? "#1f2937" : d.status === "CANCELADO" ? "#6b7280" : TYPE_COLORS[d.tipo] || "#6b7280",
     borderColor: "transparent",
     textColor: "#fff",
     extendedProps: d,
@@ -86,7 +86,7 @@ export default function DeadlinesCalendar({ deadlines }: { deadlines: any[] }) {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <p className="text-xs text-[#666666]">Data Limite</p>
-                  <p className="text-sm font-medium">{new Date(selected.data_limite).toLocaleDateString("pt-BR")}</p>
+                  <p className="text-sm font-medium">{new Date(selected.data_fim_prazo || selected.data_limite).toLocaleDateString("pt-BR")}</p>
                 </div>
                 <div>
                   <p className="text-xs text-[#666666]">Status</p>

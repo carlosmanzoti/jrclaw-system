@@ -80,7 +80,7 @@ function Countdown({ date }: { date: string | Date }) {
 }
 
 // ─── Main Component ──────────────────────────────────────────
-export function WorkspaceView({ deadlineId }: { deadlineId: string }) {
+export function WorkspaceView({ deadlineId, onClose }: { deadlineId: string; onClose?: () => void }) {
   const [activeTab, setActiveTab] = useState("editor")
   const [aiChatOpen, setAiChatOpen] = useState(false)
   const [aiConfigOpen, setAiConfigOpen] = useState(false)
@@ -161,9 +161,15 @@ export function WorkspaceView({ deadlineId }: { deadlineId: string }) {
         {/* Top bar */}
         <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-3 min-w-0">
-            <Button variant="ghost" size="icon" className="shrink-0" asChild>
-              <Link href="/prazos"><ArrowLeft className="size-4" /></Link>
-            </Button>
+            {onClose ? (
+              <Button variant="ghost" size="icon" className="shrink-0" onClick={onClose}>
+                <ArrowLeft className="size-4" />
+              </Button>
+            ) : (
+              <Button variant="ghost" size="icon" className="shrink-0" asChild>
+                <Link href="/prazos"><ArrowLeft className="size-4" /></Link>
+              </Button>
+            )}
             <div className="min-w-0">
               <div className="flex items-center gap-2">
                 <Badge variant="outline" className="shrink-0 font-mono text-xs">{dl?.codigo}</Badge>

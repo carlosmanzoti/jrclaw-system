@@ -78,25 +78,27 @@ interface TimelineDeadline {
   id: string
   tipo: string
   descricao: string
-  data_limite: string | Date
+  data_fim_prazo: string | Date
+  titulo?: string | null
   status: string
   prioridade?: string
-  case_: {
+  case_?: {
     id: string
     numero_processo: string | null
     tipo?: string
     uf?: string
-    cliente: { id: string; nome: string }
-  }
-  responsavel: { id: string; name: string; avatar_url?: string | null }
+    cliente?: { id: string; nome: string }
+  } | null
+  responsavel?: { id: string; name: string; avatar_url?: string | null } | null
 }
 
 export function PrazosTimeline() {
   const [selectedDeadline, setSelectedDeadline] = useState<TimelineDeadline | null>(null)
 
-  const { data: listData, isLoading } = trpc.deadlines.list.useQuery({
-    status: "PENDENTE",
-    limit: 200,
+  const { data: listData, isLoading } = trpc.deadlines.listNew.useQuery({
+    per_page: 200,
+    sort_by: "data_fim_prazo",
+    sort_dir: "asc",
   })
 
   const deadlines = (listData?.items ?? []) as TimelineDeadline[]
@@ -104,7 +106,7 @@ export function PrazosTimeline() {
   // Group deadlines by date
   const grouped: Record<string, TimelineDeadline[]> = {}
   for (const d of deadlines) {
-    const dateKey = new Date(d.data_limite).toISOString().split("T")[0]
+    const dateKey = new Date(d.data_fim_prazo).toISOString().split("T")[0]
     if (!grouped[dateKey]) grouped[dateKey] = []
     grouped[dateKey].push(d)
   }
@@ -177,7 +179,7 @@ export function PrazosTimeline() {
                 {/* Deadline cards for this date */}
                 <div className="space-y-2">
                   {items.map((d) => {
-                    const days = daysUntil(d.data_limite)
+                    const days = daysUntil(d.data_fim_prazo)
                     return (
                       <Card
                         key={d.id}
@@ -200,30 +202,34 @@ export function PrazosTimeline() {
                                   <AlertTriangle className="size-3.5 text-[#DC3545] animate-pulse" />
                                 )}
                               </div>
-                              <p className="text-sm font-medium truncate">{d.descricao}</p>
-                              <div className="flex items-center gap-3 mt-1.5 text-xs text-[#666666]">
-                                <Link
-                                  href={`/processos/${d.case_.id}`}
-                                  className="hover:underline text-primary font-mono"
-                                  onClick={(e) => e.stopPropagation()}
-                                >
-                                  {formatCNJ(d.case_.numero_processo) || "Sem numero"}
-                                </Link>
-                                <span className="truncate max-w-[150px]">{d.case_.cliente.nome}</span>
-                              </div>
+                              <p className="text-sm font-medium truncate">{d.titulo || d.descricao}</p>
+                              {d.case_ && (
+                                <div className="flex items-center gap-3 mt-1.5 text-xs text-[#666666]">
+                                  <Link
+                                    href={`/processos/${d.case_.id}`}
+                                    className="hover:underline text-primary font-mono"
+                                    onClick={(e) => e.stopPropagation()}
+                                  >
+                                    {formatCNJ(d.case_.numero_processo) || "Sem numero"}
+                                  </Link>
+                                  <span className="truncate max-w-[150px]">{d.case_.cliente?.nome}</span>
+                                </div>
+                              )}
                             </div>
 
                             <div className="flex items-center gap-2 shrink-0">
-                              <div className="flex items-center gap-1.5">
-                                <Avatar className="size-6">
-                                  <AvatarFallback className="text-[10px] bg-primary/10 text-primary">
-                                    {getInitials(d.responsavel.name)}
-                                  </AvatarFallback>
-                                </Avatar>
-                                <span className="text-xs text-[#666666] hidden sm:inline">
-                                  {d.responsavel.name.split(" ")[0]}
-                                </span>
-                              </div>
+                              {d.responsavel && (
+                                <div className="flex items-center gap-1.5">
+                                  <Avatar className="size-6">
+                                    <AvatarFallback className="text-[10px] bg-primary/10 text-primary">
+                                      {getInitials(d.responsavel.name)}
+                                    </AvatarFallback>
+                                  </Avatar>
+                                  <span className="text-xs text-[#666666] hidden sm:inline">
+                                    {d.responsavel.name.split(" ")[0]}
+                                  </span>
+                                </div>
+                              )}
                             </div>
                           </div>
                         </CardContent>
@@ -253,18 +259,20 @@ export function PrazosTimeline() {
               </div>
               <div>
                 <p className="text-xs text-[#666666] mb-1">Descrição</p>
-                <p className="text-sm">{selectedDeadline.descricao}</p>
+                <p className="text-sm">{selectedDeadline.titulo || selectedDeadline.descricao}</p>
               </div>
-              <div>
-                <p className="text-xs text-[#666666] mb-1">Processo</p>
-                <p className="text-sm font-mono">{formatCNJ(selectedDeadline.case_.numero_processo)}</p>
-                <p className="text-xs text-[#666666]">{selectedDeadline.case_.cliente.nome}</p>
-              </div>
+              {selectedDeadline.case_ && (
+                <div>
+                  <p className="text-xs text-[#666666] mb-1">Processo</p>
+                  <p className="text-sm font-mono">{formatCNJ(selectedDeadline.case_.numero_processo)}</p>
+                  <p className="text-xs text-[#666666]">{selectedDeadline.case_.cliente?.nome}</p>
+                </div>
+              )}
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <p className="text-xs text-[#666666] mb-1">Data Limite</p>
                   <p className="text-sm font-medium">
-                    {new Date(selectedDeadline.data_limite).toLocaleDateString("pt-BR")}
+                    {new Date(selectedDeadline.data_fim_prazo).toLocaleDateString("pt-BR")}
                   </p>
                 </div>
                 <div>
@@ -272,24 +280,28 @@ export function PrazosTimeline() {
                   <p className="text-sm">{DEADLINE_STATUS_LABELS[selectedDeadline.status]}</p>
                 </div>
               </div>
-              <div>
-                <p className="text-xs text-[#666666] mb-1">Responsável</p>
-                <div className="flex items-center gap-2">
-                  <Avatar className="size-6">
-                    <AvatarFallback className="text-[10px] bg-primary/10 text-primary">
-                      {getInitials(selectedDeadline.responsavel.name)}
-                    </AvatarFallback>
-                  </Avatar>
-                  <span className="text-sm">{selectedDeadline.responsavel.name}</span>
+              {selectedDeadline.responsavel && (
+                <div>
+                  <p className="text-xs text-[#666666] mb-1">Responsável</p>
+                  <div className="flex items-center gap-2">
+                    <Avatar className="size-6">
+                      <AvatarFallback className="text-[10px] bg-primary/10 text-primary">
+                        {getInitials(selectedDeadline.responsavel.name)}
+                      </AvatarFallback>
+                    </Avatar>
+                    <span className="text-sm">{selectedDeadline.responsavel.name}</span>
+                  </div>
                 </div>
-              </div>
-              <div className="pt-2 flex justify-end">
-                <Button variant="outline" size="sm" asChild>
-                  <Link href={`/processos/${selectedDeadline.case_.id}`}>
-                    Ver Processo
-                  </Link>
-                </Button>
-              </div>
+              )}
+              {selectedDeadline.case_ && (
+                <div className="pt-2 flex justify-end">
+                  <Button variant="outline" size="sm" asChild>
+                    <Link href={`/processos/${selectedDeadline.case_.id}`}>
+                      Ver Processo
+                    </Link>
+                  </Button>
+                </div>
+              )}
             </div>
           )}
         </DialogContent>
