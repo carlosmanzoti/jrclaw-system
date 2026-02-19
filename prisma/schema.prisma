@@ -4046,11 +4046,10 @@ model DeadlineWorkspace {
   revisor_parecer       String?   @db.Text
   revisor_data          DateTime?
 
-  // Protocol fields
-  protocol_number       String?
-  protocol_date         DateTime?
-  protocol_system       String?   // PJe, ESAJ, PROJUDI, etc.
-  protocol_receipt_url  String?
+  // Protocol confirmation
+  protocolo_data        DateTime?  // date/time informed by the lawyer
+  protocolo_observacoes String?    @db.Text  // free-text observations
+  protocolo_confirmado_por String? // user who confirmed
 
   // Metadata
   total_words           Int       @default(0)
@@ -4095,7 +4094,7 @@ model WorkspaceDocument {
   is_versao_anterior    Boolean   @default(false)  // flag: replaced minuta (kept as history)
   substituido_por_id    String?                    // ID of the newer document that replaced this one
 
-  fase_origem           String    @default("RASCUNHO") // phase when document was added: RASCUNHO, REVISAO, APROVACAO
+  fase_origem           String    @default("RASCUNHO") // phase when document was added: RASCUNHO, REVISAO, APROVACAO, PROTOCOLO
 
   order                 Int       @default(0)
   is_required           Boolean   @default(false)

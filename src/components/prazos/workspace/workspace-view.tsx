@@ -425,7 +425,6 @@ function PhaseTransitionBar({
   const hasMinuta = workspace.documents?.some((d: any) => d.is_minuta_principal)
   const blockingItems = stats?.blockingUnchecked || 0
   const allApproved = workspace.approvals?.length > 0 && workspace.approvals.every((a: any) => a.status !== "PENDENTE")
-  const hasProtocol = !!workspace.protocol_number
 
   if (phase === "RASCUNHO") {
     const canAdvance = hasMinuta && blockingItems === 0
@@ -497,18 +496,12 @@ function PhaseTransitionBar({
   }
 
   if (phase === "PROTOCOLO") {
+    // The confirm action is now inside the ProtocolTab — no transition bar needed
     return (
-      <div className="shrink-0 border-t bg-gray-50 px-4 py-3 flex items-center justify-between">
-        <div className="text-xs text-muted-foreground">
-          {!hasProtocol && "Registre os dados do protocolo para concluir"}
-        </div>
-        <Button
-          disabled={!hasProtocol || changePhase.isPending}
-          onClick={() => changePhase.mutate({ workspaceId, phase: "CONCLUIDO" })}
-        >
-          {changePhase.isPending ? <Loader2 className="size-4 mr-2 animate-spin" /> : <Check className="size-4 mr-2" />}
-          Confirmar Protocolo e Concluir
-        </Button>
+      <div className="shrink-0 border-t bg-gray-50 px-4 py-3 flex items-center justify-center">
+        <p className="text-xs text-muted-foreground">
+          Use a aba &quot;Protocolo&quot; para juntar a peticao protocolada e confirmar o protocolo.
+        </p>
       </div>
     )
   }
@@ -1400,7 +1393,7 @@ function ApproversTab({
 }
 
 // ═══════════════════════════════════════════════════════════════
-// SUB-ABA: PROTOCOLO
+// SUB-ABA: PROTOCOLO — CONFIRMAÇÃO DE PROTOCOLO
 // ═══════════════════════════════════════════════════════════════
 
 function ProtocolTab({
@@ -1409,153 +1402,264 @@ function ProtocolTab({
   workspaceId: string; workspace: any; stats: any; onUpdate: () => void
 }) {
   const utils = trpc.useUtils()
-  const registerProtocol = trpc.deadlines.workspace.registerProtocol.useMutation({
+  const addDoc = trpc.deadlines.workspace.addDocument.useMutation({
+    onSuccess: () => { utils.deadlines.workspace.get.invalidate({ workspaceId }); onUpdate() },
+  })
+  const removeDoc = trpc.deadlines.workspace.removeDocument.useMutation({
+    onSuccess: () => { utils.deadlines.workspace.get.invalidate({ workspaceId }); onUpdate() },
+  })
+  const confirmProtocol = trpc.deadlines.workspace.confirmProtocol.useMutation({
     onSuccess: () => {
       utils.deadlines.workspace.get.invalidate({ workspaceId })
+      utils.deadlines.workspace.stats.invalidate({ workspaceId })
       onUpdate()
     },
   })
 
-  const [protocolNumber, setProtocolNumber] = useState(workspace.protocol_number || "")
-  const [protocolDate, setProtocolDate] = useState(workspace.protocol_date ? new Date(workspace.protocol_date).toISOString().slice(0, 16) : "")
-  const [protocolSystem, setProtocolSystem] = useState(workspace.protocol_system || "PJe")
+  const [protocolDate, setProtocolDate] = useState(workspace.protocolo_data ? new Date(workspace.protocolo_data).toISOString().slice(0, 16) : "")
+  const [observacoes, setObservacoes] = useState(workspace.protocolo_observacoes || "")
   const [uploading, setUploading] = useState(false)
-  const [receiptUrl, setReceiptUrl] = useState(workspace.protocol_receipt_url || "")
-  const receiptInputRef = useRef<HTMLInputElement>(null)
+  const peticaoInputRef = useRef<HTMLInputElement>(null)
+  const comprovanteInputRef = useRef<HTMLInputElement>(null)
 
-  const hasMinuta = workspace.documents?.some((d: any) => d.is_minuta_principal)
-  const totalDocs = workspace.documents?.length || 0
-  const checklistOk = stats ? stats.blockingUnchecked === 0 : false
-  const approvalOk = workspace.approvals?.length > 0 && workspace.approvals.every((a: any) => a.status !== "PENDENTE")
-  const totalSize = workspace.documents?.reduce((acc: number, d: any) => acc + (d.file_size || 0), 0) || 0
+  // Get protocol-phase documents
+  const peticaoProtocolada = workspace.documents?.filter((d: any) => d.category === "PETICAO_PROTOCOLADA" && !d.is_versao_anterior) || []
+  const comprovantes = workspace.documents?.filter((d: any) => d.category === "COMPROVANTE_PROTOCOLO" && !d.is_versao_anterior) || []
 
-  const handleReceiptUpload = async (file: File) => {
+  const hasPeticao = peticaoProtocolada.length > 0
+  const hasDate = !!protocolDate
+  const canConfirm = hasPeticao && hasDate
+
+  const handleUploadProtocolDoc = async (file: File, category: "PETICAO_PROTOCOLADA" | "COMPROVANTE_PROTOCOLO") => {
     setUploading(true)
     try {
       const formData = new FormData()
       formData.append("file", file)
       formData.append("workspaceId", workspaceId)
+
       const res = await fetch("/api/deadlines/workspace/upload", { method: "POST", body: formData })
-      if (!res.ok) { alert("Erro no upload"); return }
+      if (!res.ok) {
+        const err = await res.json()
+        alert(err.error || "Erro no upload")
+        return
+      }
       const data = await res.json()
-      setReceiptUrl(data.url)
+      addDoc.mutate({
+        workspaceId,
+        title: category === "PETICAO_PROTOCOLADA" ? "Petição protocolada" : file.name.replace(/\.[^.]+$/, ""),
+        fileUrl: data.url,
+        fileName: data.fileName,
+        fileSize: data.fileSize,
+        mimeType: data.mimeType,
+        category,
+        faseOrigem: "PROTOCOLO",
+      })
     } catch {
-      alert("Erro ao enviar comprovante")
+      alert("Erro ao enviar arquivo")
     } finally {
       setUploading(false)
     }
   }
 
-  const validations = [
-    { ok: hasMinuta, label: `Minuta principal presente (${workspace.documents?.find((d: any) => d.is_minuta_principal)?.file_name || "—"})` },
-    { ok: totalDocs > 1 || hasMinuta, label: `Documentos juntados (${totalDocs})` },
-    { ok: checklistOk, label: `Checklist ${checklistOk ? "completa" : "incompleta"} (${stats?.checklistDone || 0}/${stats?.checklistTotal || 0})` },
-    { ok: approvalOk, label: `Aprovação ${approvalOk ? "concluída" : "pendente"}` },
-    { ok: totalSize < 10 * 1024 * 1024, label: `Tamanho total: ${(totalSize / (1024 * 1024)).toFixed(1)}MB`, warn: totalSize >= 6 * 1024 * 1024 && totalSize < 10 * 1024 * 1024 },
-  ]
+  const handleConfirm = () => {
+    confirmProtocol.mutate({
+      workspaceId,
+      protocoloData: new Date(protocolDate),
+      protocoloObservacoes: observacoes.trim() || undefined,
+    })
+  }
+
+  const renderDocList = (docs: any[], label: string) => (
+    <div className="space-y-1.5">
+      {docs.map((doc: any) => (
+        <div key={doc.id} className="flex items-center gap-3 p-2.5 bg-white rounded-lg border">
+          <FileText className="size-4 text-green-600 shrink-0" />
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium truncate">{doc.file_name}</p>
+            <p className="text-xs text-muted-foreground">
+              {(doc.file_size / 1024).toFixed(0)} KB — {doc.uploaded_by_name || "—"} — {new Date(doc.created_at).toLocaleDateString("pt-BR")}
+            </p>
+          </div>
+          <div className="flex items-center gap-0.5 shrink-0">
+            {doc.file_url && (
+              <a href={doc.file_url} target="_blank" rel="noopener noreferrer">
+                <Button variant="ghost" size="icon" className="size-7"><Eye className="size-3.5" /></Button>
+              </a>
+            )}
+            {doc.file_url && (
+              <a href={doc.file_url} download={doc.file_name}>
+                <Button variant="ghost" size="icon" className="size-7"><Download className="size-3.5" /></Button>
+              </a>
+            )}
+            <Button variant="ghost" size="icon" className="size-7 text-destructive" onClick={() => removeDoc.mutate({ documentId: doc.id })}>
+              <Trash2 className="size-3.5" />
+            </Button>
+          </div>
+        </div>
+      ))}
+    </div>
+  )
 
   return (
     <div className="space-y-6 max-w-2xl">
-      <h2 className="text-sm font-semibold flex items-center gap-2">
-        <FileUp className="size-4" /> PROTOCOLO
-      </h2>
-
-      {/* Validation */}
-      <div className="border rounded-lg p-4 space-y-2">
-        <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Validação Pré-Protocolo</h3>
-        {validations.map((v, i) => (
-          <div key={i} className="flex items-center gap-2 text-sm">
-            <span>{v.ok ? (v as any).warn ? "🟡" : "🟢" : "🔴"}</span>
-            <span className={v.ok ? "" : "text-red-600"}>{v.label}</span>
-          </div>
-        ))}
-      </div>
-
-      {/* Protocol data */}
-      <div className="border rounded-lg p-4 space-y-4">
-        <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Dados do Protocolo</h3>
-
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="text-xs font-medium text-muted-foreground">Sistema</label>
-            <select className="w-full px-3 py-2 border rounded-md text-sm mt-1" value={protocolSystem} onChange={e => setProtocolSystem(e.target.value)}>
-              <option>PJe</option>
-              <option>e-SAJ</option>
-              <option>PROJUDI</option>
-              <option>EPROC</option>
-              <option>Outro</option>
-            </select>
-          </div>
-          <div>
-            <label className="text-xs font-medium text-muted-foreground">Tribunal</label>
-            <input className="w-full px-3 py-2 border rounded-md text-sm mt-1" value={workspace.deadline?.case_?.uf || ""} readOnly />
-          </div>
+      <div className="flex items-center gap-3">
+        <div className="size-8 rounded-full bg-blue-100 flex items-center justify-center">
+          <FileUp className="size-4 text-blue-600" />
         </div>
-
         <div>
-          <label className="text-xs font-medium text-muted-foreground">Nº do Processo</label>
-          <input className="w-full px-3 py-2 border rounded-md text-sm mt-1" value={workspace.deadline?.case_?.numero_processo || ""} readOnly />
+          <h2 className="text-sm font-semibold">CONFIRMACAO DE PROTOCOLO</h2>
+          <p className="text-xs text-muted-foreground">Registre abaixo o protocolo realizado no sistema do tribunal.</p>
         </div>
-
-        <div className="border-t pt-4 space-y-3">
-          <p className="text-xs text-muted-foreground">Após protocolar externamente (no PJe/e-SAJ), registre aqui:</p>
-          <div>
-            <label className="text-xs font-medium text-muted-foreground">Nº do Protocolo</label>
-            <input className="w-full px-3 py-2 border rounded-md text-sm mt-1" placeholder="2026.001.234567" value={protocolNumber} onChange={e => setProtocolNumber(e.target.value)} />
-          </div>
-          <div>
-            <label className="text-xs font-medium text-muted-foreground">Data/Hora do Protocolo</label>
-            <input type="datetime-local" className="w-full px-3 py-2 border rounded-md text-sm mt-1" value={protocolDate} onChange={e => setProtocolDate(e.target.value)} />
-          </div>
-          <div>
-            <label className="text-xs font-medium text-muted-foreground">Comprovante</label>
-            {receiptUrl ? (
-              <div className="flex items-center gap-2 mt-1">
-                <Badge variant="secondary" className="text-xs">Comprovante enviado</Badge>
-                <a href={receiptUrl} target="_blank" rel="noopener noreferrer"><Button variant="ghost" size="sm" className="h-6 text-xs"><Eye className="size-3 mr-1" />Ver</Button></a>
-              </div>
-            ) : (
-              <Button variant="outline" size="sm" className="mt-1" onClick={() => receiptInputRef.current?.click()} disabled={uploading}>
-                <Upload className="size-3.5 mr-1.5" />{uploading ? "Enviando..." : "Upload do comprovante"}
-              </Button>
-            )}
-            <input ref={receiptInputRef} type="file" accept=".pdf,.jpg,.jpeg,.png" className="hidden" onChange={e => {
-              const file = e.target.files?.[0]
-              if (file) handleReceiptUpload(file)
-              e.target.value = ""
-            }} />
-          </div>
-        </div>
-
-        <Button
-          className="w-full"
-          disabled={!protocolNumber.trim() || !protocolDate || registerProtocol.isPending}
-          onClick={() => registerProtocol.mutate({
-            workspaceId,
-            protocolNumber: protocolNumber.trim(),
-            protocolDate: new Date(protocolDate),
-            protocolSystem,
-            receiptUrl: receiptUrl || undefined,
-          })}
-        >
-          {registerProtocol.isPending ? <Loader2 className="size-4 mr-2 animate-spin" /> : <Check className="size-4 mr-2" />}
-          Registrar Protocolo
-        </Button>
       </div>
+
+      {/* PETICAO PROTOCOLADA */}
+      <div className="border rounded-lg p-4 space-y-3">
+        <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+          Peticao Protocolada <span className="text-red-500">*</span>
+        </h3>
+        <p className="text-xs text-muted-foreground">
+          Junte aqui o arquivo da peticao protocolada, baixada do sistema do tribunal apos o protocolo.
+        </p>
+
+        {peticaoProtocolada.length > 0 && renderDocList(peticaoProtocolada, "Petição protocolada")}
+
+        {peticaoProtocolada.length === 0 && (
+          <div
+            className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-primary/50 hover:bg-primary/5 transition-colors cursor-pointer"
+            onClick={() => peticaoInputRef.current?.click()}
+          >
+            <Upload className="size-6 mx-auto text-muted-foreground mb-2" />
+            <p className="text-sm font-medium">Arraste o arquivo aqui ou clique para enviar</p>
+            <p className="text-xs text-muted-foreground mt-1">Aceita: .pdf, .docx, .doc</p>
+          </div>
+        )}
+
+        <input
+          ref={peticaoInputRef}
+          type="file"
+          accept=".pdf,.docx,.doc"
+          className="hidden"
+          onChange={e => {
+            const file = e.target.files?.[0]
+            if (file) handleUploadProtocolDoc(file, "PETICAO_PROTOCOLADA")
+            e.target.value = ""
+          }}
+        />
+      </div>
+
+      {/* COMPROVANTE DE PROTOCOLO */}
+      <div className="border rounded-lg p-4 space-y-3">
+        <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+          Comprovante de Protocolo <span className="text-xs font-normal text-muted-foreground">(opcional)</span>
+        </h3>
+        <p className="text-xs text-muted-foreground">
+          Junte prints ou comprovantes do protocolo (recibo, tela de confirmacao, e-mail de confirmacao, etc.)
+        </p>
+
+        {comprovantes.length > 0 && renderDocList(comprovantes, "Comprovantes")}
+
+        <Button variant="outline" size="sm" onClick={() => comprovanteInputRef.current?.click()} disabled={uploading}>
+          <Plus className="size-3.5 mr-1.5" />{uploading ? "Enviando..." : "Adicionar Comprovante"}
+        </Button>
+
+        <input
+          ref={comprovanteInputRef}
+          type="file"
+          accept=".pdf,.png,.jpg,.jpeg"
+          multiple
+          className="hidden"
+          onChange={e => {
+            const files = e.target.files
+            if (files) {
+              Array.from(files).forEach(file => handleUploadProtocolDoc(file, "COMPROVANTE_PROTOCOLO"))
+            }
+            e.target.value = ""
+          }}
+        />
+      </div>
+
+      {/* DATA/HORA + OBSERVACOES */}
+      <div className="border rounded-lg p-4 space-y-4">
+        <div>
+          <label className="text-xs font-medium text-muted-foreground">
+            Data/Hora do Protocolo <span className="text-red-500">*</span>
+          </label>
+          <input
+            type="datetime-local"
+            className="w-full px-3 py-2 border rounded-md text-sm mt-1"
+            value={protocolDate}
+            onChange={e => setProtocolDate(e.target.value)}
+          />
+        </div>
+        <div>
+          <label className="text-xs font-medium text-muted-foreground">
+            Observacoes <span className="text-xs font-normal">(opcional)</span>
+          </label>
+          <textarea
+            className="w-full px-3 py-2 border rounded-md text-sm mt-1 min-h-[60px] resize-none"
+            placeholder="Ex: Protocolado via PJe sem intercorrencias..."
+            value={observacoes}
+            onChange={e => setObservacoes(e.target.value)}
+          />
+        </div>
+      </div>
+
+      {/* CONFIRM BUTTON */}
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <div>
+              <Button
+                className="w-full"
+                size="lg"
+                disabled={!canConfirm || confirmProtocol.isPending}
+                onClick={handleConfirm}
+              >
+                {confirmProtocol.isPending ? <Loader2 className="size-4 mr-2 animate-spin" /> : <Check className="size-4 mr-2" />}
+                Confirmar Protocolo e Concluir Prazo
+              </Button>
+            </div>
+          </TooltipTrigger>
+          {!canConfirm && (
+            <TooltipContent>
+              {!hasPeticao ? "Junte a petição protocolada para concluir" : "Informe a data/hora do protocolo"}
+            </TooltipContent>
+          )}
+        </Tooltip>
+      </TooltipProvider>
+
+      {uploading && (
+        <div className="flex items-center gap-2 text-sm text-blue-600">
+          <Loader2 className="size-4 animate-spin" /> Enviando arquivo...
+        </div>
+      )}
     </div>
   )
 }
 
 // ═══════════════════════════════════════════════════════════════
-// SUB-ABA: CONCLUÍDO (Resumo)
+// SUB-ABA: CONCLUIDO (Resumo)
 // ═══════════════════════════════════════════════════════════════
 
 function ConclusionTab({ workspace }: { workspace: any }) {
   const approvedBy = workspace.approvals?.filter((a: any) => a.status === "APROVADO" || a.status === "APROVADO_COM_RESSALVAS") || []
+  const peticaoProtocolada = workspace.documents?.filter((d: any) => d.category === "PETICAO_PROTOCOLADA" && !d.is_versao_anterior) || []
+  const comprovantes = workspace.documents?.filter((d: any) => d.category === "COMPROVANTE_PROTOCOLO" && !d.is_versao_anterior) || []
+
+  // Find who confirmed and who elaborated
+  const confirmActivity = workspace.activities?.find((a: any) => a.action === "PROTOCOL_CONFIRMED")
+  const elaboradoPor = workspace.deadline?.responsavel?.name || "—"
+  const confirmedByName = confirmActivity?.user_name || "—"
+
+  const tempoTotal = workspace.created_at && workspace.phase_changed_at
+    ? Math.ceil((new Date(workspace.phase_changed_at).getTime() - new Date(workspace.created_at).getTime()) / (1000 * 60 * 60 * 24))
+    : null
+  const dataInicio = workspace.created_at ? new Date(workspace.created_at).toLocaleDateString("pt-BR") : "—"
+  const dataFim = workspace.phase_changed_at ? new Date(workspace.phase_changed_at).toLocaleDateString("pt-BR") : "—"
 
   return (
     <div className="space-y-6 max-w-2xl">
-      <div className="border rounded-lg p-6 bg-green-50 border-green-200 space-y-4">
+      <div className="border rounded-lg p-6 bg-green-50 border-green-200 space-y-5">
         <div className="flex items-center gap-3">
           <div className="size-10 rounded-full bg-green-100 flex items-center justify-center">
             <Check className="size-6 text-green-600" />
@@ -1563,49 +1667,79 @@ function ConclusionTab({ workspace }: { workspace: any }) {
           <h2 className="text-lg font-semibold text-green-800">PRAZO CUMPRIDO</h2>
         </div>
 
-        <div className="grid grid-cols-2 gap-4 text-sm">
-          <div>
-            <p className="text-xs text-muted-foreground">Protocolado em</p>
-            <p className="font-medium">{workspace.protocol_date ? new Date(workspace.protocol_date).toLocaleString("pt-BR") : "—"}</p>
-          </div>
-          <div>
-            <p className="text-xs text-muted-foreground">Nº Protocolo</p>
-            <p className="font-medium">{workspace.protocol_number || "—"}</p>
-          </div>
-          <div>
-            <p className="text-xs text-muted-foreground">Sistema</p>
-            <p className="font-medium">{workspace.protocol_system || "—"}</p>
-          </div>
-          <div>
-            <p className="text-xs text-muted-foreground">Comprovante</p>
-            {workspace.protocol_receipt_url ? (
-              <a href={workspace.protocol_receipt_url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline font-medium">
-                Ver comprovante
-              </a>
-            ) : <p className="text-muted-foreground">—</p>}
-          </div>
-        </div>
-
-        {approvedBy.length > 0 && (
-          <div>
-            <p className="text-xs text-muted-foreground mb-1">Aprovado por</p>
-            <div className="flex items-center gap-2">
-              {approvedBy.map((a: any) => (
-                <Badge key={a.id} variant="secondary" className="text-xs">
-                  Rodada {a.round} — {a.status === "APROVADO" ? "Aprovado" : "Aprovado c/ ressalvas"}
-                </Badge>
-              ))}
+        <div className="space-y-3 text-sm">
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <p className="text-xs text-muted-foreground">Protocolado em</p>
+              <p className="font-medium">{workspace.protocolo_data ? new Date(workspace.protocolo_data).toLocaleString("pt-BR") : "—"}</p>
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">Confirmado por</p>
+              <p className="font-medium">{confirmedByName}</p>
             </div>
           </div>
-        )}
 
-        <div>
-          <p className="text-xs text-muted-foreground">Tempo total</p>
-          <p className="font-medium text-sm">
-            {workspace.created_at && workspace.phase_changed_at
-              ? `${Math.ceil((new Date(workspace.phase_changed_at).getTime() - new Date(workspace.created_at).getTime()) / (1000 * 60 * 60 * 24))} dias`
-              : "—"}
-          </p>
+          {workspace.protocolo_observacoes && (
+            <div>
+              <p className="text-xs text-muted-foreground">Observacoes</p>
+              <p className="font-medium">&ldquo;{workspace.protocolo_observacoes}&rdquo;</p>
+            </div>
+          )}
+
+          {/* Protocol documents */}
+          <div className="space-y-1.5 pt-2 border-t border-green-200">
+            {peticaoProtocolada.map((doc: any) => (
+              <div key={doc.id} className="flex items-center gap-2">
+                <FileText className="size-4 text-green-600 shrink-0" />
+                <span className="text-sm flex-1 truncate">Peticao protocolada: {doc.file_name}</span>
+                {doc.file_url && (
+                  <a href={doc.file_url} download={doc.file_name}>
+                    <Button variant="ghost" size="icon" className="size-6"><Download className="size-3" /></Button>
+                  </a>
+                )}
+              </div>
+            ))}
+            {comprovantes.length > 0 && (
+              <div className="flex items-center gap-2">
+                <FileText className="size-4 text-green-600 shrink-0" />
+                <span className="text-sm flex-1">Comprovantes: {comprovantes.length} arquivo(s)</span>
+                {comprovantes.map((doc: any) => (
+                  doc.file_url && (
+                    <a key={doc.id} href={doc.file_url} download={doc.file_name}>
+                      <Button variant="ghost" size="icon" className="size-6"><Download className="size-3" /></Button>
+                    </a>
+                  )
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Approvals + authorship */}
+          <div className="grid grid-cols-2 gap-3 pt-2 border-t border-green-200">
+            {approvedBy.length > 0 && (
+              <div>
+                <p className="text-xs text-muted-foreground mb-1">Aprovado por</p>
+                <div className="space-y-1">
+                  {approvedBy.map((a: any) => (
+                    <Badge key={a.id} variant="secondary" className="text-xs mr-1">
+                      Rodada {a.round} — {a.status === "APROVADO" ? "Aprovado" : "Aprovado c/ ressalvas"}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            )}
+            <div>
+              <p className="text-xs text-muted-foreground">Elaborado por</p>
+              <p className="font-medium">{elaboradoPor}</p>
+            </div>
+          </div>
+
+          <div className="pt-2 border-t border-green-200">
+            <p className="text-xs text-muted-foreground">Tempo total</p>
+            <p className="font-medium">
+              {tempoTotal !== null ? `${tempoTotal} dia(s) (de ${dataInicio} a ${dataFim})` : "—"}
+            </p>
+          </div>
         </div>
       </div>
     </div>

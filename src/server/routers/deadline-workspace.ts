@@ -280,12 +280,23 @@ export const workspaceRouter = router({
         }
       }
 
-      // Validate: CONCLUIDO requires protocol info
-      if (input.phase === "CONCLUIDO" && !ws.protocol_number) {
-        throw new TRPCError({
-          code: "PRECONDITION_FAILED",
-          message: "Informe o número do protocolo antes de concluir.",
+      // Validate: CONCLUIDO requires protocol confirmation (petition filed + date)
+      if (input.phase === "CONCLUIDO") {
+        const protocolDocs = await ctx.db.workspaceDocument.findMany({
+          where: { workspace_id: input.workspaceId, category: "PETICAO_PROTOCOLADA", is_versao_anterior: false },
         });
+        if (protocolDocs.length === 0) {
+          throw new TRPCError({
+            code: "PRECONDITION_FAILED",
+            message: "Junte a petição protocolada antes de concluir.",
+          });
+        }
+        if (!ws.protocolo_data) {
+          throw new TRPCError({
+            code: "PRECONDITION_FAILED",
+            message: "Informe a data/hora do protocolo antes de concluir.",
+          });
+        }
       }
 
       const description = input.motivo
@@ -324,38 +335,67 @@ export const workspaceRouter = router({
       return updated;
     }),
 
-  // ── Register protocol ──
-  registerProtocol: protectedProcedure
+  // ── Confirm protocol (save date + observations) ──
+  confirmProtocol: protectedProcedure
     .input(z.object({
       workspaceId: z.string(),
-      protocolNumber: z.string(),
-      protocolDate: z.coerce.date(),
-      protocolSystem: z.string().optional(),
-      receiptUrl: z.string().optional(),
+      protocoloData: z.coerce.date(),
+      protocoloObservacoes: z.string().optional(),
     }))
     .mutation(async ({ ctx, input }) => {
-      const updated = await ctx.db.deadlineWorkspace.update({
+      // Validate: at least one PETICAO_PROTOCOLADA document exists
+      const peticao = await ctx.db.workspaceDocument.findFirst({
+        where: { workspace_id: input.workspaceId, category: "PETICAO_PROTOCOLADA", is_versao_anterior: false },
+      });
+      if (!peticao) {
+        throw new TRPCError({
+          code: "PRECONDITION_FAILED",
+          message: "Junte a petição protocolada antes de confirmar.",
+        });
+      }
+
+      // Save protocol confirmation data
+      await ctx.db.deadlineWorkspace.update({
         where: { id: input.workspaceId },
         data: {
-          protocol_number: input.protocolNumber,
-          protocol_date: input.protocolDate,
-          protocol_system: input.protocolSystem,
-          protocol_receipt_url: input.receiptUrl,
+          protocolo_data: input.protocoloData,
+          protocolo_observacoes: input.protocoloObservacoes,
+          protocolo_confirmado_por: ctx.session.user.id,
+        },
+      });
+
+      // Advance to CONCLUIDO
+      const ws = await ctx.db.deadlineWorkspace.update({
+        where: { id: input.workspaceId },
+        data: {
+          phase: "CONCLUIDO",
+          phase_changed_at: new Date(),
+          phase_changed_by: ctx.session.user.id,
           activities: {
             create: {
-              action: "PROTOCOL_REGISTERED",
-              description: `Protocolo registrado: ${input.protocolNumber} (${input.protocolSystem || "manual"})`,
+              action: "PROTOCOL_CONFIRMED",
+              description: `Prazo cumprido — protocolo confirmado por ${ctx.session.user.name || "usuário"} em ${input.protocoloData.toLocaleDateString("pt-BR")}`,
               user_id: ctx.session.user.id,
               user_name: ctx.session.user.name || "Sistema",
               metadata: {
-                protocol_number: input.protocolNumber,
-                protocol_system: input.protocolSystem,
+                protocolo_data: input.protocoloData.toISOString(),
+                observacoes: input.protocoloObservacoes,
               },
             },
           },
         },
       });
-      return updated;
+
+      // Mark deadline as CUMPRIDO
+      await ctx.db.deadlineNew.update({
+        where: { id: ws.deadline_id },
+        data: {
+          status: "CUMPRIDO",
+          data_cumprimento: new Date(),
+        },
+      });
+
+      return ws;
     }),
 
   // ── Set reviewer ──

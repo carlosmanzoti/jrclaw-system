@@ -36,7 +36,7 @@ export interface WorkspaceContext {
     estimatedPages: number
     locked: boolean
     editorSavedAt: string | null
-    protocolNumber: string | null
+    protocoloData: string | null
   }
   // Section 2 — Case
   caso: {
@@ -251,7 +251,7 @@ export async function buildWorkspaceContext(deadlineId: string): Promise<Workspa
       estimatedPages: ws.estimated_pages,
       locked: ws.locked,
       editorSavedAt: ws.editor_saved_at?.toISOString() || null,
-      protocolNumber: ws.protocol_number,
+      protocoloData: ws.protocolo_data?.toISOString() || null,
     },
     caso: caso ? {
       id: caso.id,
