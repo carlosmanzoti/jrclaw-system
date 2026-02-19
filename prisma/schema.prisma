@@ -4391,3 +4391,40 @@ model SystemConfig {
 
   @@map("system_configs")
 }
+
+// ============================================================
+// AUDIT LOG (security & compliance)
+// ============================================================
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  timestamp  DateTime @default(now())
+
+  // Who
+  user_id    String?
+  user_email String?
+  user_role  String?
+  ip_address String?
+  user_agent String?
+
+  // What
+  action     String   // CREATE, READ, UPDATE, DELETE, LOGIN, LOGOUT, EXPORT, PERMISSION_CHANGE
+  resource   String   // e.g. "Case", "Person", "Document", "Fee"
+  resource_id String?
+
+  // Details
+  description String?
+  old_values  Json?   // previous state (for UPDATE/DELETE)
+  new_values  Json?   // new state (for CREATE/UPDATE)
+  metadata    Json?   // extra context
+
+  // Result
+  success    Boolean  @default(true)
+  error      String?
+
+  @@index([user_id])
+  @@index([action])
+  @@index([resource, resource_id])
+  @@index([timestamp])
+  @@map("audit_logs")
+}

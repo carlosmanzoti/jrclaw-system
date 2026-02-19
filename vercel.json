@@ -2,6 +2,19 @@
   "crons": [
     { "path": "/api/cron/prazos", "schedule": "0 10 * * *" },
     { "path": "/api/cron/calendar-sync", "schedule": "*/15 * * * *" },
-    { "path": "/api/cron/email-activity-reminders", "schedule": "*/30 * * * *" }
+    { "path": "/api/cron/email-activity-reminders", "schedule": "*/30 * * * *" },
+    { "path": "/api/cron/monitoramento", "schedule": "0 8,14,20 * * *" }
+  ],
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        { "key": "X-Content-Type-Options", "value": "nosniff" },
+        { "key": "X-Frame-Options", "value": "DENY" },
+        { "key": "X-XSS-Protection", "value": "1; mode=block" },
+        { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" },
+        { "key": "Permissions-Policy", "value": "camera=(), microphone=(), geolocation=()" }
+      ]
+    }
   ]
 }

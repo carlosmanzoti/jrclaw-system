@@ -19,6 +19,7 @@ import { whatsappRouter } from "./whatsapp";
 import { crjNegotiationsRouter } from "./crj-negotiations";
 import { monitoringRouter } from "./monitoring";
 import { financialRouter } from "./financial";
+import { auditRouter } from "./audit";
 
 export const appRouter = router({
   users: usersRouter,
@@ -41,6 +42,7 @@ export const appRouter = router({
   crjNeg: crjNegotiationsRouter,
   monitoring: monitoringRouter,
   financial: financialRouter,
+  audit: auditRouter,
 });
 
 export type AppRouter = typeof appRouter;
