@@ -49,7 +49,16 @@
       "Bash(git status:*)",
       "Bash(git push:*)",
       "Bash(npm run dev:*)",
-      "Bash(tee:*)"
+      "Bash(tee:*)",
+      "Bash(git -C \"C:/Users/ADV07/Documents/jrclaw-system\" ls-files)",
+      "Bash(grep:*)",
+      "Bash(cat:*)",
+      "Bash(echo:*)",
+      "Bash(dir:*)",
+      "Bash(test:*)",
+      "Bash(python:*)",
+      "Bash(node:*)",
+      "Bash(bash --version)"
     ]
   }
 }
