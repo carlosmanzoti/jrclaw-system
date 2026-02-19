@@ -12,11 +12,60 @@ import { DEADLINE_TYPE_LABELS, DEADLINE_STATUS_LABELS, formatCNJ } from "@/lib/c
 
 const TYPE_COLORS: Record<string, string> = {
   FATAL: "#DC3545",
+  PRAZO_FATAL: "#DC3545",
   ORDINARIO: "#C9A961",
   DILIGENCIA: "#17A2B8",
   AUDIENCIA: "#C9A961",
+  AUDIENCIA_CONCILIACAO: "#C9A961",
+  AUDIENCIA_INSTRUCAO: "#C9A961",
+  AUDIENCIA_SANEAMENTO: "#C9A961",
   ASSEMBLEIA: "#28A745",
+  ASSEMBLEIA_CREDORES: "#28A745",
+  // Defesa e Resposta
+  CONTESTACAO: "#F97316",
+  RECONVENCAO: "#F97316",
+  REPLICA: "#F97316",
+  IMPUGNACAO_VALOR_CAUSA: "#F97316",
+  IMPUGNACAO_JUSTICA_GRATUITA: "#F97316",
+  IMPUGNACAO_CUMPRIMENTO: "#F97316",
+  MANIFESTACAO: "#F97316",
+  // Recursais
+  APELACAO: "#8B5CF6",
+  AGRAVO_INSTRUMENTO: "#8B5CF6",
+  AGRAVO_INTERNO: "#8B5CF6",
+  RECURSO_ESPECIAL: "#8B5CF6",
+  RECURSO_EXTRAORDINARIO: "#8B5CF6",
+  RECURSO_ORDINARIO: "#8B5CF6",
+  RECURSO_REVISTA: "#8B5CF6",
+  EMBARGOS_DECLARACAO: "#8B5CF6",
+  EMBARGOS_DIVERGENCIA: "#8B5CF6",
+  EMBARGOS_EXECUCAO: "#8B5CF6",
+  EMBARGOS_TERCEIRO: "#8B5CF6",
+  // RJ
+  RJ_STAY_PERIOD: "#28A745",
+  RJ_APRESENTACAO_PLANO: "#28A745",
+  RJ_HABILITACAO_CREDITO: "#28A745",
+  RJ_IMPUGNACAO_CREDITO: "#28A745",
+  // Execucao
+  PAGAMENTO_VOLUNTARIO: "#0EA5E9",
+  PENHORA: "#0EA5E9",
+  LEILAO: "#0EA5E9",
+  DEPOSITO_JUDICIAL: "#0EA5E9",
+  // Administrativo
+  PROTOCOLO: "#17A2B8",
+  JUNTADA_DOCUMENTO: "#17A2B8",
+  PERICIA: "#17A2B8",
+  CUMPRIMENTO_DECISAO: "#17A2B8",
+  EMENDA_INICIAL: "#17A2B8",
+  // Tarefas internas
+  TAREFA_INTERNA: "#6B7280",
+  FOLLOW_UP: "#6B7280",
+  REUNIAO_INTERNA: "#6B7280",
+  RETORNO_CLIENTE: "#6B7280",
+  RETORNO_EMAIL: "#6B7280",
 }
+
+const DEFAULT_TYPE_COLOR = "#6B7280"
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export default function DeadlinesCalendar({ deadlines }: { deadlines: any[] }) {
@@ -27,7 +76,7 @@ export default function DeadlinesCalendar({ deadlines }: { deadlines: any[] }) {
     id: d.id,
     title: `${DEADLINE_TYPE_LABELS[d.tipo] || d.tipo}: ${d.descricao}`,
     start: new Date(d.data_fim_prazo || d.data_limite).toISOString().split("T")[0],
-    backgroundColor: d.status === "CUMPRIDO" ? "#94a3b8" : (d.status === "PERDIDO" || d.status === "VENCIDO") ? "#1f2937" : d.status === "CANCELADO" ? "#6b7280" : TYPE_COLORS[d.tipo] || "#6b7280",
+    backgroundColor: d.status === "CUMPRIDO" ? "#94a3b8" : (d.status === "PERDIDO" || d.status === "VENCIDO") ? "#1f2937" : d.status === "CANCELADO" ? "#6b7280" : TYPE_COLORS[d.tipo] || DEFAULT_TYPE_COLOR,
     borderColor: "transparent",
     textColor: "#fff",
     extendedProps: d,
@@ -70,8 +119,8 @@ export default function DeadlinesCalendar({ deadlines }: { deadlines: any[] }) {
             <div className="space-y-3">
               <div>
                 <p className="text-xs text-[#666666]">Tipo</p>
-                <Badge className="mt-1" style={{ backgroundColor: TYPE_COLORS[selected.tipo] }}>
-                  {DEADLINE_TYPE_LABELS[selected.tipo]}
+                <Badge className="mt-1" style={{ backgroundColor: TYPE_COLORS[selected.tipo] || DEFAULT_TYPE_COLOR }}>
+                  {DEADLINE_TYPE_LABELS[selected.tipo] || selected.tipo}
                 </Badge>
               </div>
               <div>

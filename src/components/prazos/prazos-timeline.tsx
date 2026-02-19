@@ -19,19 +19,128 @@ import { trpc } from "@/lib/trpc"
 
 const TYPE_DOT_COLORS: Record<string, string> = {
   FATAL: "bg-[#DC3545]",
+  PRAZO_FATAL: "bg-[#DC3545]",
   ORDINARIO: "bg-[#C9A961]",
   DILIGENCIA: "bg-[#17A2B8]",
   AUDIENCIA: "bg-[#C9A961]",
+  AUDIENCIA_CONCILIACAO: "bg-[#C9A961]",
+  AUDIENCIA_INSTRUCAO: "bg-[#C9A961]",
+  AUDIENCIA_SANEAMENTO: "bg-[#C9A961]",
   ASSEMBLEIA: "bg-[#28A745]",
+  ASSEMBLEIA_CREDORES: "bg-[#28A745]",
+  // Recursais
+  APELACAO: "bg-[#8B5CF6]",
+  AGRAVO_INSTRUMENTO: "bg-[#8B5CF6]",
+  AGRAVO_INTERNO: "bg-[#8B5CF6]",
+  RECURSO_ESPECIAL: "bg-[#8B5CF6]",
+  RECURSO_EXTRAORDINARIO: "bg-[#8B5CF6]",
+  RECURSO_ORDINARIO: "bg-[#8B5CF6]",
+  RECURSO_REVISTA: "bg-[#8B5CF6]",
+  RECURSO_ORDINARIO_TRABALHISTA: "bg-[#8B5CF6]",
+  EMBARGOS_DECLARACAO: "bg-[#8B5CF6]",
+  EMBARGOS_DIVERGENCIA: "bg-[#8B5CF6]",
+  EMBARGOS_EXECUCAO: "bg-[#8B5CF6]",
+  EMBARGOS_TERCEIRO: "bg-[#8B5CF6]",
+  // Defesa
+  CONTESTACAO: "bg-[#F97316]",
+  RECONVENCAO: "bg-[#F97316]",
+  REPLICA: "bg-[#F97316]",
+  IMPUGNACAO_VALOR_CAUSA: "bg-[#F97316]",
+  IMPUGNACAO_JUSTICA_GRATUITA: "bg-[#F97316]",
+  IMPUGNACAO_CUMPRIMENTO: "bg-[#F97316]",
+  MANIFESTACAO: "bg-[#F97316]",
+  // RJ
+  RJ_STAY_PERIOD: "bg-[#28A745]",
+  RJ_APRESENTACAO_PLANO: "bg-[#28A745]",
+  RJ_HABILITACAO_CREDITO: "bg-[#28A745]",
+  RJ_IMPUGNACAO_CREDITO: "bg-[#28A745]",
+  // Tarefas internas
+  TAREFA_INTERNA: "bg-[#6B7280]",
+  FOLLOW_UP: "bg-[#6B7280]",
+  REUNIAO_INTERNA: "bg-[#6B7280]",
+  RETORNO_CLIENTE: "bg-[#6B7280]",
+  RETORNO_EMAIL: "bg-[#6B7280]",
 }
+
+const DEFAULT_DOT_COLOR = "bg-[#6B7280]"
 
 const TYPE_BADGE_COLORS: Record<string, string> = {
   FATAL: "bg-[#DC3545]/10 text-[#DC3545]",
+  PRAZO_FATAL: "bg-[#DC3545]/10 text-[#DC3545]",
   ORDINARIO: "bg-[#C9A961]/10 text-[#C9A961]",
   DILIGENCIA: "bg-[#17A2B8]/10 text-[#17A2B8]",
   AUDIENCIA: "bg-[#C9A961]/10 text-[#C9A961]",
+  AUDIENCIA_CONCILIACAO: "bg-[#C9A961]/10 text-[#C9A961]",
+  AUDIENCIA_INSTRUCAO: "bg-[#C9A961]/10 text-[#C9A961]",
+  AUDIENCIA_SANEAMENTO: "bg-[#C9A961]/10 text-[#C9A961]",
   ASSEMBLEIA: "bg-[#28A745]/10 text-[#28A745]",
+  ASSEMBLEIA_CREDORES: "bg-[#28A745]/10 text-[#28A745]",
+  // Recursais
+  APELACAO: "bg-[#8B5CF6]/10 text-[#8B5CF6]",
+  AGRAVO_INSTRUMENTO: "bg-[#8B5CF6]/10 text-[#8B5CF6]",
+  AGRAVO_INTERNO: "bg-[#8B5CF6]/10 text-[#8B5CF6]",
+  RECURSO_ESPECIAL: "bg-[#8B5CF6]/10 text-[#8B5CF6]",
+  RECURSO_EXTRAORDINARIO: "bg-[#8B5CF6]/10 text-[#8B5CF6]",
+  RECURSO_ORDINARIO: "bg-[#8B5CF6]/10 text-[#8B5CF6]",
+  RECURSO_REVISTA: "bg-[#8B5CF6]/10 text-[#8B5CF6]",
+  RECURSO_ORDINARIO_TRABALHISTA: "bg-[#8B5CF6]/10 text-[#8B5CF6]",
+  EMBARGOS_DECLARACAO: "bg-[#8B5CF6]/10 text-[#8B5CF6]",
+  EMBARGOS_DIVERGENCIA: "bg-[#8B5CF6]/10 text-[#8B5CF6]",
+  EMBARGOS_EXECUCAO: "bg-[#8B5CF6]/10 text-[#8B5CF6]",
+  EMBARGOS_TERCEIRO: "bg-[#8B5CF6]/10 text-[#8B5CF6]",
+  // Defesa
+  CONTESTACAO: "bg-[#F97316]/10 text-[#F97316]",
+  RECONVENCAO: "bg-[#F97316]/10 text-[#F97316]",
+  REPLICA: "bg-[#F97316]/10 text-[#F97316]",
+  IMPUGNACAO_VALOR_CAUSA: "bg-[#F97316]/10 text-[#F97316]",
+  IMPUGNACAO_JUSTICA_GRATUITA: "bg-[#F97316]/10 text-[#F97316]",
+  IMPUGNACAO_CUMPRIMENTO: "bg-[#F97316]/10 text-[#F97316]",
+  MANIFESTACAO: "bg-[#F97316]/10 text-[#F97316]",
+  // RJ
+  RJ_STAY_PERIOD: "bg-[#28A745]/10 text-[#28A745]",
+  RJ_APRESENTACAO_PLANO: "bg-[#28A745]/10 text-[#28A745]",
+  RJ_HABILITACAO_CREDITO: "bg-[#28A745]/10 text-[#28A745]",
+  RJ_IMPUGNACAO_CREDITO: "bg-[#28A745]/10 text-[#28A745]",
+  // Tarefas internas
+  TAREFA_INTERNA: "bg-[#6B7280]/10 text-[#6B7280]",
+  FOLLOW_UP: "bg-[#6B7280]/10 text-[#6B7280]",
+  REUNIAO_INTERNA: "bg-[#6B7280]/10 text-[#6B7280]",
+  RETORNO_CLIENTE: "bg-[#6B7280]/10 text-[#6B7280]",
+  RETORNO_EMAIL: "bg-[#6B7280]/10 text-[#6B7280]",
 }
+
+const DEFAULT_BADGE_COLOR = "bg-[#6B7280]/10 text-[#6B7280]"
+
+const TYPE_BORDER_COLORS: Record<string, string> = {
+  FATAL: "border-l-[#DC3545]",
+  PRAZO_FATAL: "border-l-[#DC3545]",
+  DILIGENCIA: "border-l-[#17A2B8]",
+  ASSEMBLEIA: "border-l-[#28A745]",
+  ASSEMBLEIA_CREDORES: "border-l-[#28A745]",
+  ORDINARIO: "border-l-[#C9A961]",
+  AUDIENCIA: "border-l-[#C9A961]",
+  AUDIENCIA_CONCILIACAO: "border-l-[#C9A961]",
+  AUDIENCIA_INSTRUCAO: "border-l-[#C9A961]",
+  AUDIENCIA_SANEAMENTO: "border-l-[#C9A961]",
+  APELACAO: "border-l-[#8B5CF6]",
+  AGRAVO_INSTRUMENTO: "border-l-[#8B5CF6]",
+  AGRAVO_INTERNO: "border-l-[#8B5CF6]",
+  RECURSO_ESPECIAL: "border-l-[#8B5CF6]",
+  RECURSO_EXTRAORDINARIO: "border-l-[#8B5CF6]",
+  EMBARGOS_DECLARACAO: "border-l-[#8B5CF6]",
+  CONTESTACAO: "border-l-[#F97316]",
+  RECONVENCAO: "border-l-[#F97316]",
+  REPLICA: "border-l-[#F97316]",
+  MANIFESTACAO: "border-l-[#F97316]",
+  RJ_STAY_PERIOD: "border-l-[#28A745]",
+  RJ_APRESENTACAO_PLANO: "border-l-[#28A745]",
+  RJ_HABILITACAO_CREDITO: "border-l-[#28A745]",
+  TAREFA_INTERNA: "border-l-[#6B7280]",
+  FOLLOW_UP: "border-l-[#6B7280]",
+  REUNIAO_INTERNA: "border-l-[#6B7280]",
+}
+
+const DEFAULT_BORDER_COLOR = "border-l-[#6B7280]"
 
 const PRIORITY_INDICATOR: Record<string, string> = {
   CRITICA: "ring-2 ring-red-400",
@@ -184,10 +293,7 @@ export function PrazosTimeline() {
                       <Card
                         key={d.id}
                         className={`cursor-pointer hover:shadow-md transition-shadow border-l-4 ${
-                          d.tipo === "FATAL" ? "border-l-[#DC3545]"
-                          : d.tipo === "DILIGENCIA" ? "border-l-[#17A2B8]"
-                          : d.tipo === "ASSEMBLEIA" ? "border-l-[#28A745]"
-                          : "border-l-[#C9A961]"
+                          TYPE_BORDER_COLORS[d.tipo] || DEFAULT_BORDER_COLOR
                         } ${d.prioridade ? PRIORITY_INDICATOR[d.prioridade] || "" : ""}`}
                         onClick={() => setSelectedDeadline(d)}
                       >
@@ -195,10 +301,10 @@ export function PrazosTimeline() {
                           <div className="flex items-start justify-between gap-3">
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2 mb-1">
-                                <Badge variant="secondary" className={`text-[10px] shrink-0 ${TYPE_BADGE_COLORS[d.tipo] || ""}`}>
-                                  {DEADLINE_TYPE_LABELS[d.tipo]}
+                                <Badge variant="secondary" className={`text-[10px] shrink-0 ${TYPE_BADGE_COLORS[d.tipo] || DEFAULT_BADGE_COLOR}`}>
+                                  {DEADLINE_TYPE_LABELS[d.tipo] || d.tipo}
                                 </Badge>
-                                {d.tipo === "FATAL" && days <= 2 && (
+                                {(d.tipo === "FATAL" || d.tipo === "PRAZO_FATAL") && days <= 2 && (
                                   <AlertTriangle className="size-3.5 text-[#DC3545] animate-pulse" />
                                 )}
                               </div>
@@ -253,8 +359,8 @@ export function PrazosTimeline() {
             <div className="space-y-4">
               <div>
                 <p className="text-xs text-[#666666] mb-1">Tipo</p>
-                <Badge variant="secondary" className={TYPE_BADGE_COLORS[selectedDeadline.tipo] || ""}>
-                  {DEADLINE_TYPE_LABELS[selectedDeadline.tipo]}
+                <Badge variant="secondary" className={TYPE_BADGE_COLORS[selectedDeadline.tipo] || DEFAULT_BADGE_COLOR}>
+                  {DEADLINE_TYPE_LABELS[selectedDeadline.tipo] || selectedDeadline.tipo}
                 </Badge>
               </div>
               <div>

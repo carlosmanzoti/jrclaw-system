@@ -370,7 +370,7 @@ export default async function DashboardPage() {
                     </div>
                     <div className="ml-3 flex items-center gap-2">
                       <Badge variant="secondary" className="text-[10px]">
-                        {DEADLINE_TYPE_LABELS[d.tipo]}
+                        {DEADLINE_TYPE_LABELS[d.tipo] || d.tipo.replace(/_/g, " ")}
                       </Badge>
                       <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${deadlineColor(d.data_limite ?? d.dueDate ?? new Date())}`}>
                         {(d.data_limite ?? d.dueDate) ? new Date((d.data_limite ?? d.dueDate)!).toLocaleDateString("pt-BR") : "Sem data"}

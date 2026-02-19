@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, createContext, useContext } from "react"
+import { useState, useEffect, useMemo, createContext, useContext } from "react"
 import Link from "next/link"
 import dynamic from "next/dynamic"
 import {
@@ -9,7 +9,7 @@ import {
   Pencil, ExternalLink, BookOpen, Scale,
   LayoutGrid, Timer, Activity, Search,
   Flame, ShieldAlert, CalendarDays, TrendingUp, FileText,
-  XCircle,
+  XCircle, Loader2,
 } from "lucide-react"
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
@@ -34,6 +34,7 @@ import { Label } from "@/components/ui/label"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Textarea } from "@/components/ui/textarea"
 import { Sheet, SheetContent } from "@/components/ui/sheet"
+import { Checkbox } from "@/components/ui/checkbox"
 import {
   DEADLINE_TYPE_LABELS, formatCNJ, daysUntil, deadlineColor,
   ESTADOS_BRASIL,
@@ -140,11 +141,27 @@ export function PrazosLayout() {
   const [newDialogOpen, setNewDialogOpen] = useState(false)
   const [selectedDeadlineId, setSelectedDeadlineId] = useState<string | null>(null)
 
-  // Deep linking: read workspace param from URL on mount
+  // Deep linking: read workspace param from URL on mount + auto-open new dialog
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
     const wsId = params.get("workspace")
     if (wsId) setSelectedDeadlineId(wsId)
+    if (params.get("newPrazo") === "true") {
+      setNewDialogOpen(true)
+      window.history.replaceState(null, "", "/prazos")
+    }
+  }, [])
+
+  // Keyboard shortcut: Ctrl+Shift+P to open New Deadline dialog
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.ctrlKey && e.shiftKey && e.key === "P") {
+        e.preventDefault()
+        setNewDialogOpen(true)
+      }
+    }
+    window.addEventListener("keydown", handleKeyDown)
+    return () => window.removeEventListener("keydown", handleKeyDown)
   }, [])
 
   const openWorkspace = (id: string) => {
@@ -181,8 +198,9 @@ export function PrazosLayout() {
                 Calendário Judicial
               </Link>
             </Button>
-            <Button onClick={() => setNewDialogOpen(true)}>
+            <Button onClick={() => setNewDialogOpen(true)} title="Ctrl+Shift+P">
               <Plus className="mr-2 size-4" />Novo Prazo
+              <kbd className="ml-2 hidden sm:inline-flex text-[10px] bg-white/20 rounded px-1 py-0.5">Ctrl+Shift+P</kbd>
             </Button>
           </div>
         </div>
@@ -1107,131 +1125,413 @@ function DeadlineRow({ deadline: d }: { deadline: any }) {
 
 // ─── New Deadline Dialog ─────────────────────────────────────────────
 
+// Category labels for grouping
+const CATEGORY_LABELS: Record<string, string> = {
+  DEFESA_RESPOSTA: "Defesa e Resposta",
+  RECURSAL: "Recursos",
+  FATAL_PEREMPTORIO: "Fatais e Peremptórios",
+  AUDIENCIA_SESSAO: "Audiências e Sessões",
+  RECUPERACAO_JUDICIAL: "Recuperação Judicial",
+  EXECUCAO_CUMPRIMENTO: "Execução e Cumprimento",
+  ADMINISTRATIVO_DILIGENCIA: "Administrativo e Diligências",
+  EXTRAJUDICIAL_CONTRATUAL: "Extrajudiciais e Contratuais",
+  TRIBUTARIO: "Tributários",
+  TAREFA_INTERNA: "Tarefas Internas",
+  OUTRO: "Outros",
+}
+
+const START_METHOD_LABELS: Record<string, string> = {
+  PUBLICACAO_DJE: "Publicação no DJE",
+  INTIMACAO_PESSOAL: "Intimação Pessoal",
+  INTIMACAO_ELETRONICA: "Intimação Eletrônica",
+  INTIMACAO_CORREIO: "Intimação por Correio (AR)",
+  INTIMACAO_EDITAL: "Intimação por Edital",
+  COMPARECIMENTO_ESPONTANEO: "Comparecimento Espontâneo",
+  AUDIENCIA: "Audiência",
+  CARGA_AUTOS: "Carga/Vista dos Autos",
+  DATA_FIXA: "Data Fixa",
+  MANUAL: "Manual (informar data)",
+}
+
 function NewDeadlineDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (v: boolean) => void }) {
   const [formData, setFormData] = useState({
-    case_id: "", tipo: "", titulo: "", data_fim_prazo: "", responsavel_id: "", dias_uteis: "", descricao: "",
+    case_id: "",
+    deadlineType: "",
+    title: "",
+    descricao: "",
+    startMethod: "MANUAL",
+    startDate: "",
+    disponibilizacaoDate: "",
+    publicacaoDate: "",
+    intimacaoDate: "",
+    responsavel_id: "",
+    isPublicEntity: false,
+    isDefensoria: false,
+    isMP: false,
+    isElectronic: true,
+    uf: "PR",
   })
 
   const { data: cases } = trpc.deadlines.casesForSelect.useQuery()
   const { data: users } = trpc.users.list.useQuery()
+  const { data: catalog } = trpc.deadlines.getTypeCatalog.useQuery()
   const utils = trpc.useUtils()
 
-  const createDeadline = trpc.deadlines.create.useMutation({
+  // Group catalog by category
+  const catalogByCategory = useMemo(() => {
+    if (!catalog) return {}
+    const grouped: Record<string, typeof catalog> = {}
+    for (const item of catalog) {
+      const cat = item.category
+      if (!grouped[cat]) grouped[cat] = []
+      grouped[cat].push(item)
+    }
+    return grouped
+  }, [catalog])
+
+  // Get selected catalog entry
+  const selectedCatalog = useMemo(() =>
+    catalog?.find((c) => c.type === formData.deadlineType),
+    [catalog, formData.deadlineType]
+  )
+
+  // Simulation query
+  const simulationInput = useMemo(() => {
+    if (!formData.deadlineType) return null
+    const input: Record<string, unknown> = {
+      deadlineType: formData.deadlineType,
+      startMethod: formData.startMethod,
+      isPublicEntity: formData.isPublicEntity,
+      isDefensoria: formData.isDefensoria,
+      isMP: formData.isMP,
+      isElectronic: formData.isElectronic,
+      uf: formData.uf,
+    }
+    if (formData.startMethod === "PUBLICACAO_DJE" && formData.disponibilizacaoDate) {
+      input.disponibilizacaoDate = new Date(formData.disponibilizacaoDate)
+      if (formData.publicacaoDate) input.publicacaoDate = new Date(formData.publicacaoDate)
+    } else if (formData.startDate) {
+      input.startDate = new Date(formData.startDate)
+    } else if (formData.intimacaoDate) {
+      input.intimacaoDate = new Date(formData.intimacaoDate)
+    }
+    // Only simulate if we have a start date
+    const hasDate = formData.startDate || formData.disponibilizacaoDate || formData.intimacaoDate
+    if (!hasDate) return null
+    return input
+  }, [formData])
+
+  const { data: simulation, isLoading: simLoading } = trpc.deadlines.simulate.useQuery(
+    simulationInput as any,
+    { enabled: !!simulationInput }
+  )
+
+  const createDeadline = trpc.deadlines.createExpanded.useMutation({
     onSuccess: () => {
       utils.deadlines.listNew.invalidate()
       utils.deadlines.dashboardStats.invalidate()
+      utils.deadlines.stats.invalidate()
       onOpenChange(false)
-      setFormData({ case_id: "", tipo: "", titulo: "", data_fim_prazo: "", responsavel_id: "", dias_uteis: "", descricao: "" })
+      setFormData({
+        case_id: "", deadlineType: "", title: "", descricao: "", startMethod: "MANUAL",
+        startDate: "", disponibilizacaoDate: "", publicacaoDate: "", intimacaoDate: "",
+        responsavel_id: "", isPublicEntity: false, isDefensoria: false, isMP: false, isElectronic: true, uf: "PR",
+      })
     },
   })
 
-  const set = (field: string, value: string) => setFormData((prev) => ({ ...prev, [field]: value }))
+  const set = (field: string, value: unknown) => setFormData((prev) => ({ ...prev, [field]: value }))
 
   const handleCreate = () => {
-    const now = new Date()
-    const dataFim = new Date(formData.data_fim_prazo)
-    const prazoDias = Math.max(1, Math.ceil((dataFim.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)))
+    if (!formData.deadlineType) return
 
     createDeadline.mutate({
-      titulo: formData.titulo,
-      descricao: formData.descricao || undefined,
-      tipo: formData.tipo,
-      prazo_dias: prazoDias,
-      data_evento_gatilho: now,
-      data_inicio_contagem: now,
-      data_fim_prazo: dataFim,
+      deadlineType: formData.deadlineType,
       case_id: formData.case_id || undefined,
+      title: formData.title || undefined,
+      descricao: formData.descricao || undefined,
+      startMethod: formData.startMethod,
+      startDate: formData.startDate ? new Date(formData.startDate) : undefined,
+      disponibilizacaoDate: formData.disponibilizacaoDate ? new Date(formData.disponibilizacaoDate) : undefined,
+      publicacaoDate: formData.publicacaoDate ? new Date(formData.publicacaoDate) : undefined,
+      intimacaoDate: formData.intimacaoDate ? new Date(formData.intimacaoDate) : undefined,
+      isPublicEntity: formData.isPublicEntity,
+      isDefensoria: formData.isDefensoria,
+      isMP: formData.isMP,
+      isElectronic: formData.isElectronic,
+      uf: formData.uf,
       responsavel_id: formData.responsavel_id || undefined,
+      dueDate: simulation?.dueDate ? new Date(simulation.dueDate) : undefined,
     })
   }
 
+  const canCreate = !!formData.deadlineType && (!!simulation || !!formData.startDate)
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="min-w-[550px] max-w-lg max-w-[95vw] max-h-[85vh] flex flex-col p-0 gap-0">
-        {/* FIXED HEADER */}
+      <DialogContent className="min-w-[700px] max-w-[95vw] max-h-[85vh] flex flex-col p-0 gap-0">
         <DialogHeader className="shrink-0 px-6 pt-6 pb-4 border-b">
-          <DialogTitle>Novo Prazo</DialogTitle>
+          <DialogTitle className="flex items-center gap-2">
+            <CalendarDays className="size-5" />
+            Novo Prazo
+          </DialogTitle>
+          <DialogDescription className="text-xs text-[#666666]">
+            Selecione o tipo de prazo do catálogo. O sistema calcula automaticamente as datas conforme CPC/2015.
+          </DialogDescription>
         </DialogHeader>
-        {/* SCROLLABLE BODY */}
+
         <div className="flex-1 overflow-y-auto min-h-0 px-6 py-4 space-y-4">
-          <div className="space-y-2">
-            <Label>Processo (opcional)</Label>
-            <Select value={formData.case_id} onValueChange={(v) => set("case_id", v)}>
-              <SelectTrigger><SelectValue placeholder="Selecionar processo" /></SelectTrigger>
-              <SelectContent>
-                {cases?.map((c) => (
-                  <SelectItem key={c.id} value={c.id}>
-                    {formatCNJ(c.numero_processo) || "Sem numero"} — {c.cliente.nome}
-                  </SelectItem>
+          {/* Row 1: Processo + Responsável */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <Label className="text-xs">Processo (opcional)</Label>
+              <Select value={formData.case_id} onValueChange={(v) => set("case_id", v)}>
+                <SelectTrigger className="h-9 text-sm"><SelectValue placeholder="Selecionar processo" /></SelectTrigger>
+                <SelectContent>
+                  {cases?.map((c) => (
+                    <SelectItem key={c.id} value={c.id} className="text-sm">
+                      {formatCNJ(c.numero_processo) || "s/n"} — {c.cliente.nome}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">Responsável</Label>
+              <Select value={formData.responsavel_id} onValueChange={(v) => set("responsavel_id", v)}>
+                <SelectTrigger className="h-9 text-sm"><SelectValue placeholder="Selecionar" /></SelectTrigger>
+                <SelectContent>
+                  {users?.map((u) => <SelectItem key={u.id} value={u.id} className="text-sm">{u.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          {/* Row 2: Tipo de Prazo (from catalog, grouped by category) */}
+          <div className="space-y-1.5">
+            <Label className="text-xs">Tipo de Prazo *</Label>
+            <Select value={formData.deadlineType} onValueChange={(v) => {
+              set("deadlineType", v)
+              // Auto-fill title from catalog
+              const item = catalog?.find((c) => c.type === v)
+              if (item && !formData.title) {
+                set("title", item.displayName)
+              }
+            }}>
+              <SelectTrigger className="h-9 text-sm"><SelectValue placeholder="Selecionar tipo de prazo" /></SelectTrigger>
+              <SelectContent className="max-h-[300px]">
+                {Object.entries(catalogByCategory).map(([cat, items]) => (
+                  <div key={cat}>
+                    <div className="px-2 py-1.5 text-xs font-semibold text-[#666666] bg-muted/50 sticky top-0">
+                      {CATEGORY_LABELS[cat] || cat}
+                    </div>
+                    {items.map((item) => (
+                      <SelectItem key={item.type} value={item.type} className="text-sm">
+                        <span className="flex items-center gap-2">
+                          <span className="size-2 rounded-full shrink-0" style={{ backgroundColor: item.color }} />
+                          {item.displayName}
+                          {item.isFatal && <span className="text-[10px] text-red-600 font-medium">FATAL</span>}
+                          <span className="text-[10px] text-[#999]">{item.defaultDays}d</span>
+                        </span>
+                      </SelectItem>
+                    ))}
+                  </div>
                 ))}
               </SelectContent>
             </Select>
           </div>
 
+          {/* Catalog info badge */}
+          {selectedCatalog && (
+            <div className="flex items-center gap-2 flex-wrap">
+              <Badge variant="outline" className="text-[10px]" style={{ borderColor: selectedCatalog.color, color: selectedCatalog.color }}>
+                {selectedCatalog.shortName}
+              </Badge>
+              <Badge variant="secondary" className="text-[10px]">
+                {selectedCatalog.defaultDays} {selectedCatalog.countingType === "DIAS_UTEIS" ? "dias úteis" : selectedCatalog.countingType === "DIAS_CORRIDOS" ? "dias corridos" : ""}
+              </Badge>
+              {selectedCatalog.legalBasis && (
+                <Badge variant="secondary" className="text-[10px]">{selectedCatalog.legalBasis}</Badge>
+              )}
+              {selectedCatalog.isFatal && (
+                <Badge className="text-[10px] bg-red-100 text-red-700">FATAL</Badge>
+              )}
+            </div>
+          )}
+
+          {/* Row 3: Title + Description */}
+          <div className="space-y-1.5">
+            <Label className="text-xs">Título</Label>
+            <Input className="h-9 text-sm" value={formData.title} onChange={(e) => set("title", e.target.value)} placeholder="Título do prazo (auto-preenchido pelo catálogo)" />
+          </div>
+
+          {/* Row 4: Start Method + Date */}
           <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>Tipo *</Label>
-              <Select value={formData.tipo} onValueChange={(v) => set("tipo", v)}>
-                <SelectTrigger><SelectValue placeholder="Tipo" /></SelectTrigger>
+            <div className="space-y-1.5">
+              <Label className="text-xs">Método de Início da Contagem *</Label>
+              <Select value={formData.startMethod} onValueChange={(v) => set("startMethod", v)}>
+                <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {Object.entries(DEADLINE_TYPE_LABELS).map(([v, l]) => (
-                    <SelectItem key={v} value={v}>{l}</SelectItem>
+                  {Object.entries(START_METHOD_LABELS).map(([v, l]) => (
+                    <SelectItem key={v} value={v} className="text-sm">{l}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-2">
-              <Label>Responsável</Label>
-              <Select value={formData.responsavel_id} onValueChange={(v) => set("responsavel_id", v)}>
-                <SelectTrigger><SelectValue placeholder="Selecionar" /></SelectTrigger>
+            <div className="space-y-1.5">
+              <Label className="text-xs">UF</Label>
+              <Select value={formData.uf} onValueChange={(v) => set("uf", v)}>
+                <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {users?.map((u) => <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>)}
+                  {ESTADOS_BRASIL.map((uf) => <SelectItem key={uf} value={uf} className="text-sm">{uf}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label>Título *</Label>
-            <Input value={formData.titulo} onChange={(e) => set("titulo", e.target.value)} placeholder="Titulo do prazo..." />
+          {/* Conditional date fields based on startMethod */}
+          {formData.startMethod === "PUBLICACAO_DJE" ? (
+            <div className="grid grid-cols-2 gap-4 p-3 bg-blue-50 rounded-lg border border-blue-100">
+              <div className="space-y-1.5">
+                <Label className="text-xs text-blue-700">Disponibilização no DJE *</Label>
+                <Input type="date" className="h-9 text-sm" value={formData.disponibilizacaoDate}
+                  onChange={(e) => set("disponibilizacaoDate", e.target.value)} />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs text-blue-700">Publicação (1o útil após)</Label>
+                <Input type="date" className="h-9 text-sm" value={formData.publicacaoDate}
+                  onChange={(e) => set("publicacaoDate", e.target.value)} />
+                <p className="text-[9px] text-blue-500">Deixe em branco para calcular automaticamente</p>
+              </div>
+            </div>
+          ) : formData.startMethod.startsWith("INTIMACAO") ? (
+            <div className="space-y-1.5">
+              <Label className="text-xs">Data da Intimação *</Label>
+              <Input type="date" className="h-9 text-sm" value={formData.intimacaoDate}
+                onChange={(e) => set("intimacaoDate", e.target.value)} />
+            </div>
+          ) : (
+            <div className="space-y-1.5">
+              <Label className="text-xs">Data de Início *</Label>
+              <Input type="date" className="h-9 text-sm" value={formData.startDate}
+                onChange={(e) => set("startDate", e.target.value)} />
+            </div>
+          )}
+
+          {/* Context flags: Fazenda Pública, Defensoria, MP */}
+          <div className="flex items-center gap-4 flex-wrap">
+            <label className="flex items-center gap-1.5 text-xs cursor-pointer">
+              <Checkbox checked={formData.isPublicEntity}
+                onCheckedChange={(v) => set("isPublicEntity", !!v)} />
+              <span>Fazenda Pública</span>
+              {formData.isPublicEntity && selectedCatalog?.doubleForPublicEntity && (
+                <span className="text-[9px] text-orange-600 font-medium">(2x)</span>
+              )}
+            </label>
+            <label className="flex items-center gap-1.5 text-xs cursor-pointer">
+              <Checkbox checked={formData.isDefensoria}
+                onCheckedChange={(v) => set("isDefensoria", !!v)} />
+              <span>Defensoria</span>
+              {formData.isDefensoria && selectedCatalog?.doubleForDefensoria && (
+                <span className="text-[9px] text-orange-600 font-medium">(2x)</span>
+              )}
+            </label>
+            <label className="flex items-center gap-1.5 text-xs cursor-pointer">
+              <Checkbox checked={formData.isMP}
+                onCheckedChange={(v) => set("isMP", !!v)} />
+              <span>Ministério Público</span>
+              {formData.isMP && <span className="text-[9px] text-orange-600 font-medium">(2x)</span>}
+            </label>
+            <label className="flex items-center gap-1.5 text-xs cursor-pointer">
+              <Checkbox checked={formData.isElectronic}
+                onCheckedChange={(v) => set("isElectronic", !!v)} />
+              <span>Processo eletrônico</span>
+            </label>
           </div>
 
-          <div className="space-y-2">
-            <Label>Descrição (opcional)</Label>
-            <Textarea value={formData.descricao} onChange={(e) => set("descricao", e.target.value)} placeholder="Detalhes adicionais..." />
-          </div>
+          {/* Simulation Preview Panel */}
+          {simulation && (
+            <Card className="border-green-200 bg-green-50/50">
+              <CardContent className="pt-4 pb-3 space-y-2">
+                <div className="flex items-center gap-2 mb-2">
+                  <Activity className="size-4 text-green-700" />
+                  <span className="text-sm font-semibold text-green-800">Simulação do Prazo</span>
+                  {simulation.isFatal && (
+                    <Badge className="text-[10px] bg-red-600 text-white">FATAL</Badge>
+                  )}
+                </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>Data Limite *</Label>
-              <Input type="date" value={formData.data_fim_prazo} onChange={(e) => set("data_fim_prazo", e.target.value)} />
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="text-center p-2 bg-white rounded border">
+                    <p className="text-[10px] text-[#666666]">Início</p>
+                    <p className="text-sm font-bold">{new Date(simulation.startDate).toLocaleDateString("pt-BR")}</p>
+                  </div>
+                  <div className="text-center p-2 bg-white rounded border">
+                    <p className="text-[10px] text-[#666666]">Prazo Final</p>
+                    <p className="text-sm font-bold text-red-700">{new Date(simulation.dueDate).toLocaleDateString("pt-BR")}</p>
+                  </div>
+                  <div className="text-center p-2 bg-white rounded border">
+                    <p className="text-[10px] text-[#666666]">Prazo Interno</p>
+                    <p className="text-sm font-bold text-orange-600">{new Date(simulation.internalDueDate).toLocaleDateString("pt-BR")}</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3 text-xs">
+                  <span>{simulation.effectiveDays} {simulation.countingType === "DIAS_UTEIS" ? "dias úteis" : "dias corridos"}</span>
+                  {simulation.isDoubled && (
+                    <Badge variant="outline" className="text-[10px] border-orange-400 text-orange-700">
+                      Dobrado — {simulation.doubleReason}
+                    </Badge>
+                  )}
+                  {simulation.legalBasis && (
+                    <span className="text-[#999]">{simulation.legalBasis}</span>
+                  )}
+                </div>
+
+                {simulation.warnings?.length > 0 && (
+                  <div className="space-y-1">
+                    {simulation.warnings.map((w: string, i: number) => (
+                      <div key={i} className="flex items-start gap-1.5 text-[10px] text-amber-700 bg-amber-50 rounded px-2 py-1">
+                        <AlertTriangle className="size-3 mt-0.5 shrink-0" />
+                        {w}
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Calculation log (collapsible) */}
+                {simulation.calculationLog?.length > 0 && (
+                  <details className="text-[10px] text-[#666666]">
+                    <summary className="cursor-pointer hover:text-[#333]">Log de cálculo ({simulation.calculationLog.length} passos)</summary>
+                    <div className="mt-1 space-y-0.5 pl-2 border-l">
+                      {simulation.calculationLog.map((log: { step: number; rule: string; description: string }, i: number) => (
+                        <div key={i}><strong>{log.step}.</strong> [{log.rule}] {log.description}</div>
+                      ))}
+                    </div>
+                  </details>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
+          {simLoading && formData.deadlineType && (
+            <div className="flex items-center justify-center py-4 text-xs text-[#666666]">
+              <Loader2 className="size-4 mr-2 animate-spin" /> Calculando prazo...
             </div>
-            <div className="space-y-2">
-              <Label>Ou dias uteis a partir de hoje</Label>
-              <Input
-                type="number" min={1} placeholder="Ex: 15"
-                value={formData.dias_uteis}
-                onChange={(e) => {
-                  set("dias_uteis", e.target.value)
-                  if (e.target.value) {
-                    const d = new Date()
-                    d.setDate(d.getDate() + parseInt(e.target.value))
-                    set("data_fim_prazo", d.toISOString().split("T")[0])
-                  }
-                }}
-              />
-              <p className="text-[10px] text-[#666666]">Estimativa em dias corridos (o servidor calcula dias uteis).</p>
-            </div>
+          )}
+
+          {/* Description */}
+          <div className="space-y-1.5">
+            <Label className="text-xs">Observações (opcional)</Label>
+            <Textarea className="text-sm min-h-[60px]" value={formData.descricao}
+              onChange={(e) => set("descricao", e.target.value)} placeholder="Detalhes adicionais..." />
           </div>
         </div>
-        {/* FIXED FOOTER */}
+
         <DialogFooter className="shrink-0 px-6 py-4 border-t">
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
-          <Button
-            disabled={!formData.tipo || !formData.titulo || !formData.data_fim_prazo || createDeadline.isPending}
-            onClick={handleCreate}
-          >
-            {createDeadline.isPending ? "Salvando..." : "Salvar"}
+          <Button disabled={!canCreate || createDeadline.isPending} onClick={handleCreate}>
+            {createDeadline.isPending ? "Salvando..." : "Salvar Prazo"}
           </Button>
         </DialogFooter>
       </DialogContent>

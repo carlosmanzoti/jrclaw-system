@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef, useCallback } from "react"
+import { useState, useRef, useCallback, useMemo } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import {
@@ -682,6 +682,21 @@ function MovimentacoesTab({ caso, caseId, utils }: { caso: CaseData; caseId: str
 
 // ─── Prazos Tab ──────────────────────────────────────────────────
 
+// Category labels for grouping deadline types
+const DEADLINE_CATEGORY_LABELS: Record<string, string> = {
+  DEFESA_RESPOSTA: "Defesa e Resposta",
+  RECURSAL: "Recursos",
+  FATAL_PEREMPTORIO: "Fatais e Peremptórios",
+  AUDIENCIA_SESSAO: "Audiências e Sessões",
+  RECUPERACAO_JUDICIAL: "Recuperação Judicial",
+  EXECUCAO_CUMPRIMENTO: "Execução e Cumprimento",
+  ADMINISTRATIVO_DILIGENCIA: "Administrativo e Diligências",
+  EXTRAJUDICIAL_CONTRATUAL: "Extrajudiciais e Contratuais",
+  TRIBUTARIO: "Tributários",
+  TAREFA_INTERNA: "Tarefas Internas",
+  OUTRO: "Outros",
+}
+
 function PrazosTab({
   caso, caseId, users, utils,
 }: {
@@ -693,6 +708,20 @@ function PrazosTab({
 }) {
   const [dialogOpen, setDialogOpen] = useState(false)
   const [prazoData, setPrazoData] = useState({ tipo: "", descricao: "", data_limite: "", responsavel_id: "" })
+
+  const { data: catalog } = trpc.deadlines.getTypeCatalog.useQuery()
+
+  // Group catalog by category
+  const catalogByCategory = useMemo(() => {
+    if (!catalog) return {}
+    const grouped: Record<string, typeof catalog> = {}
+    for (const item of catalog) {
+      const cat = item.category
+      if (!grouped[cat]) grouped[cat] = []
+      grouped[cat].push(item)
+    }
+    return grouped
+  }, [catalog])
 
   const addDeadline = trpc.cases.addDeadline.useMutation({
     onSuccess: () => {
@@ -802,10 +831,23 @@ function PrazosTab({
               <div className="space-y-2">
                 <Label>Tipo *</Label>
                 <Select value={prazoData.tipo} onValueChange={(v) => setPrazoData({ ...prazoData, tipo: v })}>
-                  <SelectTrigger><SelectValue placeholder="Tipo" /></SelectTrigger>
-                  <SelectContent>
-                    {Object.entries(DEADLINE_TYPE_LABELS).map(([v, l]) => (
-                      <SelectItem key={v} value={v}>{l}</SelectItem>
+                  <SelectTrigger><SelectValue placeholder="Selecionar tipo de prazo" /></SelectTrigger>
+                  <SelectContent className="max-h-[300px]">
+                    {Object.entries(catalogByCategory).map(([cat, items]) => (
+                      <div key={cat}>
+                        <div className="px-2 py-1.5 text-xs font-semibold text-[#666666] bg-muted/50 sticky top-0">
+                          {DEADLINE_CATEGORY_LABELS[cat] || cat}
+                        </div>
+                        {items.map((item) => (
+                          <SelectItem key={item.type} value={item.type} className="text-sm">
+                            <span className="flex items-center gap-2">
+                              <span className="size-2 rounded-full shrink-0" style={{ backgroundColor: item.color }} />
+                              {item.displayName}
+                              {item.isFatal && <span className="text-[10px] text-red-600 font-medium">FATAL</span>}
+                            </span>
+                          </SelectItem>
+                        ))}
+                      </div>
                     ))}
                   </SelectContent>
                 </Select>
