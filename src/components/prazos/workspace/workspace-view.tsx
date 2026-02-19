@@ -275,7 +275,8 @@ export function WorkspaceView({ deadlineId, onClose }: { deadlineId: string; onC
   const phase = workspace.phase
   const currentIdx = PHASES.findIndex(p => p.key === phase)
   const viewIdx = PHASES.findIndex(p => p.key === viewingPhase)
-  const isReadOnly = viewIdx < currentIdx || phase === "CONCLUIDO"
+  const isViewingPastPhase = viewIdx < currentIdx
+  const isReadOnly = isViewingPastPhase || phase === "CONCLUIDO"
   const subTabs = getSubTabs(viewingPhase, phase)
 
   return (
@@ -359,7 +360,7 @@ export function WorkspaceView({ deadlineId, onClose }: { deadlineId: string; onC
 
           <div className="flex-1 overflow-y-auto">
             <TabsContent value="documentos" className="p-4 m-0">
-              <DocumentsTab workspaceId={workspace.id} deadlineId={deadlineId} documents={workspace.documents} isReadOnly={isReadOnly} onUpdate={invalidateAll} />
+              <DocumentsTab workspaceId={workspace.id} deadlineId={deadlineId} documents={workspace.documents} isReadOnly={isReadOnly} currentPhase={phase} viewingPhase={viewingPhase} onUpdate={invalidateAll} />
             </TabsContent>
             <TabsContent value="checklist" className="p-4 m-0">
               <ChecklistTab workspaceId={workspace.id} items={workspace.checklist_items} isReadOnly={isReadOnly} />
@@ -520,12 +521,15 @@ function PhaseTransitionBar({
 // ═══════════════════════════════════════════════════════════════
 
 function DocumentsTab({
-  workspaceId, deadlineId, documents, isReadOnly, onUpdate,
+  workspaceId, deadlineId, documents, isReadOnly, currentPhase, viewingPhase, onUpdate,
 }: {
-  workspaceId: string; deadlineId: string; documents: any[]; isReadOnly: boolean; onUpdate: () => void
+  workspaceId: string; deadlineId: string; documents: any[]; isReadOnly: boolean; currentPhase: string; viewingPhase: string; onUpdate: () => void
 }) {
   const utils = trpc.useUtils()
   const addDoc = trpc.deadlines.workspace.addDocument.useMutation({
+    onSuccess: () => { utils.deadlines.workspace.get.invalidate({ workspaceId }); utils.deadlines.workspace.stats.invalidate({ workspaceId }); onUpdate() },
+  })
+  const replaceMinuta = trpc.deadlines.workspace.replaceMinuta.useMutation({
     onSuccess: () => { utils.deadlines.workspace.get.invalidate({ workspaceId }); utils.deadlines.workspace.stats.invalidate({ workspaceId }); onUpdate() },
   })
   const removeDoc = trpc.deadlines.workspace.removeDocument.useMutation({
@@ -540,9 +544,25 @@ function DocumentsTab({
   const [showAddAnexo, setShowAddAnexo] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const minutaInputRef = useRef<HTMLInputElement>(null)
+  const replaceMinutaInputRef = useRef<HTMLInputElement>(null)
 
-  const minuta = documents.find((d: any) => d.is_minuta_principal)
-  const anexos = documents.filter((d: any) => !d.is_minuta_principal).sort((a: any, b: any) => a.order - b.order)
+  // Permission logic per phase:
+  // RASCUNHO: full edit (author)
+  // REVISAO/APROVACAO: can add docs and replace minuta, but can't remove/rename docs from earlier phases
+  // PROTOCOLO: can add receipt only (handled in protocol tab)
+  // CONCLUIDO: read-only
+  const isCurrentPhaseView = viewingPhase === currentPhase
+  const isApprovalOrReview = isCurrentPhaseView && (currentPhase === "APROVACAO" || currentPhase === "REVISAO")
+  const isDraftPhase = isCurrentPhaseView && currentPhase === "RASCUNHO"
+  const canAddDocs = !isReadOnly || isApprovalOrReview
+  const canReplaceMinuta = isDraftPhase || isApprovalOrReview
+  const canFullEdit = isDraftPhase // only in draft: full edit (remove, rename)
+
+  const minuta = documents.find((d: any) => d.is_minuta_principal && !d.is_versao_anterior)
+  const previousMinutas = documents.filter((d: any) => d.is_versao_anterior).sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+  const anexos = documents.filter((d: any) => !d.is_minuta_principal && !d.is_versao_anterior).sort((a: any, b: any) => a.order - b.order)
+
+  const FASE_LABELS: Record<string, string> = { RASCUNHO: "Rascunho", REVISAO: "Revisão", APROVACAO: "Aprovação", PROTOCOLO: "Protocolo" }
 
   const handleUpload = async (file: File, isMinuta: boolean, title?: string) => {
     setUploading(true)
@@ -567,6 +587,37 @@ function DocumentsTab({
         fileSize: data.fileSize,
         mimeType: data.mimeType,
         isMinutaPrincipal: isMinuta,
+        faseOrigem: currentPhase,
+      })
+    } catch {
+      alert("Erro ao enviar arquivo")
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  const handleReplaceMinuta = async (file: File) => {
+    setUploading(true)
+    try {
+      const formData = new FormData()
+      formData.append("file", file)
+      formData.append("workspaceId", workspaceId)
+
+      const res = await fetch("/api/deadlines/workspace/upload", { method: "POST", body: formData })
+      if (!res.ok) {
+        const err = await res.json()
+        alert(err.error || "Erro no upload")
+        return
+      }
+
+      const data = await res.json()
+      replaceMinuta.mutate({
+        workspaceId,
+        fileUrl: data.url,
+        fileName: data.fileName,
+        fileSize: data.fileSize,
+        mimeType: data.mimeType,
+        faseOrigem: currentPhase,
       })
     } catch {
       alert("Erro ao enviar arquivo")
@@ -577,6 +628,14 @@ function DocumentsTab({
 
   const totalSize = documents.reduce((acc: number, d: any) => acc + (d.file_size || 0), 0)
   const pendingAnexos = anexos.filter((a: any) => !a.file_url || a.file_url === "pending")
+
+  // For an anexo, can the current user remove/rename it?
+  const canEditAnexo = (doc: any) => {
+    if (canFullEdit) return true // draft phase: full control
+    // In approval/review: can only remove docs added in the current phase
+    if (isApprovalOrReview && doc.fase_origem === currentPhase) return true
+    return false
+  }
 
   return (
     <div className="space-y-6 max-w-3xl">
@@ -594,6 +653,9 @@ function DocumentsTab({
               <p className="text-sm font-medium truncate">{minuta.file_name}</p>
               <p className="text-xs text-muted-foreground">
                 {(minuta.file_size / 1024).toFixed(0)} KB · Enviado por {minuta.uploaded_by_name || "—"} em {new Date(minuta.created_at).toLocaleString("pt-BR")}
+                {minuta.fase_origem && minuta.fase_origem !== "RASCUNHO" && (
+                  <> · <Badge variant="outline" className="text-[10px] ml-1">{FASE_LABELS[minuta.fase_origem] || minuta.fase_origem}</Badge></>
+                )}
               </p>
             </div>
             <div className="flex items-center gap-1 shrink-0">
@@ -607,19 +669,26 @@ function DocumentsTab({
                   <Button variant="ghost" size="icon" className="size-7"><Download className="size-3.5" /></Button>
                 </a>
               )}
-              {!isReadOnly && (
-                <>
-                  <Button variant="ghost" size="icon" className="size-7" onClick={() => minutaInputRef.current?.click()} disabled={uploading}>
-                    <RefreshCw className="size-3.5" />
-                  </Button>
-                  <Button variant="ghost" size="icon" className="size-7 text-destructive" onClick={() => removeDoc.mutate({ documentId: minuta.id })}>
-                    <Trash2 className="size-3.5" />
-                  </Button>
-                </>
+              {canReplaceMinuta && (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button variant="ghost" size="icon" className="size-7" onClick={() => replaceMinutaInputRef.current?.click()} disabled={uploading}>
+                        <RefreshCw className="size-3.5" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>{isApprovalOrReview ? "Substituir por Versão Final" : "Substituir Minuta"}</TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
+              {canFullEdit && (
+                <Button variant="ghost" size="icon" className="size-7 text-destructive" onClick={() => removeDoc.mutate({ documentId: minuta.id })}>
+                  <Trash2 className="size-3.5" />
+                </Button>
               )}
             </div>
           </div>
-        ) : !isReadOnly ? (
+        ) : canAddDocs ? (
           <div
             className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-primary/50 hover:bg-primary/5 transition-colors cursor-pointer"
             onClick={() => minutaInputRef.current?.click()}
@@ -632,6 +701,36 @@ function DocumentsTab({
         ) : (
           <p className="text-sm text-muted-foreground text-center py-4">Nenhuma minuta juntada</p>
         )}
+
+        {/* Previous minuta versions (history) */}
+        {previousMinutas.length > 0 && (
+          <div className="space-y-1">
+            {previousMinutas.map((old: any) => (
+              <div key={old.id} className="flex items-center gap-3 p-2 bg-gray-50 rounded border border-gray-200 opacity-70">
+                <FileText className="size-4 text-gray-400 shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs text-muted-foreground truncate">
+                    {old.file_name} — {(old.file_size / 1024).toFixed(0)} KB — {old.uploaded_by_name || "—"} — {new Date(old.created_at).toLocaleString("pt-BR")}
+                    <Badge variant="outline" className="text-[9px] ml-1.5">versão anterior</Badge>
+                  </p>
+                </div>
+                <div className="flex items-center gap-0.5 shrink-0">
+                  {old.file_url && (
+                    <a href={old.file_url} target="_blank" rel="noopener noreferrer">
+                      <Button variant="ghost" size="icon" className="size-6"><Eye className="size-3" /></Button>
+                    </a>
+                  )}
+                  {old.file_url && (
+                    <a href={old.file_url} download={old.file_name}>
+                      <Button variant="ghost" size="icon" className="size-6"><Download className="size-3" /></Button>
+                    </a>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
         <input
           ref={minutaInputRef}
           type="file"
@@ -640,6 +739,17 @@ function DocumentsTab({
           onChange={e => {
             const file = e.target.files?.[0]
             if (file) handleUpload(file, true)
+            e.target.value = ""
+          }}
+        />
+        <input
+          ref={replaceMinutaInputRef}
+          type="file"
+          accept=".docx,.doc,.pdf,.odt"
+          className="hidden"
+          onChange={e => {
+            const file = e.target.files?.[0]
+            if (file) handleReplaceMinuta(file)
             e.target.value = ""
           }}
         />
@@ -657,68 +767,77 @@ function DocumentsTab({
                   <th className="px-3 py-2 text-left w-8">#</th>
                   <th className="px-3 py-2 text-left">Nome do Anexo</th>
                   <th className="px-3 py-2 text-left">Arquivo</th>
+                  <th className="px-3 py-2 text-left w-24">Origem</th>
                   <th className="px-3 py-2 text-right w-20">Tamanho</th>
                   <th className="px-3 py-2 text-right w-24">Ações</th>
                 </tr>
               </thead>
               <tbody className="divide-y">
-                {anexos.map((doc: any, idx: number) => (
-                  <tr key={doc.id} className="hover:bg-gray-50">
-                    <td className="px-3 py-2 text-muted-foreground">{idx + 1}</td>
-                    <td className="px-3 py-2">
-                      {isReadOnly ? (
-                        <span>{doc.title}</span>
-                      ) : (
-                        <input
-                          className="w-full bg-transparent border-0 p-0 text-sm focus:ring-0 focus:outline-none"
-                          defaultValue={doc.title}
-                          onBlur={e => {
-                            if (e.target.value !== doc.title) {
-                              updateDoc.mutate({ documentId: doc.id, title: e.target.value })
-                            }
-                          }}
-                        />
-                      )}
-                    </td>
-                    <td className="px-3 py-2">
-                      {doc.file_url ? (
-                        <span className="text-xs text-muted-foreground">{doc.file_name}</span>
-                      ) : (
-                        <Badge variant="outline" className="text-amber-600 border-amber-300 text-[10px]">
-                          <AlertCircle className="size-3 mr-1" /> Pendente
+                {anexos.map((doc: any, idx: number) => {
+                  const editable = canEditAnexo(doc)
+                  return (
+                    <tr key={doc.id} className="hover:bg-gray-50">
+                      <td className="px-3 py-2 text-muted-foreground">{idx + 1}</td>
+                      <td className="px-3 py-2">
+                        {editable ? (
+                          <input
+                            className="w-full bg-transparent border-0 p-0 text-sm focus:ring-0 focus:outline-none"
+                            defaultValue={doc.title}
+                            onBlur={e => {
+                              if (e.target.value !== doc.title) {
+                                updateDoc.mutate({ documentId: doc.id, title: e.target.value })
+                              }
+                            }}
+                          />
+                        ) : (
+                          <span>{doc.title}</span>
+                        )}
+                      </td>
+                      <td className="px-3 py-2">
+                        {doc.file_url ? (
+                          <span className="text-xs text-muted-foreground">{doc.file_name}</span>
+                        ) : (
+                          <Badge variant="outline" className="text-amber-600 border-amber-300 text-[10px]">
+                            <AlertCircle className="size-3 mr-1" /> Pendente
+                          </Badge>
+                        )}
+                      </td>
+                      <td className="px-3 py-2">
+                        <Badge variant="outline" className="text-[10px]">
+                          {FASE_LABELS[doc.fase_origem] || doc.fase_origem || "Rascunho"}
                         </Badge>
-                      )}
-                    </td>
-                    <td className="px-3 py-2 text-right text-xs text-muted-foreground">
-                      {doc.file_size ? `${(doc.file_size / 1024).toFixed(0)} KB` : "—"}
-                    </td>
-                    <td className="px-3 py-2 text-right">
-                      <div className="flex items-center justify-end gap-0.5">
-                        {doc.file_url && (
-                          <a href={doc.file_url} target="_blank" rel="noopener noreferrer">
-                            <Button variant="ghost" size="icon" className="size-6"><Eye className="size-3" /></Button>
-                          </a>
-                        )}
-                        {doc.file_url && (
-                          <a href={doc.file_url} download={doc.file_name}>
-                            <Button variant="ghost" size="icon" className="size-6"><Download className="size-3" /></Button>
-                          </a>
-                        )}
-                        {!isReadOnly && (
-                          <Button variant="ghost" size="icon" className="size-6 text-destructive" onClick={() => removeDoc.mutate({ documentId: doc.id })}>
-                            <Trash2 className="size-3" />
-                          </Button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                      </td>
+                      <td className="px-3 py-2 text-right text-xs text-muted-foreground">
+                        {doc.file_size ? `${(doc.file_size / 1024).toFixed(0)} KB` : "—"}
+                      </td>
+                      <td className="px-3 py-2 text-right">
+                        <div className="flex items-center justify-end gap-0.5">
+                          {doc.file_url && (
+                            <a href={doc.file_url} target="_blank" rel="noopener noreferrer">
+                              <Button variant="ghost" size="icon" className="size-6"><Eye className="size-3" /></Button>
+                            </a>
+                          )}
+                          {doc.file_url && (
+                            <a href={doc.file_url} download={doc.file_name}>
+                              <Button variant="ghost" size="icon" className="size-6"><Download className="size-3" /></Button>
+                            </a>
+                          )}
+                          {editable && (
+                            <Button variant="ghost" size="icon" className="size-6 text-destructive" onClick={() => removeDoc.mutate({ documentId: doc.id })}>
+                              <Trash2 className="size-3" />
+                            </Button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  )
+                })}
               </tbody>
             </table>
           </div>
         )}
 
-        {!isReadOnly && (
+        {canAddDocs && (
           <>
             {showAddAnexo ? (
               <div className="flex items-center gap-2 border rounded-lg p-3">
@@ -736,7 +855,7 @@ function DocumentsTab({
               </div>
             ) : (
               <Button variant="outline" size="sm" onClick={() => setShowAddAnexo(true)}>
-                <Plus className="size-3.5 mr-1.5" /> Adicionar Anexo
+                <Plus className="size-3.5 mr-1.5" /> Adicionar Documento
               </Button>
             )}
             <input
@@ -754,11 +873,19 @@ function DocumentsTab({
             />
           </>
         )}
+
+        {/* Info banner for approval/review phase */}
+        {isApprovalOrReview && (
+          <div className="flex items-start gap-2 p-3 bg-blue-50 border border-blue-200 rounded-lg text-xs text-blue-700">
+            <AlertCircle className="size-4 shrink-0 mt-0.5" />
+            <span>Documentos da fase de Rascunho são somente leitura. Você pode adicionar novos documentos ou substituir a minuta por uma versão final.</span>
+          </div>
+        )}
       </div>
 
       {/* Summary */}
       <div className="flex items-center justify-between text-xs text-muted-foreground pt-2 border-t">
-        <span>Total: {documents.length} documento(s) · {(totalSize / (1024 * 1024)).toFixed(1)} MB</span>
+        <span>Total: {documents.filter((d: any) => !d.is_versao_anterior).length} documento(s) · {(totalSize / (1024 * 1024)).toFixed(1)} MB</span>
         {pendingAnexos.length > 0 && (
           <span className="text-amber-600">{pendingAnexos.length} anexo(s) pendente(s)</span>
         )}

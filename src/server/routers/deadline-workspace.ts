@@ -580,6 +580,7 @@ export const workspaceRouter = router({
       category: z.string().optional(),
       isMinutaPrincipal: z.boolean().optional(),
       isRequired: z.boolean().optional(),
+      faseOrigem: z.string().optional(),
     }))
     .mutation(async ({ ctx, input }) => {
       // If marking as minuta principal, unmark any existing one
@@ -606,6 +607,7 @@ export const workspaceRouter = router({
           category: input.category || "ANEXO",
           is_minuta_principal: input.isMinutaPrincipal || false,
           is_required: input.isRequired || false,
+          fase_origem: input.faseOrigem || "RASCUNHO",
           order: input.isMinutaPrincipal ? 0 : (maxOrder._max.order || 0) + 1,
           uploaded_by: ctx.session.user.id,
           uploaded_by_name: ctx.session.user.name,
@@ -628,6 +630,78 @@ export const workspaceRouter = router({
       onDocumentUploaded(input.workspaceId, doc.id).catch(() => {});
 
       return doc;
+    }),
+
+  // Replace minuta principal — keeps old version as history
+  replaceMinuta: protectedProcedure
+    .input(z.object({
+      workspaceId: z.string(),
+      fileUrl: z.string(),
+      fileName: z.string(),
+      fileSize: z.number().optional(),
+      mimeType: z.string().optional(),
+      faseOrigem: z.string().optional(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      // Find current minuta
+      const currentMinuta = await ctx.db.workspaceDocument.findFirst({
+        where: { workspace_id: input.workspaceId, is_minuta_principal: true, is_versao_anterior: false },
+      });
+
+      // Get workspace phase for fase_origem
+      const ws = await ctx.db.deadlineWorkspace.findUnique({
+        where: { id: input.workspaceId },
+        select: { phase: true },
+      });
+
+      // Create new minuta
+      const newDoc = await ctx.db.workspaceDocument.create({
+        data: {
+          workspace_id: input.workspaceId,
+          title: input.fileName.replace(/\.[^.]+$/, ""),
+          file_url: input.fileUrl,
+          file_name: input.fileName,
+          file_size: input.fileSize || 0,
+          mime_type: input.mimeType,
+          category: "ANEXO",
+          is_minuta_principal: true,
+          is_versao_anterior: false,
+          fase_origem: input.faseOrigem || ws?.phase || "RASCUNHO",
+          order: 0,
+          uploaded_by: ctx.session.user.id,
+          uploaded_by_name: ctx.session.user.name,
+        },
+      });
+
+      // Demote old minuta to version history (keep it, don't delete)
+      if (currentMinuta) {
+        await ctx.db.workspaceDocument.update({
+          where: { id: currentMinuta.id },
+          data: {
+            is_minuta_principal: false,
+            is_versao_anterior: true,
+            substituido_por_id: newDoc.id,
+          },
+        });
+      }
+
+      // Log activity
+      const oldName = currentMinuta?.file_name || "—";
+      await ctx.db.workspaceActivity.create({
+        data: {
+          workspace_id: input.workspaceId,
+          action: "DOCUMENT_UPLOADED",
+          description: `${ctx.session.user.name || "Usuário"} substituiu a minuta principal: ${oldName} → ${input.fileName}`,
+          user_id: ctx.session.user.id,
+          user_name: ctx.session.user.name || "Sistema",
+          metadata: { old_file: oldName, new_file: input.fileName, action_type: "replace_minuta" },
+        },
+      });
+
+      // Fire-and-forget
+      onDocumentUploaded(input.workspaceId, newDoc.id).catch(() => {});
+
+      return newDoc;
     }),
 
   updateDocument: protectedProcedure

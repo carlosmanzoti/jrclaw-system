@@ -4092,6 +4092,10 @@ model WorkspaceDocument {
   description           String?
 
   is_minuta_principal   Boolean   @default(false)  // flag: main draft file (only 1 per workspace)
+  is_versao_anterior    Boolean   @default(false)  // flag: replaced minuta (kept as history)
+  substituido_por_id    String?                    // ID of the newer document that replaced this one
+
+  fase_origem           String    @default("RASCUNHO") // phase when document was added: RASCUNHO, REVISAO, APROVACAO
 
   order                 Int       @default(0)
   is_required           Boolean   @default(false)
