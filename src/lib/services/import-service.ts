@@ -485,13 +485,13 @@ async function insertDeadline(
   const rec = await tx.deadline.create({
     data: {
       case_id: caseId,
-      tipo: (String(row.tipo || "ORDINARIO")).toUpperCase() as never,
+      tipo: (String(row.tipo || "DILIGENCIA")).toUpperCase() as never,
       descricao: String(row.descricao || ""),
       data_limite: new Date(String(row.data_limite)),
       data_alerta: [],
       status: (String(row.status || "PENDENTE")).toUpperCase() as never,
       responsavel_id: String(defaults.responsavel_id || ""),
-      origem: row.origem ? String(row.origem) : "IMPORTACAO",
+      origem: (row.origem ? String(row.origem) : "IMPORTACAO") as never,
     },
   })
   return rec.id

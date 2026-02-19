@@ -365,15 +365,15 @@ export default async function DashboardPage() {
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-medium truncate">{d.descricao}</p>
                       <p className="text-xs text-[#666666] font-mono truncate">
-                        {formatCNJ(d.case_.numero_processo)} — {d.case_.cliente.nome}
+                        {d.case_ ? `${formatCNJ(d.case_.numero_processo)} — ${d.case_.cliente?.nome ?? ""}` : "Sem processo vinculado"}
                       </p>
                     </div>
                     <div className="ml-3 flex items-center gap-2">
                       <Badge variant="secondary" className="text-[10px]">
                         {DEADLINE_TYPE_LABELS[d.tipo]}
                       </Badge>
-                      <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${deadlineColor(d.data_limite)}`}>
-                        {new Date(d.data_limite).toLocaleDateString("pt-BR")}
+                      <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${deadlineColor(d.data_limite ?? d.dueDate ?? new Date())}`}>
+                        {(d.data_limite ?? d.dueDate) ? new Date((d.data_limite ?? d.dueDate)!).toLocaleDateString("pt-BR") : "Sem data"}
                       </span>
                       <Button asChild size="sm" variant="outline" className="h-7 text-xs gap-1">
                         <Link href={`/prazos?cumprir=${d.id}`}>
@@ -381,12 +381,14 @@ export default async function DashboardPage() {
                           Cumprir
                         </Link>
                       </Button>
-                      <Button asChild size="sm" variant="ghost" className="h-7 text-xs gap-1">
-                        <Link href={`/processos/${d.case_.id}`}>
-                          <ExternalLink className="size-3" />
-                          Ver processo
-                        </Link>
-                      </Button>
+                      {d.case_ && (
+                        <Button asChild size="sm" variant="ghost" className="h-7 text-xs gap-1">
+                          <Link href={`/processos/${d.case_.id}`}>
+                            <ExternalLink className="size-3" />
+                            Ver processo
+                          </Link>
+                        </Button>
+                      )}
                     </div>
                   </div>
                 ))}

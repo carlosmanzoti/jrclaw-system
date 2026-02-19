@@ -1032,24 +1032,24 @@ async function main() {
   await prisma.deadline.createMany({
     data: [
       // Caso 1 - RJ
-      { case_id: caso1_rj.id, tipo: "FATAL", descricao: "Prazo para apresentação do Plano de Recuperação Judicial", data_limite: addDays(now, 15), data_alerta: [addDays(now, 10), addDays(now, 12), addDays(now, 14)], responsavel_id: admin.id },
-      { case_id: caso1_rj.id, tipo: "ORDINARIO", descricao: "Juntada de documentos contábeis atualizados", data_limite: addDays(now, 10), data_alerta: [addDays(now, 7)], responsavel_id: advogado1.id },
-      { case_id: caso1_rj.id, tipo: "ASSEMBLEIA", descricao: "Assembleia Geral de Credores - 1ª convocação", data_limite: addDays(now, 45), data_alerta: [addDays(now, 30), addDays(now, 40), addDays(now, 44)], responsavel_id: admin.id },
+      { case_id: caso1_rj.id, tipo: "RJ_APRESENTACAO_PLANO", descricao: "Prazo para apresentação do Plano de Recuperação Judicial", data_limite: addDays(now, 15), data_alerta: [addDays(now, 10), addDays(now, 12), addDays(now, 14)], responsavel_id: admin.id },
+      { case_id: caso1_rj.id, tipo: "JUNTADA_DOCUMENTO", descricao: "Juntada de documentos contábeis atualizados", data_limite: addDays(now, 10), data_alerta: [addDays(now, 7)], responsavel_id: advogado1.id },
+      { case_id: caso1_rj.id, tipo: "ASSEMBLEIA_CREDORES", descricao: "Assembleia Geral de Credores - 1ª convocação", data_limite: addDays(now, 45), data_alerta: [addDays(now, 30), addDays(now, 40), addDays(now, 44)], responsavel_id: admin.id },
       // Caso 2 - RJ
-      { case_id: caso2_rj.id, tipo: "FATAL", descricao: "Prazo para impugnação ao crédito de Yara Fertilizantes", data_limite: addDays(now, 7), data_alerta: [addDays(now, 3), addDays(now, 5), addDays(now, 6)], responsavel_id: advogado2.id },
-      { case_id: caso2_rj.id, tipo: "FATAL", descricao: "Prazo para manifestação sobre laudo pericial", data_limite: addDays(now, 20), data_alerta: [addDays(now, 15), addDays(now, 18)], responsavel_id: advogado2.id },
-      { case_id: caso2_rj.id, tipo: "AUDIENCIA", descricao: "Audiência de conciliação com credores classe III", data_limite: addDays(now, 30), data_alerta: [addDays(now, 25), addDays(now, 29)], responsavel_id: advogado2.id },
+      { case_id: caso2_rj.id, tipo: "RJ_IMPUGNACAO_CREDITO", descricao: "Prazo para impugnação ao crédito de Yara Fertilizantes", data_limite: addDays(now, 7), data_alerta: [addDays(now, 3), addDays(now, 5), addDays(now, 6)], responsavel_id: advogado2.id },
+      { case_id: caso2_rj.id, tipo: "LAUDO_PERICIAL", descricao: "Prazo para manifestação sobre laudo pericial", data_limite: addDays(now, 20), data_alerta: [addDays(now, 15), addDays(now, 18)], responsavel_id: advogado2.id },
+      { case_id: caso2_rj.id, tipo: "AUDIENCIA_CONCILIACAO", descricao: "Audiência de conciliação com credores classe III", data_limite: addDays(now, 30), data_alerta: [addDays(now, 25), addDays(now, 29)], responsavel_id: advogado2.id },
       // Caso 3 - Execução
-      { case_id: caso3_exec.id, tipo: "FATAL", descricao: "Prazo para embargos à execução", data_limite: addDays(now, 12), data_alerta: [addDays(now, 7), addDays(now, 10), addDays(now, 11)], responsavel_id: advogado1.id },
-      { case_id: caso3_exec.id, tipo: "ORDINARIO", descricao: "Providenciar cálculo atualizado do débito", data_limite: addDays(now, 8), data_alerta: [addDays(now, 5)], responsavel_id: advogado1.id },
+      { case_id: caso3_exec.id, tipo: "EMBARGOS_EXECUCAO", descricao: "Prazo para embargos à execução", data_limite: addDays(now, 12), data_alerta: [addDays(now, 7), addDays(now, 10), addDays(now, 11)], responsavel_id: advogado1.id },
+      { case_id: caso3_exec.id, tipo: "DILIGENCIA", descricao: "Providenciar cálculo atualizado do débito", data_limite: addDays(now, 8), data_alerta: [addDays(now, 5)], responsavel_id: advogado1.id },
       { case_id: caso3_exec.id, tipo: "DILIGENCIA", descricao: "Diligência para localização de bens do executado", data_limite: addDays(now, 18), data_alerta: [addDays(now, 14)], responsavel_id: advogado1.id },
       // Caso 4 - Agronegócio
-      { case_id: caso4_agro.id, tipo: "FATAL", descricao: "Prazo para contestação", data_limite: addDays(now, 5), data_alerta: [addDays(now, 2), addDays(now, 4)], responsavel_id: admin.id },
-      { case_id: caso4_agro.id, tipo: "AUDIENCIA", descricao: "Audiência de instrução e julgamento", data_limite: addDays(now, 60), data_alerta: [addDays(now, 50), addDays(now, 58)], responsavel_id: admin.id },
-      { case_id: caso4_agro.id, tipo: "ORDINARIO", descricao: "Indicação de assistente técnico para perícia", data_limite: addDays(now, 25), data_alerta: [addDays(now, 20)], responsavel_id: admin.id },
+      { case_id: caso4_agro.id, tipo: "CONTESTACAO", descricao: "Prazo para contestação", data_limite: addDays(now, 5), data_alerta: [addDays(now, 2), addDays(now, 4)], responsavel_id: admin.id },
+      { case_id: caso4_agro.id, tipo: "AUDIENCIA_INSTRUCAO", descricao: "Audiência de instrução e julgamento", data_limite: addDays(now, 60), data_alerta: [addDays(now, 50), addDays(now, 58)], responsavel_id: admin.id },
+      { case_id: caso4_agro.id, tipo: "PERICIA", descricao: "Indicação de assistente técnico para perícia", data_limite: addDays(now, 25), data_alerta: [addDays(now, 20)], responsavel_id: admin.id },
       // Caso 5 - Tributário
-      { case_id: caso5_trib.id, tipo: "FATAL", descricao: "Prazo para contrarrazões ao recurso especial", data_limite: addDays(now, 14), data_alerta: [addDays(now, 9), addDays(now, 12), addDays(now, 13)], responsavel_id: advogado2.id },
-      { case_id: caso5_trib.id, tipo: "ORDINARIO", descricao: "Pedido de efeito suspensivo", data_limite: addDays(now, 3), data_alerta: [addDays(now, 1), addDays(now, 2)], responsavel_id: advogado2.id },
+      { case_id: caso5_trib.id, tipo: "CONTRARRAZOES_RESP", descricao: "Prazo para contrarrazões ao recurso especial", data_limite: addDays(now, 14), data_alerta: [addDays(now, 9), addDays(now, 12), addDays(now, 13)], responsavel_id: advogado2.id },
+      { case_id: caso5_trib.id, tipo: "MANIFESTACAO", descricao: "Pedido de efeito suspensivo", data_limite: addDays(now, 3), data_alerta: [addDays(now, 1), addDays(now, 2)], responsavel_id: advogado2.id },
       { case_id: caso5_trib.id, tipo: "DILIGENCIA", descricao: "Obtenção de certidões negativas junto à SEFAZ/MA", data_limite: addDays(now, 22), data_alerta: [addDays(now, 18)], responsavel_id: advogado2.id },
     ],
   });

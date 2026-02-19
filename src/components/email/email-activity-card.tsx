@@ -133,7 +133,7 @@ export function EmailActivityCard({ messageId }: EmailActivityCardProps) {
               {activity.deadline && (
                 <span className="flex items-center gap-1">
                   <Clock className="size-3" />
-                  Prazo: {new Date(activity.deadline.data_limite).toLocaleDateString("pt-BR")}
+                  Prazo: {activity.deadline.data_limite ? new Date(activity.deadline.data_limite).toLocaleDateString("pt-BR") : "Sem data"}
                 </span>
               )}
               {activity.calendar_event && (

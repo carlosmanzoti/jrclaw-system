@@ -50,7 +50,7 @@ export const emailActivityRouter = router({
         data_limite: z.coerce.date().optional(),
         contagem_tipo: z.enum(["DIAS_UTEIS", "DIAS_CORRIDOS"]).optional(),
         dias_prazo: z.number().optional(),
-        tipo_prazo: z.enum(["FATAL", "ORDINARIO", "DILIGENCIA", "AUDIENCIA"]).optional(),
+        tipo_prazo: z.string().optional(),
         // Calendar event fields
         criar_evento: z.boolean().default(false),
         data_evento: z.coerce.date().optional(),
@@ -115,13 +115,13 @@ export const emailActivityRouter = router({
           const deadline = await ctx.db.deadline.create({
             data: {
               case_id: input.case_id,
-              tipo: input.tipo_prazo || "ORDINARIO",
+              tipo: (input.tipo_prazo || "DILIGENCIA") as never,
               descricao: input.titulo,
               data_limite: input.data_limite,
               data_alerta: computeAlerts(input.data_limite),
               status: "PENDENTE",
               responsavel_id: input.responsavel_id || userId,
-              origem: `Email: ${input.email_subject || input.outlook_message_id}`,
+              origem: "EMAIL",
             },
           })
 

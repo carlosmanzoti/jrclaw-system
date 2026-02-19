@@ -106,7 +106,7 @@ export function CasesList() {
                 "UF": c.uf || "",
                 "Valor da Causa": c.valor_causa != null ? Number(c.valor_causa) : "",
                 "Advogado": c.advogado_responsavel.name,
-                "Próx. Prazo": c.prazos[0] ? new Date(c.prazos[0].data_limite).toLocaleDateString("pt-BR") : "",
+                "Próx. Prazo": c.prazos[0]?.data_limite ? new Date(c.prazos[0].data_limite).toLocaleDateString("pt-BR") : "",
               }))
               const ws = XLSX.utils.json_to_sheet(data)
               const wb = XLSX.utils.book_new()
@@ -231,9 +231,9 @@ export function CasesList() {
                     <TableCell className="hidden xl:table-cell text-sm">{caso.advogado_responsavel.name}</TableCell>
                     <TableCell className="hidden xl:table-cell">
                       {nextDeadline ? (
-                        <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${deadlineColor(nextDeadline.data_limite)}`}>
-                          {new Date(nextDeadline.data_limite).toLocaleDateString("pt-BR")}
-                          {daysUntil(nextDeadline.data_limite) < 0 && " (vencido)"}
+                        <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${nextDeadline.data_limite ? deadlineColor(nextDeadline.data_limite) : "text-gray-500"}`}>
+                          {nextDeadline.data_limite ? new Date(nextDeadline.data_limite).toLocaleDateString("pt-BR") : "Sem data"}
+                          {nextDeadline.data_limite && daysUntil(nextDeadline.data_limite) < 0 && " (vencido)"}
                         </span>
                       ) : <span className="text-xs text-[#666666]">—</span>}
                     </TableCell>

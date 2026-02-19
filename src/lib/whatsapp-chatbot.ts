@@ -126,7 +126,7 @@ export async function handleChatbotMessage(
   // Build context for Claude
   const casesSummary = cases.map((c) => {
     const deadlines = c.prazos.map((p) =>
-      `  - ${p.descricao} (${p.tipo}, vence ${new Date(p.data_limite).toLocaleDateString("pt-BR")})`
+      `  - ${p.descricao} (${p.tipo}, vence ${p.data_limite ? new Date(p.data_limite).toLocaleDateString("pt-BR") : "sem data"})`
     ).join("\n")
     const movements = c.movimentacoes.map((m) =>
       `  - ${new Date(m.data).toLocaleDateString("pt-BR")}: ${m.descricao.substring(0, 100)}`

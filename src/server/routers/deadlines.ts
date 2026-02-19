@@ -173,7 +173,7 @@ export const deadlinesRouter = router({
       z
         .object({
           status: z.enum(["PENDENTE", "CUMPRIDO", "PERDIDO", "CANCELADO"]).optional(),
-          tipo: z.enum(["FATAL", "ORDINARIO", "DILIGENCIA", "AUDIENCIA", "ASSEMBLEIA"]).optional(),
+          tipo: z.string().optional(),
           responsavel_id: z.string().optional(),
           case_id: z.string().optional(),
           date_from: z.coerce.date().optional(),
@@ -185,7 +185,7 @@ export const deadlinesRouter = router({
     .query(async ({ ctx, input }) => {
       const where = {
         ...(input?.status && { status: input.status }),
-        ...(input?.tipo && { tipo: input.tipo }),
+        ...(input?.tipo && { tipo: input.tipo as never }),
         ...(input?.responsavel_id && { responsavel_id: input.responsavel_id }),
         ...(input?.case_id && { case_id: input.case_id }),
         ...((input?.date_from || input?.date_to) && {
@@ -2047,6 +2047,567 @@ export const deadlinesRouter = router({
       take: 200,
     });
   }),
+
+  // ============================================================
+  // TYPE CATALOG & TRIGGERS (DeadlineTypeCatalog + DeadlinePieceTrigger)
+  // ============================================================
+
+  /**
+   * Get the full type catalog (with optional category filter)
+   */
+  getTypeCatalog: protectedProcedure
+    .input(
+      z
+        .object({
+          category: z.string().optional(),
+          activeOnly: z.boolean().default(true),
+        })
+        .optional(),
+    )
+    .query(async ({ ctx, input }) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const where: Record<string, any> = {};
+      if (input?.activeOnly !== false) {
+        where.isActive = true;
+      }
+      if (input?.category) {
+        where.category = input.category as never;
+      }
+
+      return ctx.db.deadlineTypeCatalog.findMany({
+        where,
+        include: {
+          triggeredByPieces: {
+            select: {
+              id: true,
+              triggerPieceType: true,
+              triggerDescription: true,
+              targetRole: true,
+              isSuggestion: true,
+              isDefault: true,
+              notes: true,
+            },
+          },
+        },
+        orderBy: [{ category: "asc" }, { sortOrder: "asc" }],
+      });
+    }),
+
+  /**
+   * Get a single catalog entry by deadline type
+   */
+  getCatalogByType: protectedProcedure
+    .input(z.object({ type: z.string() }))
+    .query(async ({ ctx, input }) => {
+      const entry = await ctx.db.deadlineTypeCatalog.findUnique({
+        where: { type: input.type as never },
+        include: {
+          triggeredByPieces: true,
+        },
+      });
+
+      if (!entry) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Tipo nao encontrado no catalogo" });
+      }
+
+      return entry;
+    }),
+
+  /**
+   * Get suggested deadline types for a given piece type (trigger mapping)
+   */
+  getSuggestedTypes: protectedProcedure
+    .input(
+      z.object({
+        pieceType: z.string(),
+        partyRole: z.string().optional(),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const where: Record<string, any> = {
+        triggerPieceType: input.pieceType as never,
+      };
+
+      if (input.partyRole) {
+        where.targetRole = { in: [input.partyRole as never, "AMBOS" as never] };
+      }
+
+      const triggers = await ctx.db.deadlinePieceTrigger.findMany({
+        where,
+        include: {
+          deadlineTypeCatalog: {
+            select: {
+              type: true,
+              displayName: true,
+              shortName: true,
+              category: true,
+              legalBasis: true,
+              defaultDays: true,
+              countingType: true,
+              isFatal: true,
+              defaultPriority: true,
+              color: true,
+              icon: true,
+              doubleForPublicEntity: true,
+              doubleForDefensoria: true,
+            },
+          },
+        },
+        orderBy: [{ isDefault: "desc" }, { deadlineType: "asc" }],
+      });
+
+      return triggers.map((t) => ({
+        triggerId: t.id,
+        deadlineType: t.deadlineType,
+        triggerPieceType: t.triggerPieceType,
+        triggerDescription: t.triggerDescription,
+        targetRole: t.targetRole,
+        isSuggestion: t.isSuggestion,
+        isDefault: t.isDefault,
+        notes: t.notes,
+        catalog: t.deadlineTypeCatalog,
+      }));
+    }),
+
+  /**
+   * Simulate deadline calculation (preview without saving)
+   */
+  simulate: protectedProcedure
+    .input(
+      z.object({
+        deadlineType: z.string(),
+        startMethod: z.string().default("MANUAL"),
+        disponibilizacaoDate: z.coerce.date().optional(),
+        publicacaoDate: z.coerce.date().optional(),
+        intimacaoDate: z.coerce.date().optional(),
+        cienciaDate: z.coerce.date().optional(),
+        startDate: z.coerce.date().optional(),
+        customDays: z.number().int().optional(),
+        customCountingType: z.string().optional(),
+        isPublicEntity: z.boolean().default(false),
+        isDefensoria: z.boolean().default(false),
+        isMP: z.boolean().default(false),
+        isElectronic: z.boolean().default(true),
+        uf: z.string().optional(),
+        tribunal: z.string().optional(),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      // Get catalog entry for defaults
+      const catalog = await ctx.db.deadlineTypeCatalog.findUnique({
+        where: { type: input.deadlineType as never },
+      });
+
+      if (!catalog) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Tipo nao encontrado no catalogo" });
+      }
+
+      const days = input.customDays ?? catalog.defaultDays;
+      const countingType = (input.customCountingType ?? catalog.countingType) as string;
+      const uf = input.uf ?? "PR";
+
+      // Determine effective start date based on start method
+      let effectiveStart: Date;
+      const log: { step: number; rule: string; description: string; dateBefore?: string; dateAfter?: string }[] = [];
+      let stepNum = 1;
+
+      if (input.startMethod === "PUBLICACAO_DJE" && input.disponibilizacaoDate) {
+        // DJE Flow: Disponibilização → Publicação (1º útil após) → Início (1º útil após publicação)
+        const disponibilizacao = new Date(input.disponibilizacaoDate);
+        disponibilizacao.setHours(0, 0, 0, 0);
+
+        log.push({
+          step: stepNum++,
+          rule: "DJE_DISPONIBILIZACAO",
+          description: `Disponibilização no DJE: ${disponibilizacao.toISOString().slice(0, 10)}`,
+        });
+
+        // Publication = first business day after disponibilização
+        const pubDate = input.publicacaoDate ? new Date(input.publicacaoDate) : addDays(disponibilizacao, 1);
+        pubDate.setHours(0, 0, 0, 0);
+
+        log.push({
+          step: stepNum++,
+          rule: "DJE_PUBLICACAO",
+          description: `Publicação (Art. 224, §2º): ${pubDate.toISOString().slice(0, 10)}`,
+        });
+
+        // Start = first business day after publication
+        effectiveStart = addDays(pubDate, 1);
+
+        log.push({
+          step: stepNum++,
+          rule: "INICIO_CONTAGEM",
+          description: `Início da contagem (1º útil após publicação): ${effectiveStart.toISOString().slice(0, 10)}`,
+        });
+      } else if (input.startDate) {
+        effectiveStart = new Date(input.startDate);
+        effectiveStart.setHours(0, 0, 0, 0);
+
+        log.push({
+          step: stepNum++,
+          rule: "DATA_INICIO",
+          description: `Data de início manual: ${effectiveStart.toISOString().slice(0, 10)}`,
+        });
+      } else if (input.intimacaoDate) {
+        effectiveStart = addDays(new Date(input.intimacaoDate), 1);
+        effectiveStart.setHours(0, 0, 0, 0);
+
+        log.push({
+          step: stepNum++,
+          rule: "INTIMACAO",
+          description: `Intimação: ${new Date(input.intimacaoDate).toISOString().slice(0, 10)} → Início: ${effectiveStart.toISOString().slice(0, 10)}`,
+        });
+      } else if (input.cienciaDate) {
+        effectiveStart = addDays(new Date(input.cienciaDate), 1);
+        effectiveStart.setHours(0, 0, 0, 0);
+
+        log.push({
+          step: stepNum++,
+          rule: "CIENCIA",
+          description: `Ciência: ${new Date(input.cienciaDate).toISOString().slice(0, 10)} → Início: ${effectiveStart.toISOString().slice(0, 10)}`,
+        });
+      } else {
+        effectiveStart = new Date();
+        effectiveStart.setHours(0, 0, 0, 0);
+
+        log.push({
+          step: stepNum++,
+          rule: "DATA_HOJE",
+          description: `Sem data de início especificada, usando hoje: ${effectiveStart.toISOString().slice(0, 10)}`,
+        });
+      }
+
+      // Apply doubling rules
+      let effectiveDays = days;
+      let isDoubled = false;
+      let doubleReason: string | null = null;
+
+      if (input.isPublicEntity && catalog.doubleForPublicEntity) {
+        effectiveDays *= 2;
+        isDoubled = true;
+        doubleReason = "Fazenda Pública (Art. 183, CPC)";
+        log.push({
+          step: stepNum++,
+          rule: "DOBRA_FAZENDA",
+          description: `Prazo em dobro — ${doubleReason}: ${days} → ${effectiveDays} dias`,
+        });
+      } else if (input.isDefensoria && catalog.doubleForDefensoria) {
+        effectiveDays *= 2;
+        isDoubled = true;
+        doubleReason = "Defensoria Pública (Art. 186, CPC)";
+        log.push({
+          step: stepNum++,
+          rule: "DOBRA_DEFENSORIA",
+          description: `Prazo em dobro — ${doubleReason}: ${days} → ${effectiveDays} dias`,
+        });
+      } else if (input.isMP) {
+        effectiveDays *= 2;
+        isDoubled = true;
+        doubleReason = "Ministério Público (Art. 180, CPC)";
+        log.push({
+          step: stepNum++,
+          rule: "DOBRA_MP",
+          description: `Prazo em dobro — ${doubleReason}: ${days} → ${effectiveDays} dias`,
+        });
+      }
+
+      // Calculate due date
+      let dueDate: Date;
+
+      if (countingType === "DIAS_UTEIS") {
+        // Count business days (Art. 219 CPC)
+        const { calcularPrazo: calcPrazo } = await import("@/lib/prazos");
+        dueDate = await calcPrazo(effectiveStart, effectiveDays, uf);
+
+        log.push({
+          step: stepNum++,
+          rule: "CONTAGEM_DIAS_UTEIS",
+          description: `${effectiveDays} dias úteis a partir de ${effectiveStart.toISOString().slice(0, 10)} = ${dueDate.toISOString().slice(0, 10)} (Art. 219, CPC)`,
+        });
+      } else if (countingType === "DIAS_CORRIDOS") {
+        // Calendar days
+        dueDate = addDays(effectiveStart, effectiveDays);
+
+        // If final day is non-business, extend to next business day (Art. 224, §1º)
+        const { proximoDiaUtil: proxDiaUtil } = await import("@/lib/prazos");
+        const adjustedDue = await proxDiaUtil(dueDate, uf);
+        if (adjustedDue.getTime() !== dueDate.getTime()) {
+          log.push({
+            step: stepNum++,
+            rule: "EXTENSAO_DIA_UTIL",
+            description: `Dia final (${dueDate.toISOString().slice(0, 10)}) não é dia útil → estendido para ${adjustedDue.toISOString().slice(0, 10)} (Art. 224, §1º)`,
+          });
+          dueDate = adjustedDue;
+        }
+
+        log.push({
+          step: stepNum++,
+          rule: "CONTAGEM_DIAS_CORRIDOS",
+          description: `${effectiveDays} dias corridos a partir de ${effectiveStart.toISOString().slice(0, 10)} = ${dueDate.toISOString().slice(0, 10)}`,
+        });
+      } else {
+        // SEM_PRAZO or HORAS — just use the start date
+        dueDate = new Date(effectiveStart);
+      }
+
+      // Check for recesso forense (Dec 20 - Jan 20)
+      const recessoStart = new Date(dueDate.getFullYear(), 11, 20); // Dec 20
+      const recessoEnd = new Date(dueDate.getFullYear() + 1, 0, 20); // Jan 20
+      const warnings: string[] = [];
+
+      if (dueDate >= recessoStart && dueDate <= recessoEnd) {
+        warnings.push("O prazo final cai durante o recesso forense (20/dez a 20/jan). Verifique se o prazo fica suspenso durante este período (Art. 220, CPC).");
+      }
+
+      // Internal due date (2 business days before)
+      const { calcularPrazo: calcPrazo2 } = await import("@/lib/prazos");
+      let internalDue: Date;
+      if (countingType === "DIAS_UTEIS" || countingType === "DIAS_CORRIDOS") {
+        // Go 2 business days back
+        const tempDate = new Date(dueDate);
+        let counted = 0;
+        const { isDiaUtil: isDU } = await import("@/lib/prazos");
+        while (counted < 2) {
+          tempDate.setDate(tempDate.getDate() - 1);
+          if (await isDU(tempDate, uf)) {
+            counted++;
+          }
+        }
+        internalDue = tempDate;
+      } else {
+        internalDue = dueDate;
+      }
+
+      // Business days remaining
+      const { diasUteisAte: diasUteis } = await import("@/lib/prazos");
+      const businessDaysRemaining = await diasUteis(dueDate, uf);
+
+      if (catalog.isFatal && businessDaysRemaining <= 3 && businessDaysRemaining > 0) {
+        warnings.push(`Atenção: prazo FATAL com apenas ${businessDaysRemaining} dia(s) útil(eis) restante(s)!`);
+      }
+
+      return {
+        startDate: effectiveStart,
+        dueDate,
+        internalDueDate: internalDue,
+        originalDays: days,
+        effectiveDays,
+        countingType,
+        isDoubled,
+        doubleReason,
+        businessDaysRemaining,
+        calculationLog: log,
+        warnings,
+        legalBasis: catalog.legalBasis,
+        isFatal: catalog.isFatal,
+        displayName: catalog.displayName,
+        category: catalog.category,
+        color: catalog.color,
+        icon: catalog.icon,
+        defaultPriority: catalog.defaultPriority,
+      };
+    }),
+
+  /**
+   * Create deadline using the expanded Deadline model with full calculation
+   */
+  createExpanded: protectedProcedure
+    .input(
+      z.object({
+        // Required
+        deadlineType: z.string(),
+        case_id: z.string().optional(),
+        clientId: z.string().optional(),
+
+        // Start method and dates
+        startMethod: z.string().default("MANUAL"),
+        startDate: z.coerce.date().optional(),
+        disponibilizacaoDate: z.coerce.date().optional(),
+        publicacaoDate: z.coerce.date().optional(),
+        intimacaoDate: z.coerce.date().optional(),
+        cienciaDate: z.coerce.date().optional(),
+
+        // Calculation overrides
+        customDays: z.number().int().optional(),
+        customCountingType: z.string().optional(),
+
+        // Trigger piece
+        triggerPieceType: z.string().optional(),
+        triggerPieceDesc: z.string().optional(),
+        triggerDocumentId: z.string().optional(),
+        triggerMovementId: z.string().optional(),
+
+        // Context
+        isPublicEntity: z.boolean().default(false),
+        isDefensoria: z.boolean().default(false),
+        isMP: z.boolean().default(false),
+        isElectronic: z.boolean().default(true),
+        uf: z.string().optional(),
+        tribunal: z.string().optional(),
+
+        // Override
+        title: z.string().optional(),
+        descricao: z.string().optional(),
+        priority: z.string().optional(),
+        responsavel_id: z.string().optional(),
+        dueDate: z.coerce.date().optional(), // manual override
+
+        // Notifications
+        notifyClientEmail: z.boolean().default(false),
+        notifyClientWhatsapp: z.boolean().default(false),
+        reminderBefore: z.string().optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      // Get catalog entry for defaults
+      const catalog = await ctx.db.deadlineTypeCatalog.findUnique({
+        where: { type: input.deadlineType as never },
+      });
+
+      // Use catalog defaults or fallback
+      const days = input.customDays ?? catalog?.defaultDays ?? 15;
+      const countingType = (input.customCountingType ?? catalog?.countingType ?? "DIAS_UTEIS") as string;
+      const uf = input.uf ?? "PR";
+
+      // Determine start date
+      let effectiveStart: Date;
+      const calcLog: unknown[] = [];
+
+      if (input.startMethod === "PUBLICACAO_DJE" && input.disponibilizacaoDate) {
+        const pub = input.publicacaoDate
+          ? new Date(input.publicacaoDate)
+          : addDays(new Date(input.disponibilizacaoDate), 1);
+        effectiveStart = addDays(pub, 1);
+      } else if (input.startDate) {
+        effectiveStart = new Date(input.startDate);
+      } else if (input.intimacaoDate) {
+        effectiveStart = addDays(new Date(input.intimacaoDate), 1);
+      } else if (input.cienciaDate) {
+        effectiveStart = addDays(new Date(input.cienciaDate), 1);
+      } else {
+        effectiveStart = new Date();
+      }
+      effectiveStart.setHours(0, 0, 0, 0);
+
+      // Apply doubling
+      let effectiveDays = days;
+      let isDoubled = false;
+      let doubleReason: string | null = null;
+
+      if (input.isPublicEntity && catalog?.doubleForPublicEntity) {
+        effectiveDays *= 2;
+        isDoubled = true;
+        doubleReason = "Fazenda Pública (Art. 183, CPC)";
+      } else if (input.isDefensoria && catalog?.doubleForDefensoria) {
+        effectiveDays *= 2;
+        isDoubled = true;
+        doubleReason = "Defensoria Pública (Art. 186, CPC)";
+      } else if (input.isMP) {
+        effectiveDays *= 2;
+        isDoubled = true;
+        doubleReason = "Ministério Público (Art. 180, CPC)";
+      }
+
+      // Calculate due date (or use manual override)
+      let dueDate: Date;
+      if (input.dueDate) {
+        dueDate = new Date(input.dueDate);
+      } else if (countingType === "DIAS_UTEIS") {
+        const { calcularPrazo: calcPrazo } = await import("@/lib/prazos");
+        dueDate = await calcPrazo(effectiveStart, effectiveDays, uf);
+      } else if (countingType === "DIAS_CORRIDOS") {
+        dueDate = addDays(effectiveStart, effectiveDays);
+        const { proximoDiaUtil: proxDiaUtil } = await import("@/lib/prazos");
+        dueDate = await proxDiaUtil(dueDate, uf);
+      } else {
+        dueDate = new Date(effectiveStart);
+      }
+
+      // Internal due date (2 business days before)
+      const { isDiaUtil: isDU } = await import("@/lib/prazos");
+      const tempDate = new Date(dueDate);
+      let counted = 0;
+      while (counted < 2 && tempDate.getTime() > effectiveStart.getTime()) {
+        tempDate.setDate(tempDate.getDate() - 1);
+        if (await isDU(tempDate, uf)) {
+          counted++;
+        }
+      }
+      const internalDueDate = tempDate;
+
+      // Build title
+      const autoTitle = catalog
+        ? `${catalog.displayName} — ${catalog.legalBasis ?? ""}`
+        : input.deadlineType;
+      const title = input.title ?? autoTitle;
+
+      const deadline = await ctx.db.deadline.create({
+        data: {
+          tipo: input.deadlineType as never,
+          case_id: input.case_id,
+          clientId: input.clientId,
+          title,
+          autoTitle: !input.title,
+          descricao: input.descricao,
+
+          triggerPieceType: input.triggerPieceType as never ?? undefined,
+          triggerPieceDesc: input.triggerPieceDesc,
+          triggerDocumentId: input.triggerDocumentId,
+          triggerMovementId: input.triggerMovementId,
+
+          startMethod: input.startMethod as never,
+          startDate: effectiveStart,
+          disponibilizacaoDate: input.disponibilizacaoDate,
+          publicacaoDate: input.publicacaoDate,
+          intimacaoDate: input.intimacaoDate,
+          cienciaDate: input.cienciaDate,
+
+          calculatedDays: effectiveDays,
+          countingType: countingType as never,
+          isDoubled,
+          doubleReason,
+          originalDays: days,
+
+          dueDate,
+          internalDueDate,
+          calculationLog: calcLog.length > 0 ? (calcLog as any) : undefined,
+
+          data_limite: dueDate,
+          data_alerta: [],
+          status: "PENDENTE",
+          responsavel_id: input.responsavel_id,
+          origem: "MANUAL",
+
+          isPublicEntity: input.isPublicEntity,
+          isDefensoria: input.isDefensoria,
+          isMP: input.isMP,
+          isElectronic: input.isElectronic,
+
+          priority: input.priority ?? catalog?.defaultPriority ?? "MEDIA",
+
+          notifyClientEmail: input.notifyClientEmail,
+          notifyClientWhatsapp: input.notifyClientWhatsapp,
+          reminderBefore: input.reminderBefore,
+        },
+        include: {
+          case_: {
+            select: {
+              id: true,
+              numero_processo: true,
+              tipo: true,
+              uf: true,
+              cliente: { select: { id: true, nome: true } },
+            },
+          },
+          responsavel: { select: { id: true, name: true, avatar_url: true } },
+          client: { select: { id: true, nome: true } },
+        },
+      });
+
+      return deadline;
+    }),
 
   // Workspace sub-router
   workspace: workspaceRouter,

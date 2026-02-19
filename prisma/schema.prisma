@@ -106,11 +106,207 @@ enum CaseTeamRole {
 }
 
 enum DeadlineType {
-  FATAL
-  ORDINARIO
+  // PRAZOS DE DEFESA E RESPOSTA
+  CONTESTACAO
+  RECONVENCAO
+  REPLICA
+  IMPUGNACAO_VALOR_CAUSA
+  IMPUGNACAO_JUSTICA_GRATUITA
+  IMPUGNACAO_CUMPRIMENTO
+  EXCECAO_PRE_EXECUTIVIDADE
+  EMBARGOS_EXECUCAO
+  EMBARGOS_TERCEIRO
+  EMBARGOS_DECLARACAO
+  MANIFESTACAO
+  ESPECIFICACAO_PROVAS
+
+  // PRAZOS RECURSAIS
+  APELACAO
+  CONTRARRAZOES_APELACAO
+  AGRAVO_INSTRUMENTO
+  CONTRARRAZOES_AGRAVO
+  AGRAVO_INTERNO
+  RECURSO_ORDINARIO
+  RECURSO_ESPECIAL
+  CONTRARRAZOES_RESP
+  RECURSO_EXTRAORDINARIO
+  CONTRARRAZOES_RE
+  EMBARGOS_DIVERGENCIA
+  RECURSO_REVISTA
+  RECURSO_ORDINARIO_TRABALHISTA
+  AGRAVO_PETICAO
+  RECLAMACAO
+
+  // PRAZOS FATAIS E PEREMPTÓRIOS
+  PRAZO_FATAL
+  ACAO_RESCISORIA
+  MANDADO_SEGURANCA
+  HABEAS_CORPUS
+
+  // AUDIÊNCIAS E SESSÕES
+  AUDIENCIA_CONCILIACAO
+  AUDIENCIA_INSTRUCAO
+  AUDIENCIA_SANEAMENTO
+  SUSTENTACAO_ORAL
+  ASSEMBLEIA_CREDORES
+  MEDIACAO
+  DEPOIMENTO_PESSOAL
+
+  // RECUPERAÇÃO JUDICIAL (Lei 11.101/2005)
+  RJ_STAY_PERIOD
+  RJ_APRESENTACAO_PLANO
+  RJ_OBJECAO_PLANO
+  RJ_HABILITACAO_CREDITO
+  RJ_IMPUGNACAO_CREDITO
+  RJ_DIVERGENCIA_CREDITO
+  RJ_PRESTACAO_CONTAS_AJ
+  RJ_CUMPRIMENTO_PLANO
+
+  // EXECUÇÃO E CUMPRIMENTO
+  PAGAMENTO_VOLUNTARIO
+  PENHORA
+  ADJUDICACAO
+  DEPOSITO_JUDICIAL
+  PRESTACAO_CONTAS
+  LEILAO
+  HASTA_PUBLICA
+
+  // ADMINISTRATIVO E DILIGÊNCIAS
   DILIGENCIA
+  PROTOCOLO
+  JUNTADA_DOCUMENTO
+  JUNTADA_PROCURACAO
+  SUBSTABELECIMENTO
+  CARGA_AUTOS
+  PERICIA
+  LAUDO_PERICIAL
+  QUESITOS
+  CUMPRIMENTO_DECISAO
+  EMENDA_INICIAL
+  COMPLEMENTACAO_CUSTAS
+
+  // EXTRAJUDICIAIS E CONTRATUAIS
+  NOTIFICACAO_EXTRAJUDICIAL
+  VENCIMENTO_CONTRATO
+  PRAZO_REGULATORIO
+  PRAZO_ADMINISTRATIVO
+
+  // TRIBUTÁRIOS
+  IMPUGNACAO_AUTO_INFRACAO
+  RECURSO_ADMINISTRATIVO_FISCAL
+  PARCELAMENTO
+
+  // TAREFAS INTERNAS
+  TAREFA_INTERNA
+  FOLLOW_UP
+  REUNIAO_INTERNA
+  RETORNO_CLIENTE
+  RETORNO_EMAIL
+
+  OUTRO
+}
+
+enum DeadlineCategory {
+  DEFESA_RESPOSTA
+  RECURSAL
+  FATAL_PEREMPTORIO
+  AUDIENCIA_SESSAO
+  RECUPERACAO_JUDICIAL
+  EXECUCAO_CUMPRIMENTO
+  ADMINISTRATIVO_DILIGENCIA
+  EXTRAJUDICIAL_CONTRATUAL
+  TRIBUTARIO
+  TAREFA_INTERNA
+  OUTRO
+}
+
+enum CountingType {
+  DIAS_UTEIS
+  DIAS_CORRIDOS
+  HORAS
+  SEM_PRAZO
+}
+
+enum PieceType {
+  // Decisões judiciais
+  SENTENCA
+  SENTENCA_CONDENATORIA
+  SENTENCA_TERMINATIVA
+  DECISAO_INTERLOCUTORIA
+  DESPACHO
+  ACORDAO
+  DECISAO_MONOCRATICA
+
+  // Citações e intimações
+  CITACAO
+  INTIMACAO_GENERICA
+  INTIMACAO_SENTENCA
+  INTIMACAO_DECISAO
+  INTIMACAO_ACORDAO
+  INTIMACAO_DESPACHO
+  INTIMACAO_PERICIA
+  INTIMACAO_CUMPRIMENTO
+  INTIMACAO_PENHORA
+
+  // Peças da parte contrária
+  CONTESTACAO_RECEBIDA
+  RECONVENCAO_RECEBIDA
+  APELACAO_RECEBIDA
+  AGRAVO_RECEBIDO
+  RESP_RECEBIDO
+  RE_RECEBIDO
+  IMPUGNACAO_RECEBIDA
+  EMBARGOS_EXEC_RECEBIDOS
+
+  // Atos processuais
+  AUDIENCIA_DESIGNADA
+  PERICIA_DESIGNADA
+  LEILAO_DESIGNADO
+
+  // RJ
+  RJ_DEFERIMENTO
+  RJ_PUBLICACAO_EDITAL
+  RJ_PUBLICACAO_QUADRO
+  RJ_PLANO_APRESENTADO
+  RJ_AGC_DESIGNADA
+
+  // Mandado de segurança
+  MS_ATO_COATOR
+
+  // Genéricos
+  PUBLICACAO_DJE
+  MOVIMENTACAO_GENERICA
+}
+
+enum PartyRole {
+  AUTOR
+  REU
+  AMBOS
+  TERCEIRO
+  CLIENTE
+}
+
+enum DeadlineStartMethod {
+  PUBLICACAO_DJE
+  INTIMACAO_PESSOAL
+  INTIMACAO_ELETRONICA
+  INTIMACAO_CORREIO
+  INTIMACAO_EDITAL
+  COMPARECIMENTO_ESPONTANEO
   AUDIENCIA
-  ASSEMBLEIA
+  CARGA_AUTOS
+  DATA_FIXA
+  MANUAL
+}
+
+enum DeadlineOrigin {
+  MANUAL
+  EMAIL
+  PROCESSO
+  MONITORAMENTO
+  IMPORTACAO
+  MOVIMENTACAO
+  IA
 }
 
 enum DeadlineStatus {
@@ -674,6 +870,7 @@ model Person {
   process_parties            ProcessParty[]
   whatsapp_conversations     WhatsAppConversation[]
   portal_messages            PortalMessage[]
+  deadlines                  Deadline[]       @relation("ClientDeadlines")
 
   @@map("persons")
 }
@@ -777,26 +974,88 @@ model CaseTeam {
 
 model Deadline {
   id             String         @id @default(cuid())
-  case_id        String
-  case_          Case           @relation(fields: [case_id], references: [id], onDelete: Cascade)
+
+  // Vinculação obrigatória (nullable no Prisma, obrigatório no Zod/frontend)
+  clientId       String?
+  client         Person?        @relation("ClientDeadlines", fields: [clientId], references: [id])
+  case_id        String?
+  case_          Case?          @relation(fields: [case_id], references: [id], onDelete: Cascade)
+  projectId      String?
+
+  // Tipo e metadados
   tipo           DeadlineType
-  descricao      String
-  data_limite    DateTime
+  descricao      String?        @db.Text
+
+  // Título automático
+  title          String?
+  autoTitle      Boolean        @default(true)
+
+  // Origem da peça que gerou o prazo
+  triggerPieceType   PieceType?
+  triggerPieceDesc   String?
+  triggerDocumentId  String?
+  triggerDocument    Document?      @relation("DeadlineTriggerDocument", fields: [triggerDocumentId], references: [id])
+  triggerMovementId  String?
+  triggerMovement    CaseMovement?  @relation("DeadlineTriggerMovement", fields: [triggerMovementId], references: [id])
+
+  // Início da contagem do prazo
+  startMethod           DeadlineStartMethod @default(MANUAL)
+  startDate             DateTime?
+  disponibilizacaoDate  DateTime?
+  publicacaoDate        DateTime?
+  intimacaoDate         DateTime?
+  cienciaDate           DateTime?
+
+  // Dados do cálculo
+  calculatedDays    Int?
+  countingType      CountingType?
+  isDoubled         Boolean        @default(false)
+  doubleReason      String?
+  originalDays      Int?
+
+  // Datas calculadas
+  dueDate           DateTime?
+  internalDueDate   DateTime?
+  calculationLog    Json?
+
+  // Campos legados (mantidos para compatibilidade)
+  data_limite    DateTime?
   data_alerta    DateTime[]
   status         DeadlineStatus @default(PENDENTE)
-  responsavel_id String
-  responsavel    User           @relation(fields: [responsavel_id], references: [id])
+  responsavel_id String?
+  responsavel    User?          @relation(fields: [responsavel_id], references: [id])
   recorrente     Boolean        @default(false)
-  origem         String?
+  origem         DeadlineOrigin @default(MANUAL)
   movimento_id   String?
   lembrete_enviado Boolean      @default(false)
   documento_cumprimento_id String?
+
+  // Contexto
+  isPublicEntity    Boolean    @default(false)
+  isDefensoria      Boolean    @default(false)
+  isMP              Boolean    @default(false)
+  isElectronic      Boolean    @default(true)
+
+  // Prioridade
+  priority          String?    // CRITICA, URGENTE, ALTA, MEDIA, BAIXA
+
+  // Notificações
+  notifyClientEmail    Boolean @default(false)
+  notifyClientWhatsapp Boolean @default(false)
+  reminderBefore       String? // "1d", "2d", "3d", "1w"
 
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
 
   email_activity EmailActivity? @relation("DeadlineFromEmail")
 
+  @@index([clientId])
+  @@index([clientId, status])
+  @@index([clientId, dueDate])
+  @@index([case_id, clientId])
+  @@index([triggerPieceType])
+  @@index([dueDate])
+  @@index([status])
   @@map("deadlines")
 }
 
@@ -814,6 +1073,8 @@ model CaseMovement {
   notificar_cliente Boolean      @default(false)
   lida              Boolean      @default(false)
   created_at        DateTime     @default(now())
+
+  generatedDeadlines Deadline[]  @relation("DeadlineTriggerMovement")
 
   @@map("case_movements")
 }
@@ -843,6 +1104,8 @@ model Document {
   onedrive_web_url   String?
   created_at       DateTime     @default(now())
   updated_at       DateTime     @updatedAt
+
+  generatedDeadlines Deadline[] @relation("DeadlineTriggerDocument")
 
   @@map("documents")
 }
@@ -3415,6 +3678,55 @@ model DeadlineCatalog {
   updated_at                DateTime  @updatedAt
 
   @@map("deadline_catalog")
+}
+
+model DeadlineTypeCatalog {
+  id                    String           @id @default(cuid())
+  type                  DeadlineType     @unique
+  displayName           String
+  shortName             String
+  category              DeadlineCategory
+  legalBasis            String?          // Ex: "Art. 335, CPC"
+  defaultDays           Int
+  countingType          CountingType     @default(DIAS_UTEIS)
+  isExtendable          Boolean          @default(false)
+  isFatal               Boolean          @default(false)
+  defaultPriority       String           @default("MEDIA") // CRITICA, URGENTE, ALTA, MEDIA, BAIXA
+  color                 String           @default("#6B7280")
+  icon                  String?
+  doubleForPublicEntity Boolean          @default(true)
+  doubleForDefensoria   Boolean          @default(true)
+  specialRules          Json?            // Regras especiais como prorrogação, condições, etc.
+  isActive              Boolean          @default(true)
+  sortOrder             Int              @default(0)
+
+  triggeredByPieces     DeadlinePieceTrigger[]
+
+  created_at            DateTime         @default(now())
+  updated_at            DateTime         @updatedAt
+
+  @@index([category])
+  @@index([isActive, sortOrder])
+  @@map("deadline_type_catalog")
+}
+
+model DeadlinePieceTrigger {
+  id                    String               @id @default(cuid())
+  deadlineTypeId        String
+  deadlineTypeCatalog   DeadlineTypeCatalog   @relation(fields: [deadlineTypeId], references: [id], onDelete: Cascade)
+  deadlineType          DeadlineType
+  triggerPieceType      PieceType
+  triggerDescription    String                // Ex: "Contestação após citação"
+  targetRole            PartyRole             @default(REU)
+  isSuggestion          Boolean               @default(true)
+  isDefault             Boolean               @default(false)
+  notes                 String?
+
+  created_at            DateTime              @default(now())
+
+  @@unique([deadlineType, triggerPieceType, targetRole])
+  @@index([triggerPieceType])
+  @@map("deadline_piece_triggers")
 }
 
 model ProcessParty {

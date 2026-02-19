@@ -48,14 +48,27 @@ const DeadlinesCalendar = dynamic(() => import("./deadlines-calendar"), { ssr: f
 
 const TYPE_BORDER: Record<string, string> = {
   FATAL: "border-l-[#DC3545]",
+  PRAZO_FATAL: "border-l-[#DC3545]",
   ORDINARIO: "border-l-[#C9A961]",
   DILIGENCIA: "border-l-[#17A2B8]",
   AUDIENCIA: "border-l-[#C9A961]",
   ASSEMBLEIA: "border-l-[#28A745]",
+  // New categories
+  CONTESTACAO: "border-l-[#DC2626]",
+  APELACAO: "border-l-[#DC2626]",
+  AGRAVO_INSTRUMENTO: "border-l-[#DC2626]",
+  RECURSO_ESPECIAL: "border-l-[#7C3AED]",
+  RECURSO_EXTRAORDINARIO: "border-l-[#7C3AED]",
+  AUDIENCIA_CONCILIACAO: "border-l-[#0EA5E9]",
+  AUDIENCIA_INSTRUCAO: "border-l-[#0EA5E9]",
+  RJ_STAY_PERIOD: "border-l-[#059669]",
+  RJ_HABILITACAO_CREDITO: "border-l-[#059669]",
+  TAREFA_INTERNA: "border-l-[#8B5CF6]",
 }
 
 const TYPE_BADGE: Record<string, string> = {
   FATAL: "bg-[#DC3545]/10 text-[#DC3545]",
+  PRAZO_FATAL: "bg-[#DC3545]/10 text-[#DC3545]",
   ORDINARIO: "bg-[#C9A961]/10 text-[#C9A961]",
   DILIGENCIA: "bg-[#17A2B8]/10 text-[#17A2B8]",
   AUDIENCIA: "bg-[#C9A961]/10 text-[#C9A961]",
