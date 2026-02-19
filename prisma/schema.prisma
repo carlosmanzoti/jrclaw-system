@@ -4031,10 +4031,20 @@ model DeadlineWorkspace {
   phase_changed_at      DateTime  @default(now())
   phase_changed_by      String?
 
-  // Editor content (Tiptap JSON + HTML)
-  editor_content        String?   @db.Text  // JSON (Tiptap)
-  editor_html           String?   @db.Text  // Rendered HTML
+  // Editor content (kept for backward compat, no longer used by UI)
+  editor_content        String?   @db.Text
+  editor_html           String?   @db.Text
   editor_saved_at       DateTime?
+
+  // AI analysis of the main draft (minuta)
+  analise_ia            String?   @db.Text  // JSON with AI analysis result
+  analise_ia_data       DateTime?            // when the analysis was generated
+  analise_ia_arquivo    String?              // filename that generated the analysis
+
+  // Reviewer (revisor)
+  revisor_id            String?
+  revisor_parecer       String?   @db.Text
+  revisor_data          DateTime?
 
   // Protocol fields
   protocol_number       String?
@@ -4081,6 +4091,8 @@ model WorkspaceDocument {
   category              String    @default("ANEXO") // ANEXO, PROVA, PROCURACAO, GUIA, COMPROVANTE, JURISPRUDENCIA, LEGISLACAO, MODELO, RASCUNHO, OUTRO
   description           String?
 
+  is_minuta_principal   Boolean   @default(false)  // flag: main draft file (only 1 per workspace)
+
   order                 Int       @default(0)
   is_required           Boolean   @default(false)
   is_validated          Boolean   @default(false)
@@ -4088,6 +4100,7 @@ model WorkspaceDocument {
   validated_at          DateTime?
 
   uploaded_by           String?
+  uploaded_by_name      String?
   created_at            DateTime  @default(now())
   updated_at            DateTime  @updatedAt
 

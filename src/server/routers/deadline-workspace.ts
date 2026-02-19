@@ -3,10 +3,6 @@ import { router, protectedProcedure } from "@/server/trpc";
 import { TRPCError } from "@trpc/server";
 import {
   onDocumentUploaded,
-  onContentSaved,
-  onThesisCompleted,
-  onReviewComment,
-  onApprovalRejected,
   onWorkspaceCreated,
 } from "@/lib/ai/workspace-reactive-engine";
 
@@ -18,11 +14,12 @@ const WORKSPACE_PHASES = ["RASCUNHO", "REVISAO", "APROVACAO", "PROTOCOLO", "CONC
 
 const CHECKLIST_TEMPLATES: Record<string, { category: string; title: string; blocks_protocol: boolean; is_required: boolean }[]> = {
   CONTESTACAO: [
+    { category: "DOCUMENTOS", title: "Procuração ad judicia anexada", blocks_protocol: true, is_required: true },
+    { category: "DOCUMENTOS", title: "Documentos comprobatórios anexados", blocks_protocol: false, is_required: false },
+    { category: "DOCUMENTOS", title: "Minuta principal (Word) juntada", blocks_protocol: true, is_required: true },
     { category: "REQUISITOS_FORMAIS", title: "Qualificação completa do réu", blocks_protocol: true, is_required: true },
     { category: "REQUISITOS_FORMAIS", title: "Endereçamento correto (vara/juízo)", blocks_protocol: true, is_required: true },
     { category: "REQUISITOS_FORMAIS", title: "Número do processo informado", blocks_protocol: true, is_required: true },
-    { category: "DOCUMENTOS", title: "Procuração ad judicia anexada", blocks_protocol: true, is_required: true },
-    { category: "DOCUMENTOS", title: "Documentos comprobatórios anexados", blocks_protocol: false, is_required: false },
     { category: "FUNDAMENTACAO", title: "Preliminares arguidas (se cabíveis)", blocks_protocol: false, is_required: false },
     { category: "FUNDAMENTACAO", title: "Impugnação específica dos fatos", blocks_protocol: true, is_required: true },
     { category: "FUNDAMENTACAO", title: "Fundamentação jurídica adequada", blocks_protocol: true, is_required: true },
@@ -32,11 +29,12 @@ const CHECKLIST_TEMPLATES: Record<string, { category: string; title: string; blo
     { category: "PROTOCOLO", title: "Verificar prazo antes do protocolo", blocks_protocol: true, is_required: true },
   ],
   RECURSO_ESPECIAL: [
+    { category: "DOCUMENTOS", title: "Minuta principal (Word) juntada", blocks_protocol: true, is_required: true },
+    { category: "DOCUMENTOS", title: "Comprovante de preparo anexado", blocks_protocol: true, is_required: true },
+    { category: "DOCUMENTOS", title: "Cópia do acórdão recorrido", blocks_protocol: true, is_required: true },
     { category: "REQUISITOS_FORMAIS", title: "Tempestividade verificada", blocks_protocol: true, is_required: true },
     { category: "REQUISITOS_FORMAIS", title: "Preparo (custas + porte de remessa)", blocks_protocol: true, is_required: true },
     { category: "REQUISITOS_FORMAIS", title: "Prequestionamento demonstrado", blocks_protocol: true, is_required: true },
-    { category: "DOCUMENTOS", title: "Comprovante de preparo anexado", blocks_protocol: true, is_required: true },
-    { category: "DOCUMENTOS", title: "Cópia do acórdão recorrido", blocks_protocol: true, is_required: true },
     { category: "FUNDAMENTACAO", title: "Violação de lei federal indicada (art. 105, III, a)", blocks_protocol: true, is_required: true },
     { category: "FUNDAMENTACAO", title: "Divergência jurisprudencial (se alínea c)", blocks_protocol: false, is_required: false },
     { category: "FUNDAMENTACAO", title: "Cotejo analítico realizado", blocks_protocol: false, is_required: false },
@@ -45,12 +43,13 @@ const CHECKLIST_TEMPLATES: Record<string, { category: string; title: string; blo
     { category: "PROTOCOLO", title: "Verificar prazo de 15 dias úteis", blocks_protocol: true, is_required: true },
   ],
   AGRAVO_INSTRUMENTO: [
-    { category: "REQUISITOS_FORMAIS", title: "Hipótese de cabimento verificada (art. 1.015 CPC)", blocks_protocol: true, is_required: true },
-    { category: "REQUISITOS_FORMAIS", title: "Tempestividade (10 dias úteis)", blocks_protocol: true, is_required: true },
+    { category: "DOCUMENTOS", title: "Minuta principal (Word) juntada", blocks_protocol: true, is_required: true },
     { category: "DOCUMENTOS", title: "Cópia da decisão agravada", blocks_protocol: true, is_required: true },
     { category: "DOCUMENTOS", title: "Certidão de intimação", blocks_protocol: true, is_required: true },
     { category: "DOCUMENTOS", title: "Procuração e documentos essenciais", blocks_protocol: true, is_required: true },
     { category: "DOCUMENTOS", title: "Comprovante de preparo", blocks_protocol: true, is_required: true },
+    { category: "REQUISITOS_FORMAIS", title: "Hipótese de cabimento verificada (art. 1.015 CPC)", blocks_protocol: true, is_required: true },
+    { category: "REQUISITOS_FORMAIS", title: "Tempestividade (10 dias úteis)", blocks_protocol: true, is_required: true },
     { category: "FUNDAMENTACAO", title: "Demonstração do cabimento", blocks_protocol: true, is_required: true },
     { category: "FUNDAMENTACAO", title: "Pedido de tutela recursal (se cabível)", blocks_protocol: false, is_required: false },
     { category: "PEDIDOS", title: "Pedido de reforma da decisão", blocks_protocol: true, is_required: true },
@@ -58,15 +57,17 @@ const CHECKLIST_TEMPLATES: Record<string, { category: string; title: string; blo
     { category: "ASSINATURAS", title: "Assinatura com OAB", blocks_protocol: true, is_required: true },
   ],
   IMPUGNACAO_CUMPRIMENTO: [
+    { category: "DOCUMENTOS", title: "Minuta principal (Word) juntada", blocks_protocol: true, is_required: true },
+    { category: "DOCUMENTOS", title: "Planilha de cálculos própria", blocks_protocol: false, is_required: false },
     { category: "REQUISITOS_FORMAIS", title: "Tempestividade (15 dias úteis)", blocks_protocol: true, is_required: true },
     { category: "REQUISITOS_FORMAIS", title: "Garantia do juízo (se necessária)", blocks_protocol: false, is_required: false },
     { category: "FUNDAMENTACAO", title: "Hipóteses do art. 525 CPC verificadas", blocks_protocol: true, is_required: true },
     { category: "FUNDAMENTACAO", title: "Excesso de execução demonstrado com planilha", blocks_protocol: false, is_required: false },
-    { category: "DOCUMENTOS", title: "Planilha de cálculos própria", blocks_protocol: false, is_required: false },
     { category: "PEDIDOS", title: "Pedido de extinção ou redução", blocks_protocol: true, is_required: true },
     { category: "ASSINATURAS", title: "Assinatura com OAB", blocks_protocol: true, is_required: true },
   ],
   EMBARGOS_DECLARACAO: [
+    { category: "DOCUMENTOS", title: "Minuta principal (Word) juntada", blocks_protocol: true, is_required: true },
     { category: "REQUISITOS_FORMAIS", title: "Tempestividade (5 dias)", blocks_protocol: true, is_required: true },
     { category: "FUNDAMENTACAO", title: "Omissão identificada e demonstrada", blocks_protocol: false, is_required: false },
     { category: "FUNDAMENTACAO", title: "Contradição identificada e demonstrada", blocks_protocol: false, is_required: false },
@@ -77,9 +78,10 @@ const CHECKLIST_TEMPLATES: Record<string, { category: string; title: string; blo
     { category: "ASSINATURAS", title: "Assinatura com OAB", blocks_protocol: true, is_required: true },
   ],
   APELACAO: [
+    { category: "DOCUMENTOS", title: "Minuta principal (Word) juntada", blocks_protocol: true, is_required: true },
+    { category: "DOCUMENTOS", title: "Comprovante de preparo", blocks_protocol: true, is_required: true },
     { category: "REQUISITOS_FORMAIS", title: "Tempestividade (15 dias úteis)", blocks_protocol: true, is_required: true },
     { category: "REQUISITOS_FORMAIS", title: "Preparo recolhido", blocks_protocol: true, is_required: true },
-    { category: "DOCUMENTOS", title: "Comprovante de preparo", blocks_protocol: true, is_required: true },
     { category: "FUNDAMENTACAO", title: "Razões recursais fundamentadas", blocks_protocol: true, is_required: true },
     { category: "FUNDAMENTACAO", title: "Pedido de reforma ou anulação", blocks_protocol: true, is_required: true },
     { category: "FUNDAMENTACAO", title: "Prequestionamento para eventual recurso superior", blocks_protocol: false, is_required: false },
@@ -88,9 +90,10 @@ const CHECKLIST_TEMPLATES: Record<string, { category: string; title: string; blo
     { category: "PROTOCOLO", title: "Verificar prazo fatal antes do protocolo", blocks_protocol: true, is_required: true },
   ],
   DEFAULT: [
+    { category: "DOCUMENTOS", title: "Minuta principal (Word) juntada", blocks_protocol: true, is_required: true },
+    { category: "DOCUMENTOS", title: "Procuração anexada", blocks_protocol: true, is_required: true },
     { category: "REQUISITOS_FORMAIS", title: "Endereçamento correto", blocks_protocol: true, is_required: true },
     { category: "REQUISITOS_FORMAIS", title: "Qualificação das partes", blocks_protocol: true, is_required: true },
-    { category: "DOCUMENTOS", title: "Procuração anexada", blocks_protocol: true, is_required: true },
     { category: "FUNDAMENTACAO", title: "Fundamentação jurídica adequada", blocks_protocol: true, is_required: true },
     { category: "PEDIDOS", title: "Pedidos formulados", blocks_protocol: true, is_required: true },
     { category: "ASSINATURAS", title: "Assinatura do advogado", blocks_protocol: true, is_required: true },
@@ -118,15 +121,12 @@ export const workspaceRouter = router({
             include: {
               documents: { orderBy: { order: "asc" } },
               checklist_items: { orderBy: { order: "asc" } },
-              theses: { orderBy: { order: "asc" } },
               comments: {
-                where: { parent_id: null },
-                orderBy: { created_at: "desc" },
-                take: 50,
+                orderBy: { created_at: "asc" },
+                take: 100,
               },
               approvals: { orderBy: { created_at: "desc" } },
               activities: { orderBy: { created_at: "desc" }, take: 50 },
-              document_versions: { orderBy: { version_number: "desc" }, take: 10 },
             },
           },
           responsavel: { select: { id: true, name: true, avatar_url: true, role: true } },
@@ -175,15 +175,13 @@ export const workspaceRouter = router({
         include: {
           documents: { orderBy: { order: "asc" } },
           checklist_items: { orderBy: { order: "asc" } },
-          theses: { orderBy: { order: "asc" } },
-          comments: { where: { parent_id: null }, orderBy: { created_at: "desc" }, take: 50 },
+          comments: { orderBy: { created_at: "asc" }, take: 100 },
           approvals: { orderBy: { created_at: "desc" } },
           activities: { orderBy: { created_at: "desc" }, take: 50 },
-          document_versions: { orderBy: { version_number: "desc" }, take: 10 },
         },
       });
 
-      // Fire-and-forget: AI generates briefing + initial theses
+      // Fire-and-forget: AI generates initial briefing
       onWorkspaceCreated(workspace.id, input.deadlineId).catch(() => {});
 
       return { deadline, workspace };
@@ -210,17 +208,11 @@ export const workspaceRouter = router({
           },
           documents: { orderBy: { order: "asc" } },
           checklist_items: { orderBy: { order: "asc" } },
-          theses: { orderBy: { order: "asc" } },
           comments: {
-            where: { parent_id: null },
-            orderBy: { created_at: "desc" },
-            include: {
-              replies: { orderBy: { created_at: "asc" } },
-            },
+            orderBy: { created_at: "asc" },
           },
           approvals: { orderBy: { created_at: "desc" } },
           activities: { orderBy: { created_at: "desc" }, take: 100 },
-          document_versions: { orderBy: { version_number: "desc" }, take: 20 },
         },
       });
 
@@ -231,18 +223,42 @@ export const workspaceRouter = router({
       return workspace;
     }),
 
-  // ── Change phase ──
+  // ── Change phase with validations ──
   changePhase: protectedProcedure
     .input(z.object({
       workspaceId: z.string(),
       phase: z.enum(["RASCUNHO", "REVISAO", "APROVACAO", "PROTOCOLO", "CONCLUIDO"]),
+      motivo: z.string().optional(), // reason for returning to previous phase
     }))
     .mutation(async ({ ctx, input }) => {
       const ws = await ctx.db.deadlineWorkspace.findUnique({
         where: { id: input.workspaceId },
-        include: { checklist_items: true },
+        include: {
+          checklist_items: true,
+          documents: true,
+          approvals: { where: { status: "PENDENTE" } },
+        },
       });
       if (!ws) throw new TRPCError({ code: "NOT_FOUND" });
+
+      // Validate: RASCUNHO → REVISAO requires minuta principal
+      if (input.phase === "REVISAO") {
+        const hasMinuta = ws.documents.some(d => d.is_minuta_principal);
+        if (!hasMinuta) {
+          throw new TRPCError({
+            code: "PRECONDITION_FAILED",
+            message: "Junte a minuta principal (arquivo Word) antes de enviar para revisão.",
+          });
+        }
+        // Check required checklist items
+        const blocking = ws.checklist_items.filter(i => i.is_required && i.blocks_protocol && !i.checked);
+        if (blocking.length > 0) {
+          throw new TRPCError({
+            code: "PRECONDITION_FAILED",
+            message: `Item(ns) obrigatório(s) pendente(s): ${blocking.map(b => b.title).join(", ")}`,
+          });
+        }
+      }
 
       // Validate: cannot go to PROTOCOLO if blocking checklist items unchecked
       if (input.phase === "PROTOCOLO") {
@@ -253,15 +269,28 @@ export const workspaceRouter = router({
             message: `${blocking.length} item(ns) obrigatório(s) do checklist não foram verificados: ${blocking.map(b => b.title).join(", ")}`,
           });
         }
+
+        // All approvals must be decided
+        const pendingApprovals = ws.approvals.length;
+        if (pendingApprovals > 0) {
+          throw new TRPCError({
+            code: "PRECONDITION_FAILED",
+            message: `Existem ${pendingApprovals} aprovação(ões) pendente(s).`,
+          });
+        }
       }
 
       // Validate: CONCLUIDO requires protocol info
       if (input.phase === "CONCLUIDO" && !ws.protocol_number) {
         throw new TRPCError({
           code: "PRECONDITION_FAILED",
-          message: "Informe o número do protocolo antes de concluir",
+          message: "Informe o número do protocolo antes de concluir.",
         });
       }
+
+      const description = input.motivo
+        ? `Fase alterada: ${ws.phase} → ${input.phase} — Motivo: ${input.motivo}`
+        : `Fase alterada: ${ws.phase} → ${input.phase}`;
 
       const updated = await ctx.db.deadlineWorkspace.update({
         where: { id: input.workspaceId },
@@ -272,10 +301,10 @@ export const workspaceRouter = router({
           activities: {
             create: {
               action: "PHASE_CHANGED",
-              description: `Fase alterada: ${ws.phase} → ${input.phase}`,
+              description,
               user_id: ctx.session.user.id,
               user_name: ctx.session.user.name || "Sistema",
-              metadata: { from: ws.phase, to: input.phase },
+              metadata: { from: ws.phase, to: input.phase, motivo: input.motivo },
             },
           },
         },
@@ -291,112 +320,6 @@ export const workspaceRouter = router({
           },
         });
       }
-
-      return updated;
-    }),
-
-  // ── Save editor content ──
-  saveContent: protectedProcedure
-    .input(z.object({
-      workspaceId: z.string(),
-      contentJson: z.string(),
-      contentHtml: z.string(),
-      wordCount: z.number().optional(),
-      charCount: z.number().optional(),
-    }))
-    .mutation(async ({ ctx, input }) => {
-      const ws = await ctx.db.deadlineWorkspace.update({
-        where: { id: input.workspaceId },
-        data: {
-          editor_content: input.contentJson,
-          editor_html: input.contentHtml,
-          editor_saved_at: new Date(),
-          total_words: input.wordCount || 0,
-          total_characters: input.charCount || 0,
-          estimated_pages: Math.max(1, Math.ceil((input.wordCount || 0) / 300)),
-        },
-      });
-
-      // Fire-and-forget: detect sections, auto-check checklist
-      onContentSaved(input.workspaceId).catch(() => {});
-
-      return ws;
-    }),
-
-  // ── Save version snapshot ──
-  saveVersion: protectedProcedure
-    .input(z.object({
-      workspaceId: z.string(),
-      changeSummary: z.string().optional(),
-    }))
-    .mutation(async ({ ctx, input }) => {
-      const ws = await ctx.db.deadlineWorkspace.findUnique({
-        where: { id: input.workspaceId },
-        include: { document_versions: { orderBy: { version_number: "desc" }, take: 1 } },
-      });
-      if (!ws) throw new TRPCError({ code: "NOT_FOUND" });
-
-      const nextVersion = (ws.document_versions[0]?.version_number || 0) + 1;
-
-      const version = await ctx.db.workspaceDocVersion.create({
-        data: {
-          workspace_id: input.workspaceId,
-          version_number: nextVersion,
-          title: `Versão ${nextVersion}`,
-          content_json: ws.editor_content,
-          content_html: ws.editor_html,
-          change_summary: input.changeSummary || `Versão ${nextVersion} salva`,
-          word_count: ws.total_words,
-          created_by: ctx.session.user.id,
-        },
-      });
-
-      await ctx.db.workspaceActivity.create({
-        data: {
-          workspace_id: input.workspaceId,
-          action: "VERSION_SAVED",
-          description: `Versão ${nextVersion} salva${input.changeSummary ? `: ${input.changeSummary}` : ""}`,
-          user_id: ctx.session.user.id,
-          user_name: ctx.session.user.name || "Sistema",
-          metadata: { version_number: nextVersion },
-        },
-      });
-
-      return version;
-    }),
-
-  // ── Restore version ──
-  restoreVersion: protectedProcedure
-    .input(z.object({
-      workspaceId: z.string(),
-      versionId: z.string(),
-    }))
-    .mutation(async ({ ctx, input }) => {
-      const version = await ctx.db.workspaceDocVersion.findUnique({
-        where: { id: input.versionId },
-      });
-      if (!version) throw new TRPCError({ code: "NOT_FOUND" });
-
-      const updated = await ctx.db.deadlineWorkspace.update({
-        where: { id: input.workspaceId },
-        data: {
-          editor_content: version.content_json,
-          editor_html: version.content_html,
-          editor_saved_at: new Date(),
-          total_words: version.word_count,
-        },
-      });
-
-      await ctx.db.workspaceActivity.create({
-        data: {
-          workspace_id: input.workspaceId,
-          action: "CONTENT_EDITED",
-          description: `Conteúdo restaurado para versão ${version.version_number}`,
-          user_id: ctx.session.user.id,
-          user_name: ctx.session.user.name || "Sistema",
-          metadata: { restored_version: version.version_number },
-        },
-      });
 
       return updated;
     }),
@@ -435,28 +358,32 @@ export const workspaceRouter = router({
       return updated;
     }),
 
-  // ═══ COMMENTS ═══
+  // ── Set reviewer ──
+  setRevisor: protectedProcedure
+    .input(z.object({
+      workspaceId: z.string(),
+      revisorId: z.string(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      return ctx.db.deadlineWorkspace.update({
+        where: { id: input.workspaceId },
+        data: { revisor_id: input.revisorId },
+      });
+    }),
+
+  // ═══ COMMENTS (simplified — flat feed) ═══
 
   addComment: protectedProcedure
     .input(z.object({
       workspaceId: z.string(),
       content: z.string().min(1),
-      type: z.string().optional(),
-      parentId: z.string().optional(),
-      anchorFrom: z.number().optional(),
-      anchorTo: z.number().optional(),
-      anchorText: z.string().optional(),
     }))
     .mutation(async ({ ctx, input }) => {
       const comment = await ctx.db.workspaceComment.create({
         data: {
           workspace_id: input.workspaceId,
           content: input.content,
-          type: input.type || "GERAL",
-          parent_id: input.parentId,
-          anchor_from: input.anchorFrom,
-          anchor_to: input.anchorTo,
-          anchor_text: input.anchorText,
+          type: "GERAL",
           user_id: ctx.session.user.id,
         },
       });
@@ -465,161 +392,13 @@ export const workspaceRouter = router({
         data: {
           workspace_id: input.workspaceId,
           action: "COMMENT_ADDED",
-          description: `Comentário adicionado${input.parentId ? " (resposta)" : ""}`,
-          user_id: ctx.session.user.id,
-          user_name: ctx.session.user.name || "Sistema",
-        },
-      });
-
-      // Fire-and-forget: classify severity, detect correction patterns
-      onReviewComment(input.workspaceId, comment.id).catch(() => {});
-
-      return comment;
-    }),
-
-  resolveComment: protectedProcedure
-    .input(z.object({ commentId: z.string() }))
-    .mutation(async ({ ctx, input }) => {
-      const comment = await ctx.db.workspaceComment.update({
-        where: { id: input.commentId },
-        data: {
-          resolved: true,
-          resolved_by: ctx.session.user.id,
-          resolved_at: new Date(),
-        },
-      });
-
-      await ctx.db.workspaceActivity.create({
-        data: {
-          workspace_id: comment.workspace_id,
-          action: "COMMENT_RESOLVED",
-          description: "Comentário resolvido",
+          description: "Comentário adicionado",
           user_id: ctx.session.user.id,
           user_name: ctx.session.user.name || "Sistema",
         },
       });
 
       return comment;
-    }),
-
-  listComments: protectedProcedure
-    .input(z.object({
-      workspaceId: z.string(),
-      type: z.string().optional(),
-      resolved: z.boolean().optional(),
-    }))
-    .query(async ({ ctx, input }) => {
-      return ctx.db.workspaceComment.findMany({
-        where: {
-          workspace_id: input.workspaceId,
-          parent_id: null,
-          ...(input.type ? { type: input.type } : {}),
-          ...(input.resolved !== undefined ? { resolved: input.resolved } : {}),
-        },
-        include: {
-          replies: { orderBy: { created_at: "asc" } },
-        },
-        orderBy: { created_at: "desc" },
-      });
-    }),
-
-  // ═══ THESES ═══
-
-  addThesis: protectedProcedure
-    .input(z.object({
-      workspaceId: z.string(),
-      title: z.string().min(1),
-      type: z.string().optional(),
-      issue: z.string().optional(),
-      rule: z.string().optional(),
-      analysis: z.string().optional(),
-      conclusion: z.string().optional(),
-      legalRefs: z.array(z.string()).optional(),
-      caseRefs: z.array(z.string()).optional(),
-      doctrineRefs: z.array(z.string()).optional(),
-      strength: z.string().optional(),
-      aiGenerated: z.boolean().optional(),
-      aiConfidence: z.number().optional(),
-    }))
-    .mutation(async ({ ctx, input }) => {
-      const maxOrder = await ctx.db.workspaceThesis.aggregate({
-        where: { workspace_id: input.workspaceId },
-        _max: { order: true },
-      });
-
-      const thesis = await ctx.db.workspaceThesis.create({
-        data: {
-          workspace_id: input.workspaceId,
-          title: input.title,
-          type: input.type || "MERITO",
-          issue: input.issue,
-          rule: input.rule,
-          analysis: input.analysis,
-          conclusion: input.conclusion,
-          legal_refs: input.legalRefs || [],
-          case_refs: input.caseRefs || [],
-          doctrine_refs: input.doctrineRefs || [],
-          strength: input.strength,
-          ai_generated: input.aiGenerated || false,
-          ai_confidence: input.aiConfidence,
-          order: (maxOrder._max.order || 0) + 1,
-          created_by: ctx.session.user.id,
-        },
-      });
-
-      await ctx.db.workspaceActivity.create({
-        data: {
-          workspace_id: input.workspaceId,
-          action: "THESIS_ADDED",
-          description: `Tese adicionada: ${input.title}`,
-          user_id: ctx.session.user.id,
-          user_name: ctx.session.user.name || "Sistema",
-        },
-      });
-
-      return thesis;
-    }),
-
-  updateThesis: protectedProcedure
-    .input(z.object({
-      thesisId: z.string(),
-      title: z.string().optional(),
-      type: z.string().optional(),
-      status: z.string().optional(),
-      issue: z.string().optional(),
-      rule: z.string().optional(),
-      analysis: z.string().optional(),
-      conclusion: z.string().optional(),
-      legalRefs: z.array(z.string()).optional(),
-      caseRefs: z.array(z.string()).optional(),
-      doctrineRefs: z.array(z.string()).optional(),
-      strength: z.string().optional(),
-      order: z.number().optional(),
-    }))
-    .mutation(async ({ ctx, input }) => {
-      const { thesisId, legalRefs, caseRefs, doctrineRefs, ...rest } = input;
-      const thesis = await ctx.db.workspaceThesis.update({
-        where: { id: thesisId },
-        data: {
-          ...rest,
-          ...(legalRefs !== undefined ? { legal_refs: legalRefs } : {}),
-          ...(caseRefs !== undefined ? { case_refs: caseRefs } : {}),
-          ...(doctrineRefs !== undefined ? { doctrine_refs: doctrineRefs } : {}),
-        },
-      });
-
-      // Fire-and-forget: check if completed thesis is incorporated in draft
-      if (input.status === "APROVADA") {
-        onThesisCompleted(thesis.workspace_id, thesis.id).catch(() => {});
-      }
-
-      return thesis;
-    }),
-
-  deleteThesis: protectedProcedure
-    .input(z.object({ thesisId: z.string() }))
-    .mutation(async ({ ctx, input }) => {
-      return ctx.db.workspaceThesis.delete({ where: { id: input.thesisId } });
     }),
 
   // ═══ CHECKLIST ═══
@@ -706,17 +485,6 @@ export const workspaceRouter = router({
           round: nextRound,
           requested_by: ctx.session.user.id,
           approver_id: input.approverId,
-          content_snapshot: ws.editor_html,
-        },
-      });
-
-      // Change phase to APROVACAO
-      await ctx.db.deadlineWorkspace.update({
-        where: { id: input.workspaceId },
-        data: {
-          phase: "APROVACAO",
-          phase_changed_at: new Date(),
-          phase_changed_by: ctx.session.user.id,
         },
       });
 
@@ -739,7 +507,6 @@ export const workspaceRouter = router({
       approvalId: z.string(),
       status: z.enum(["APROVADO", "REPROVADO", "APROVADO_COM_RESSALVAS"]),
       feedback: z.string().optional(),
-      correctionsRequired: z.string().optional(),
     }))
     .mutation(async ({ ctx, input }) => {
       const approval = await ctx.db.workspaceApproval.update({
@@ -748,23 +515,11 @@ export const workspaceRouter = router({
           status: input.status,
           decided_at: new Date(),
           feedback: input.feedback,
-          corrections_required: input.correctionsRequired,
+          corrections_required: input.status === "REPROVADO" ? input.feedback : undefined,
         },
       });
 
-      // If approved, advance to PROTOCOLO
-      if (input.status === "APROVADO") {
-        await ctx.db.deadlineWorkspace.update({
-          where: { id: approval.workspace_id },
-          data: {
-            phase: "PROTOCOLO",
-            phase_changed_at: new Date(),
-            phase_changed_by: ctx.session.user.id,
-          },
-        });
-      }
-
-      // If rejected, go back to RASCUNHO
+      // If rejected, go back to RASCUNHO + auto comment
       if (input.status === "REPROVADO") {
         await ctx.db.deadlineWorkspace.update({
           where: { id: approval.workspace_id },
@@ -772,6 +527,28 @@ export const workspaceRouter = router({
             phase: "RASCUNHO",
             phase_changed_at: new Date(),
             phase_changed_by: ctx.session.user.id,
+          },
+        });
+
+        // Auto-comment with rejection reason
+        await ctx.db.workspaceComment.create({
+          data: {
+            workspace_id: approval.workspace_id,
+            content: `Devolvido para ajustes por ${ctx.session.user.name || "aprovador"}. Motivo: ${input.feedback || "Não informado"}`,
+            type: "GERAL",
+            user_id: ctx.session.user.id,
+          },
+        });
+      }
+
+      // If approved with caveats, also add comment
+      if (input.status === "APROVADO_COM_RESSALVAS" && input.feedback) {
+        await ctx.db.workspaceComment.create({
+          data: {
+            workspace_id: approval.workspace_id,
+            content: `Aprovado com ressalvas por ${ctx.session.user.name || "aprovador"}: ${input.feedback}`,
+            type: "GERAL",
+            user_id: ctx.session.user.id,
           },
         });
       }
@@ -787,11 +564,6 @@ export const workspaceRouter = router({
         },
       });
 
-      // Fire-and-forget: AI generates correction plan on rejection
-      if (input.status === "REPROVADO") {
-        onApprovalRejected(approval.workspace_id, approval.id).catch(() => {});
-      }
-
       return approval;
     }),
 
@@ -806,10 +578,18 @@ export const workspaceRouter = router({
       fileSize: z.number().optional(),
       mimeType: z.string().optional(),
       category: z.string().optional(),
-      description: z.string().optional(),
+      isMinutaPrincipal: z.boolean().optional(),
       isRequired: z.boolean().optional(),
     }))
     .mutation(async ({ ctx, input }) => {
+      // If marking as minuta principal, unmark any existing one
+      if (input.isMinutaPrincipal) {
+        await ctx.db.workspaceDocument.updateMany({
+          where: { workspace_id: input.workspaceId, is_minuta_principal: true },
+          data: { is_minuta_principal: false },
+        });
+      }
+
       const maxOrder = await ctx.db.workspaceDocument.aggregate({
         where: { workspace_id: input.workspaceId },
         _max: { order: true },
@@ -824,10 +604,11 @@ export const workspaceRouter = router({
           file_size: input.fileSize || 0,
           mime_type: input.mimeType,
           category: input.category || "ANEXO",
-          description: input.description,
+          is_minuta_principal: input.isMinutaPrincipal || false,
           is_required: input.isRequired || false,
-          order: (maxOrder._max.order || 0) + 1,
+          order: input.isMinutaPrincipal ? 0 : (maxOrder._max.order || 0) + 1,
           uploaded_by: ctx.session.user.id,
+          uploaded_by_name: ctx.session.user.name,
         },
       });
 
@@ -835,7 +616,9 @@ export const workspaceRouter = router({
         data: {
           workspace_id: input.workspaceId,
           action: "DOCUMENT_UPLOADED",
-          description: `Documento anexado: ${input.title}`,
+          description: input.isMinutaPrincipal
+            ? `Minuta principal juntada: ${input.fileName}`
+            : `Anexo juntado: ${input.title} (${input.fileName})`,
           user_id: ctx.session.user.id,
           user_name: ctx.session.user.name || "Sistema",
         },
@@ -847,38 +630,38 @@ export const workspaceRouter = router({
       return doc;
     }),
 
-  validateDocument: protectedProcedure
+  updateDocument: protectedProcedure
     .input(z.object({
       documentId: z.string(),
-      validated: z.boolean(),
+      title: z.string().optional(),
+      order: z.number().optional(),
     }))
     .mutation(async ({ ctx, input }) => {
-      const doc = await ctx.db.workspaceDocument.update({
-        where: { id: input.documentId },
-        data: {
-          is_validated: input.validated,
-          validated_by: input.validated ? ctx.session.user.id : null,
-          validated_at: input.validated ? new Date() : null,
-        },
+      const { documentId, ...data } = input;
+      return ctx.db.workspaceDocument.update({
+        where: { id: documentId },
+        data,
       });
-
-      await ctx.db.workspaceActivity.create({
-        data: {
-          workspace_id: doc.workspace_id,
-          action: "DOCUMENT_VALIDATED",
-          description: `Documento ${input.validated ? "validado" : "invalidado"}: ${doc.title}`,
-          user_id: ctx.session.user.id,
-          user_name: ctx.session.user.name || "Sistema",
-        },
-      });
-
-      return doc;
     }),
 
   removeDocument: protectedProcedure
     .input(z.object({ documentId: z.string() }))
     .mutation(async ({ ctx, input }) => {
-      return ctx.db.workspaceDocument.delete({ where: { id: input.documentId } });
+      const doc = await ctx.db.workspaceDocument.delete({ where: { id: input.documentId } });
+
+      // If removed minuta, clear AI analysis
+      if (doc.is_minuta_principal) {
+        await ctx.db.deadlineWorkspace.update({
+          where: { id: doc.workspace_id },
+          data: {
+            analise_ia: null,
+            analise_ia_data: null,
+            analise_ia_arquivo: null,
+          },
+        });
+      }
+
+      return doc;
     }),
 
   // ═══ ACTIVITY LOG ═══
@@ -909,9 +692,8 @@ export const workspaceRouter = router({
       return { items, total, page: input.page, perPage: input.perPage };
     }),
 
-  // ═══ WORKSPACE ACTIONS (unified) ═══
+  // ═══ WORKSPACE ACTIONS ═══
 
-  // Delegate deadline to another user
   delegate: protectedProcedure
     .input(z.object({
       deadlineId: z.string(),
@@ -944,7 +726,6 @@ export const workspaceRouter = router({
       return dl;
     }),
 
-  // Lock/unlock workspace
   toggleLock: protectedProcedure
     .input(z.object({
       workspaceId: z.string(),
@@ -977,15 +758,15 @@ export const workspaceRouter = router({
   stats: protectedProcedure
     .input(z.object({ workspaceId: z.string() }))
     .query(async ({ ctx, input }) => {
-      const [checklist, comments, theses, approvals, docs] = await Promise.all([
+      const [checklist, comments, approvals, docs, minuta] = await Promise.all([
         ctx.db.workspaceChecklist.findMany({ where: { workspace_id: input.workspaceId } }),
-        ctx.db.workspaceComment.count({ where: { workspace_id: input.workspaceId, resolved: false } }),
-        ctx.db.workspaceThesis.count({ where: { workspace_id: input.workspaceId } }),
+        ctx.db.workspaceComment.count({ where: { workspace_id: input.workspaceId } }),
         ctx.db.workspaceApproval.findFirst({
           where: { workspace_id: input.workspaceId },
           orderBy: { created_at: "desc" },
         }),
         ctx.db.workspaceDocument.count({ where: { workspace_id: input.workspaceId } }),
+        ctx.db.workspaceDocument.findFirst({ where: { workspace_id: input.workspaceId, is_minuta_principal: true } }),
       ]);
 
       const totalChecklist = checklist.length;
@@ -997,10 +778,10 @@ export const workspaceRouter = router({
         checklistDone: checkedChecklist,
         checklistProgress: totalChecklist > 0 ? Math.round((checkedChecklist / totalChecklist) * 100) : 0,
         blockingUnchecked,
-        openComments: comments,
-        totalTheses: theses,
+        totalComments: comments,
         lastApproval: approvals,
         totalDocuments: docs,
+        hasMinuta: !!minuta,
       };
     }),
 });
