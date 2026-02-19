@@ -596,6 +596,10 @@ model User {
   email_activities_created     EmailActivity[] @relation("ActivityCreator")
   crj_negotiations_assigned    CRJNegotiation[] @relation("CRJNegAssignee")
   crj_events                   CRJNegotiationEvent[] @relation("CRJEventUser")
+  requestedInvestigations      Investigation[] @relation("InvestigationRequester")
+  assignedInvestigations       Investigation[] @relation("InvestigationAssignee")
+  investigationQueries         InvestigationQuery[] @relation("InvestigationQueryExecutor")
+  investigationReports         InvestigationReport[] @relation("InvestigationReportGenerator")
 
   @@map("users")
 }
@@ -742,6 +746,7 @@ model Case {
   email_links                EmailLink[]
   email_activities           EmailActivity[]
   whatsapp_conversations     WhatsAppConversation[]
+  investigations             Investigation[] @relation("InvestigationCase")
 
   @@map("cases")
 }
@@ -1186,6 +1191,7 @@ model Project {
   email_links     EmailLink[]
   email_activities EmailActivity[]
   whatsapp_conversations WhatsAppConversation[]
+  investigations         Investigation[] @relation("InvestigationProject")
 
   @@map("projects")
 }
@@ -2698,6 +2704,7 @@ model CreditRecoveryCase {
   monitoramentos        DebtorMonitoring[]
   eventos               RecoveryEvent[]
   devedores_solidarios  JointDebtor[]
+  investigations_new    Investigation[] @relation("InvestigationCreditCase")
 
   @@index([case_id])
   @@index([person_id])
@@ -4427,4 +4434,552 @@ model AuditLog {
   @@index([resource, resource_id])
   @@index([timestamp])
   @@map("audit_logs")
+}
+
+// ═══════════════════════════════════════════════════════════
+// INVESTIGAÇÃO PATRIMONIAL — CORE
+// ═══════════════════════════════════════════════════════════
+
+model Investigation {
+  id              String   @id @default(cuid())
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Identificação do alvo
+  targetName      String
+  targetDocument  String
+  targetType      TargetType
+  targetEmail     String?
+  targetPhone     String?
+
+  // Vinculação ao caso de recuperação de crédito
+  creditCaseId    String?
+  creditCase      CreditRecoveryCase? @relation("InvestigationCreditCase", fields: [creditCaseId], references: [id])
+
+  // Vinculação a processo judicial (opcional)
+  caseId          String?
+  case_           Case?    @relation("InvestigationCase", fields: [caseId], references: [id])
+
+  // Vinculação a projeto/negociação (opcional)
+  projectId       String?
+  project         Project? @relation("InvestigationProject", fields: [projectId], references: [id])
+
+  // Status e controle
+  status          InvestigationStatus @default(PENDENTE)
+  priority        Priority @default(MEDIA)
+  depth           InvestigationDepth @default(PADRAO)
+
+  // Quem solicitou e quem executa
+  requestedById   String
+  requestedBy     User     @relation("InvestigationRequester", fields: [requestedById], references: [id])
+  assignedToId    String?
+  assignedTo      User?    @relation("InvestigationAssignee", fields: [assignedToId], references: [id])
+
+  // Resumo patrimonial consolidado
+  totalEstimatedValue   Decimal? @db.Decimal(18, 2)
+  totalDebts            Decimal? @db.Decimal(18, 2)
+  riskScore             Int?
+  riskClassification    String?
+  aiSummary             String?  @db.Text
+
+  // Dados cadastrais extraídos
+  cadastralData         Json?
+  corporateStructure    Json?
+
+  // Controle de consultas
+  lastFullScanAt        DateTime?
+  autoMonitor           Boolean  @default(false)
+  monitorFrequency      MonitorFrequency?
+
+  notes                 String?  @db.Text
+
+  // Relações
+  queries               InvestigationQuery[]
+  assets                DiscoveredAsset[]
+  debts                 DiscoveredDebt[]
+  lawsuits              DiscoveredLawsuit[]
+  corporateLinks        CorporateLink[]
+  alerts                InvestigationAlert[]
+  reports               InvestigationReport[]
+  relatedPersons        RelatedPerson[]
+
+  @@index([targetDocument])
+  @@index([creditCaseId])
+  @@index([status])
+  @@index([assignedToId])
+  @@map("investigations")
+}
+
+model InvestigationQuery {
+  id                String   @id @default(cuid())
+  createdAt         DateTime @default(now())
+
+  investigationId   String
+  investigation     Investigation @relation(fields: [investigationId], references: [id], onDelete: Cascade)
+
+  provider          ApiProvider
+  endpoint          String
+  queryType         QueryType
+
+  inputParams       Json
+  rawResponse       Json?
+  parsedData        Json?
+
+  status            QueryStatus     @default(PENDENTE)
+  errorMessage      String?
+  responseTimeMs    Int?
+  cost              Decimal?        @db.Decimal(8, 4)
+
+  legalBasis        LgpdLegalBasis  @default(EXERCICIO_DIREITOS)
+  retentionUntil    DateTime?
+  executedById      String
+  executedBy        User            @relation("InvestigationQueryExecutor", fields: [executedById], references: [id])
+
+  @@index([investigationId])
+  @@index([provider])
+  @@index([status])
+  @@map("investigation_queries")
+}
+
+model DiscoveredAsset {
+  id                String   @id @default(cuid())
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  investigationId   String
+  investigation     Investigation @relation(fields: [investigationId], references: [id], onDelete: Cascade)
+
+  category          AssetCategory
+  subcategory       String?
+  description       String
+  registrationId    String?
+  location          String?
+  state             String?
+  city              String?
+
+  estimatedValue    Decimal?  @db.Decimal(18, 2)
+  valuationMethod   String?
+  valuationDate     DateTime?
+
+  hasRestriction    Boolean   @default(false)
+  restrictionType   String?
+  restrictionDetail String?  @db.Text
+  isSeizable        Boolean  @default(true)
+  impenhorabilityReason String?
+
+  ownershipPercentage Decimal? @db.Decimal(5, 2)
+  coOwners          Json?
+
+  sourceProvider    ApiProvider
+  sourceQueryId     String?
+  rawSourceData     Json?
+
+  verified          Boolean   @default(false)
+  verifiedAt        DateTime?
+  verifiedById      String?
+
+  latitude          Decimal?  @db.Decimal(10, 7)
+  longitude         Decimal?  @db.Decimal(10, 7)
+  areaHectares      Decimal?  @db.Decimal(12, 4)
+  carCode           String?
+
+  @@index([investigationId])
+  @@index([category])
+  @@map("discovered_assets")
+}
+
+model DiscoveredDebt {
+  id                String   @id @default(cuid())
+  createdAt         DateTime @default(now())
+
+  investigationId   String
+  investigation     Investigation @relation(fields: [investigationId], references: [id], onDelete: Cascade)
+
+  debtType          DebtType
+  creditor          String
+  creditorDocument  String?
+
+  originalValue     Decimal?  @db.Decimal(18, 2)
+  currentValue      Decimal?  @db.Decimal(18, 2)
+
+  inscriptionDate   DateTime?
+  dueDate           DateTime?
+
+  description       String?
+  caseNumber        String?
+  status            String?
+  origin            String?
+
+  sourceProvider    ApiProvider
+  rawSourceData     Json?
+
+  @@index([investigationId])
+  @@index([debtType])
+  @@map("discovered_debts")
+}
+
+model DiscoveredLawsuit {
+  id                String   @id @default(cuid())
+  createdAt         DateTime @default(now())
+
+  investigationId   String
+  investigation     Investigation @relation(fields: [investigationId], references: [id], onDelete: Cascade)
+
+  caseNumber        String
+  court             String
+  vara              String?
+  subject           String?
+  class_            String?
+  role              String
+  otherParties      Json?
+
+  estimatedValue    Decimal?  @db.Decimal(18, 2)
+  status            String?
+  lastMovement      String?
+  lastMovementDate  DateTime?
+  distributionDate  DateTime?
+
+  relevance         LawsuitRelevance @default(MEDIA)
+  hasAssetFreeze    Boolean   @default(false)
+  notes             String?   @db.Text
+
+  sourceProvider    ApiProvider
+  rawSourceData     Json?
+
+  @@index([investigationId])
+  @@index([caseNumber])
+  @@map("discovered_lawsuits")
+}
+
+model CorporateLink {
+  id                String   @id @default(cuid())
+  createdAt         DateTime @default(now())
+
+  investigationId   String
+  investigation     Investigation @relation(fields: [investigationId], references: [id], onDelete: Cascade)
+
+  companyName       String
+  companyCnpj      String
+  companyStatus     String?
+  cnae              String?
+  openDate          DateTime?
+
+  role              String
+  sharePercentage   Decimal?  @db.Decimal(5, 2)
+  capitalValue      Decimal?  @db.Decimal(18, 2)
+  entryDate         DateTime?
+  exitDate          DateTime?
+
+  isOffshore        Boolean   @default(false)
+  isRecentCreation  Boolean   @default(false)
+  hasIrregularity   Boolean   @default(false)
+  irregularityDesc  String?
+
+  sourceProvider    ApiProvider
+  rawSourceData     Json?
+
+  @@index([investigationId])
+  @@index([companyCnpj])
+  @@map("corporate_links")
+}
+
+model RelatedPerson {
+  id                String   @id @default(cuid())
+  createdAt         DateTime @default(now())
+
+  investigationId   String
+  investigation     Investigation @relation(fields: [investigationId], references: [id], onDelete: Cascade)
+
+  name              String
+  document          String?
+  relationship      String
+
+  shouldInvestigate Boolean  @default(false)
+  childInvestigationId String?
+  riskFlag          String?
+
+  sourceProvider    ApiProvider?
+  rawSourceData     Json?
+
+  @@index([investigationId])
+  @@map("related_persons")
+}
+
+model InvestigationAlert {
+  id                String   @id @default(cuid())
+  createdAt         DateTime @default(now())
+
+  investigationId   String
+  investigation     Investigation @relation(fields: [investigationId], references: [id], onDelete: Cascade)
+
+  alertType         AlertType
+  severity          AlertSeverity @default(MEDIA)
+  title             String
+  description       String  @db.Text
+
+  sourceProvider    ApiProvider?
+  triggeredBy       String?
+
+  read              Boolean  @default(false)
+  readAt            DateTime?
+  readById          String?
+  actionTaken       String?  @db.Text
+  dismissed         Boolean  @default(false)
+
+  @@index([investigationId])
+  @@index([alertType])
+  @@index([read])
+  @@map("investigation_alerts")
+}
+
+model InvestigationReport {
+  id                String   @id @default(cuid())
+  createdAt         DateTime @default(now())
+
+  investigationId   String
+  investigation     Investigation @relation(fields: [investigationId], references: [id], onDelete: Cascade)
+
+  reportType        ReportType
+  title             String
+
+  content           String   @db.Text
+  aiGenerated       Boolean  @default(false)
+
+  fileUrl           String?
+  fileName          String?
+
+  generatedById     String
+  generatedBy       User     @relation("InvestigationReportGenerator", fields: [generatedById], references: [id])
+
+  @@index([investigationId])
+  @@map("investigation_reports")
+}
+
+// ═══════════════════════════════════════════════════════════
+// CONFIGURAÇÃO DE APIs EXTERNAS
+// ═══════════════════════════════════════════════════════════
+
+model ApiProviderConfig {
+  id              String   @id @default(cuid())
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  provider        ApiProvider @unique
+  displayName     String
+  category        ApiCategory
+
+  apiKey          String?
+  apiSecret       String?
+  baseUrl         String?
+  extraConfig     Json?
+
+  isActive        Boolean  @default(false)
+  isConfigured    Boolean  @default(false)
+  lastTestedAt    DateTime?
+  lastTestResult  String?
+
+  monthlyBudget   Decimal? @db.Decimal(10, 2)
+  monthlySpent    Decimal  @default(0) @db.Decimal(10, 2)
+  costPerQuery    Decimal? @db.Decimal(8, 4)
+  rateLimitPerMin Int?
+  rateLimitPerDay Int?
+
+  @@index([provider])
+  @@index([isActive])
+  @@map("api_provider_configs")
+}
+
+// ═══════════════════════════════════════════════════════════
+// INVESTIGATION ENUMS
+// ═══════════════════════════════════════════════════════════
+
+enum TargetType {
+  PF
+  PJ
+}
+
+enum InvestigationStatus {
+  PENDENTE
+  EM_ANDAMENTO
+  CONSULTAS_CONCLUIDAS
+  ANALISE_IA
+  CONCLUIDA
+  ARQUIVADA
+}
+
+enum InvestigationDepth {
+  BASICA
+  PADRAO
+  APROFUNDADA
+  COMPLETA
+}
+
+enum MonitorFrequency {
+  DIARIO
+  SEMANAL
+  QUINZENAL
+  MENSAL
+}
+
+enum ApiProvider {
+  BRASILAPI
+  CNPJA
+  DATAJUD
+  CVM_DADOS_ABERTOS
+  BACEN
+  RECEITA_FEDERAL
+  PGFN
+  INPI
+  INFOSIMPLES
+  ESCAVADOR
+  JUDIT
+  ASSERTIVA
+  NEOWAY
+  BIGDATACORP
+  JUSBRASIL
+  SERASA
+  BOA_VISTA
+  QUOD
+  DENATRAN_SERPRO
+  ONR_SREI
+  CENPROT
+  INCRA_SIGEF
+  SICAR
+  MAPBIOMAS
+  GOOGLE_EARTH_ENGINE
+  PLANET_LABS
+  SENTINEL_HUB
+  INPE_TERRABRASILIS
+  COMPLYADVANTAGE
+  REFINITIV_WORLDCHECK
+  OPENCORPORATES
+  SAYARI
+  DNB
+  CHAINALYSIS
+  OPENSANCTIONS
+  SANCTIONS_IO
+  MANUAL
+}
+
+enum ApiCategory {
+  CADASTRAL
+  JUDICIAL
+  PATRIMONIAL
+  VEICULAR
+  IMOBILIARIO
+  RURAL_SATELITE
+  CREDITICIO
+  COMPLIANCE
+  SOCIETARIO
+  PROTESTOS
+}
+
+enum QueryType {
+  CONSULTA_CPF
+  CONSULTA_CNPJ
+  CONSULTA_PROCESSO
+  CONSULTA_VEICULO
+  CONSULTA_IMOVEL
+  CONSULTA_PROTESTO
+  CONSULTA_DIVIDA_ATIVA
+  CONSULTA_SCORING
+  CONSULTA_PEP_SANCOES
+  CONSULTA_SOCIETARIA
+  CONSULTA_CVM
+  CONSULTA_SATELITE
+  CONSULTA_RURAL
+  CONSULTA_MARCAS
+  MONITORAMENTO
+}
+
+enum QueryStatus {
+  PENDENTE
+  EXECUTANDO
+  CONCLUIDA
+  ERRO
+  TIMEOUT
+  SEM_DADOS
+  MOCK
+}
+
+enum LgpdLegalBasis {
+  EXERCICIO_DIREITOS
+  PROTECAO_CREDITO
+  LEGITIMO_INTERESSE
+  CUMPRIMENTO_OBRIGACAO
+}
+
+enum AssetCategory {
+  IMOVEL_URBANO
+  IMOVEL_RURAL
+  VEICULO_AUTOMOVEL
+  VEICULO_CAMINHAO
+  VEICULO_MOTOCICLETA
+  VEICULO_OUTRO
+  EMBARCACAO
+  AERONAVE
+  PARTICIPACAO_SOCIETARIA
+  ACOES_BOLSA
+  FUNDOS_INVESTIMENTO
+  DEPOSITO_BANCARIO
+  CREDITOS_RECEBER
+  MARCAS_PATENTES
+  MAQUINAS_EQUIPAMENTOS
+  CRIPTOATIVOS
+  OUTROS
+}
+
+enum DebtType {
+  DIVIDA_ATIVA_UNIAO
+  DIVIDA_ATIVA_ESTADO
+  DIVIDA_ATIVA_MUNICIPIO
+  PROTESTO
+  NEGATIVACAO_SERASA
+  NEGATIVACAO_SPC
+  EXECUCAO_FISCAL
+  EXECUCAO_TRABALHISTA
+  EXECUCAO_CIVEL
+  PRECATORIO
+  OUTROS
+}
+
+enum LawsuitRelevance {
+  BAIXA
+  MEDIA
+  ALTA
+  CRITICA
+}
+
+enum AlertType {
+  PATRIMONIO_ALIENADO
+  EMPRESA_BAIXADA
+  NOVA_EMPRESA_CRIADA
+  NOVO_PROCESSO
+  VEICULO_TRANSFERIDO
+  IMOVEL_GRAVADO
+  PROTESTO_INCLUIDO
+  DIVIDA_INSCRITA
+  SANCAO_DETECTADA
+  PEP_DETECTADO
+  SOCIEDADE_ALTERADA
+  DESMATAMENTO_DETECTADO
+  SCORE_ALTERADO
+}
+
+enum AlertSeverity {
+  BAIXA
+  MEDIA
+  ALTA
+  CRITICA
+}
+
+enum ReportType {
+  DOSSIE_COMPLETO
+  RESUMO_PATRIMONIAL
+  RELATORIO_BENS
+  RELATORIO_PROCESSOS
+  RELATORIO_SOCIETARIO
+  RELATORIO_COMPLIANCE
+  PETICAO_MEDIDA_CONSTRITIVA
+  LAUDO_AVALIACAO
 }
