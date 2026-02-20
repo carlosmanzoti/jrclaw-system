@@ -335,3 +335,82 @@
 .email-body h1 { font-size: 1.25em; }
 .email-body h2 { font-size: 1.15em; }
 .email-body h3 { font-size: 1.05em; }
+
+/* === TipTap Editor Juridico (Harvey Specter) === */
+.tiptap {
+  outline: none;
+}
+
+.tiptap p {
+  margin-bottom: 0.5em;
+  text-align: justify;
+  text-indent: 1.5cm;
+}
+
+.tiptap p:first-child {
+  text-indent: 0;
+}
+
+.tiptap h1 {
+  font-size: 1.3em;
+  font-weight: bold;
+  text-transform: uppercase;
+  text-align: center;
+  margin: 1em 0 0.8em;
+  letter-spacing: 0.02em;
+}
+
+.tiptap h2 {
+  font-size: 1.1em;
+  font-weight: bold;
+  margin: 0.8em 0 0.5em;
+}
+
+.tiptap h3 {
+  font-size: 1em;
+  font-weight: bold;
+  font-style: italic;
+  margin: 0.5em 0 0.3em;
+}
+
+.tiptap ul, .tiptap ol {
+  padding-left: 2em;
+  margin: 0.5em 0;
+}
+
+.tiptap li {
+  margin-bottom: 0.3em;
+}
+
+.tiptap li p {
+  text-indent: 0;
+  margin-bottom: 0;
+}
+
+.tiptap hr {
+  border: none;
+  border-top: 1px solid #ccc;
+  margin: 1em 0;
+}
+
+.tiptap blockquote {
+  margin: 0.5em 1.5em;
+  padding-left: 1em;
+  border-left: 3px solid #C9A961;
+  font-style: italic;
+  color: #666666;
+}
+
+.tiptap p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  color: #adb5bd;
+  pointer-events: none;
+  height: 0;
+  font-style: italic;
+}
+
+/* Selection highlight in editor */
+.tiptap ::selection {
+  background: rgba(201, 168, 76, 0.3);
+}

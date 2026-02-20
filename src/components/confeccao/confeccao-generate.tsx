@@ -1,13 +1,13 @@
 "use client"
 
 import { useState, useCallback, useMemo, useRef, useEffect } from "react"
+import dynamic from "next/dynamic"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
 import { Switch } from "@/components/ui/switch"
-import { ScrollArea } from "@/components/ui/scroll-area"
 import { Progress } from "@/components/ui/progress"
 import {
   Select,
@@ -29,19 +29,15 @@ import {
   Sparkles,
   RotateCcw,
   Save,
-  Download,
   Crown,
   Upload,
   X,
   FileText,
   StopCircle,
   BookOpen,
-  Copy,
-  Check,
   ChevronDown,
   ChevronRight,
 } from "lucide-react"
-import { TiptapEditor } from "@/components/ui/tiptap-editor"
 import {
   getModelDisplayForDocType,
   MODEL_DISPLAY,
@@ -61,6 +57,16 @@ import {
 import { BibliotecaSearchModal } from "@/components/biblioteca/biblioteca-search-modal"
 import { BibliotecaForm } from "@/components/biblioteca/biblioteca-form"
 import { trpc } from "@/lib/trpc"
+
+const DocumentEditor = dynamic(
+  () => import("@/components/harvey/DocumentEditor"),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="animate-pulse h-96 bg-[#F7F3F1] rounded-lg" />
+    ),
+  }
+)
 
 const DOC_TYPE_GROUPS: Record<string, Array<{ value: string; label: string }>> = {
   "Fase de Conhecimento": [
@@ -300,7 +306,9 @@ export function ConfeccaoGenerate({
   // UI state
   const [showAdvancedOptions, setShowAdvancedOptions] = useState(false)
   const [showRefsSection, setShowRefsSection] = useState(true)
-  const [copied, setCopied] = useState(false)
+
+  // Content from the DocumentEditor (tracks edits after generation)
+  const [editedContent, setEditedContent] = useState("")
 
   // Save document mutation
   const [isSaving, setIsSaving] = useState(false)
@@ -313,14 +321,15 @@ export function ConfeccaoGenerate({
   })
 
   const handleSave = useCallback(async () => {
-    if (!generatedContent || !tipoDocumento) return
+    const contentToSave = editedContent || generatedContent
+    if (!contentToSave || !tipoDocumento) return
     setIsSaving(true)
     setSaveSuccess(false)
 
     try {
       // Create HTML file blob and upload
       const docTitle = titulo || getDocTypeLabel(tipoDocumento)
-      const htmlContent = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${docTitle}</title></head><body>${generatedContent}</body></html>`
+      const htmlContent = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${docTitle}</title></head><body>${contentToSave}</body></html>`
       const blob = new Blob([htmlContent], { type: "text/html" })
       const file = new File([blob], `${docTitle.replace(/\s+/g, "-").toLowerCase()}-${Date.now()}.html`, {
         type: "text/html",
@@ -354,75 +363,7 @@ export function ConfeccaoGenerate({
     } finally {
       setIsSaving(false)
     }
-  }, [generatedContent, tipoDocumento, titulo, caseId, projectId, createDocumentMutation])
-
-  const handleDownloadPDF = useCallback(() => {
-    if (!generatedContent) return
-
-    const docTitle = titulo || getDocTypeLabel(tipoDocumento)
-
-    // Open a styled print window for PDF generation
-    const printWindow = window.open("", "_blank")
-    if (!printWindow) {
-      setError("Popup bloqueado. Permita popups para gerar o PDF.")
-      return
-    }
-
-    printWindow.document.write(`
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="utf-8">
-        <title>${docTitle}</title>
-        <style>
-          @page { margin: 2cm; size: A4; }
-          body {
-            font-family: 'Times New Roman', serif;
-            font-size: 12pt;
-            line-height: 1.6;
-            color: #000;
-            max-width: 100%;
-            padding: 0;
-            margin: 0;
-          }
-          h1 { font-size: 16pt; text-align: center; margin-bottom: 1em; }
-          h2 { font-size: 14pt; margin-top: 1.5em; }
-          h3 { font-size: 13pt; margin-top: 1em; }
-          p { text-align: justify; margin-bottom: 0.5em; text-indent: 2em; }
-          ul, ol { margin-left: 2em; }
-          blockquote { margin: 1em 2em; padding-left: 1em; border-left: 2px solid #666; font-style: italic; }
-          table { border-collapse: collapse; width: 100%; margin: 1em 0; }
-          th, td { border: 1px solid #333; padding: 6px 8px; text-align: left; font-size: 11pt; }
-          th { background: #f0f0f0; font-weight: bold; }
-          .header-banner { background: #FFC107; color: #000; padding: 4px 8px; font-size: 9pt; text-align: center; margin-bottom: 1em; }
-          @media print { .no-print { display: none !important; } }
-        </style>
-      </head>
-      <body>
-        <div class="header-banner no-print">Clique em Ctrl+P ou Cmd+P para salvar como PDF</div>
-        ${generatedContent}
-      </body>
-      </html>
-    `)
-    printWindow.document.close()
-    // Trigger print after content loads
-    printWindow.onload = () => printWindow.print()
-  }, [generatedContent, tipoDocumento, titulo])
-
-  const handleCopyText = useCallback(async () => {
-    if (!generatedContent) return
-    try {
-      // Strip HTML tags for plain text copy
-      const tmp = document.createElement("div")
-      tmp.innerHTML = generatedContent
-      const plainText = tmp.textContent || tmp.innerText || ""
-      await navigator.clipboard.writeText(plainText)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
-    } catch {
-      setError("Falha ao copiar texto.")
-    }
-  }, [generatedContent])
+  }, [editedContent, generatedContent, tipoDocumento, titulo, caseId, projectId, createDocumentMutation])
 
   // Derive current model display from selected type + forceOpus
   const currentModelDisplay = useMemo(() => {
@@ -587,7 +528,8 @@ export function ConfeccaoGenerate({
   }, [])
 
   const handleReviewWithAI = useCallback(async () => {
-    if (!generatedContent) return
+    const contentToReview = editedContent || generatedContent
+    if (!contentToReview) return
     setIsGenerating(true)
     setError("")
 
@@ -596,7 +538,7 @@ export function ConfeccaoGenerate({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          documentContent: generatedContent,
+          documentContent: contentToReview,
           reviewType: "completa",
           caseId: caseId && caseId !== "none" ? caseId : undefined,
         }),
@@ -608,21 +550,21 @@ export function ConfeccaoGenerate({
       if (!reader) throw new Error("No stream")
 
       const decoder = new TextDecoder()
-      let reviewText = "\n\n---\n\n## REVISÃO IA\n\n"
+      let reviewText = "\n\n---\n\n## REVISAO IA\n\n"
 
       while (true) {
         const { done, value } = await reader.read()
         if (done) break
         const chunk = decoder.decode(value, { stream: true })
         reviewText += chunk
-        setGeneratedContent(generatedContent + reviewText)
+        setGeneratedContent(contentToReview + reviewText)
       }
-    } catch (err: any) {
-      setError(err.message)
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Erro ao revisar")
     } finally {
       setIsGenerating(false)
     }
-  }, [generatedContent, caseId])
+  }, [editedContent, generatedContent, caseId])
 
   // Determine save-to-library tipo based on document type
   const saveToLibraryTipo = useMemo(() => {
@@ -1007,18 +949,18 @@ export function ConfeccaoGenerate({
               )}
             </div>
 
-            {/* Editor area */}
-            <div className="px-6 py-6">
-              <div className="min-h-[500px] prose prose-sm max-w-none">
-                <TiptapEditor
-                  content={generatedContent}
-                  onChange={setGeneratedContent}
-                />
-              </div>
+            {/* Rich Document Editor */}
+            <div className="px-4 py-4">
+              <DocumentEditor
+                content={generatedContent}
+                isGenerating={isGenerating}
+                documentType={getDocTypeLabel(tipoDocumento)}
+                onContentChange={(html) => setEditedContent(html)}
+              />
 
               {/* Save to Library suggestion */}
               {generatedContent && !isGenerating && (
-                <div className="mt-6 border rounded-lg bg-[#F7F3F1] p-3 flex items-center gap-3">
+                <div className="mt-4 border rounded-lg bg-[#F7F3F1] p-3 flex items-center gap-3">
                   <BookOpen className="size-5 text-[#17A2B8] shrink-0" />
                   <div className="flex-1">
                     <p className="text-xs font-medium">Salvar na Biblioteca?</p>
@@ -1046,14 +988,6 @@ export function ConfeccaoGenerate({
       {generatedContent && !isGenerating && (
         <div className="shrink-0 border-t bg-white px-4 py-2.5 flex items-center gap-2 shadow-[0_-2px_8px_rgba(0,0,0,0.06)]">
           <Button
-            size="sm"
-            className="text-xs bg-[#C9A961] hover:bg-[#C9A961]/90 text-[#2A2A2A]"
-            onClick={handleDownloadPDF}
-          >
-            <Download className="size-3.5 mr-1.5" />
-            Gerar PDF
-          </Button>
-          <Button
             variant="outline"
             size="sm"
             className={`text-xs ${saveSuccess ? "border-green-500 text-green-600" : ""}`}
@@ -1063,7 +997,7 @@ export function ConfeccaoGenerate({
             {isSaving ? (
               <><Loader2 className="size-3.5 mr-1.5 animate-spin" />Salvando...</>
             ) : saveSuccess ? (
-              <><Check className="size-3.5 mr-1.5" />Salvo!</>
+              <><Save className="size-3.5 mr-1.5" />Salvo!</>
             ) : (
               <><Save className="size-3.5 mr-1.5" />Salvar como Documento</>
             )}
@@ -1077,18 +1011,6 @@ export function ConfeccaoGenerate({
             <Sparkles className="size-3.5 mr-1.5 text-[#17A2B8]" />
             Revisar com IA
           </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            className={`text-xs ${copied ? "border-green-500 text-green-600" : ""}`}
-            onClick={handleCopyText}
-          >
-            {copied ? (
-              <><Check className="size-3.5 mr-1.5" />Copiado!</>
-            ) : (
-              <><Copy className="size-3.5 mr-1.5" />Copiar Texto</>
-            )}
-          </Button>
 
           <div className="flex-1" />
 
@@ -1098,6 +1020,7 @@ export function ConfeccaoGenerate({
             className="text-xs"
             onClick={() => {
               setGeneratedContent("")
+              setEditedContent("")
               setGenerationTier(null)
               setProgress(0)
               setGeneratedBibliotecaRefIds([])
@@ -1132,7 +1055,7 @@ export function ConfeccaoGenerate({
         prefill={{
           tipo: saveToLibraryTipo,
           titulo: titulo || tipoDocumento?.replace(/_/g, " ") || "",
-          conteudo: generatedContent,
+          conteudo: editedContent || generatedContent,
         }}
       />
     </div>
