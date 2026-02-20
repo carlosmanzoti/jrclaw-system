@@ -39,7 +39,13 @@ import {
   Factory,
   LayoutDashboard,
   Wheat,
+  FileDown,
+  FileSpreadsheet,
+  Loader2,
 } from "lucide-react";
+import { exportPatrimonyPDF } from "@/lib/patrimony-export";
+import { exportPatrimonyXLSX } from "@/lib/patrimony-export";
+import type { PatrimonyPDFData } from "@/lib/pdf/patrimony-pdf-template";
 
 // Import child tab components
 import PatrimonyRuralTab from "./patrimony-rural-tab";
@@ -175,6 +181,8 @@ interface PatrimonyTabProps {
 
 export function PatrimonyTab({ clientId }: PatrimonyTabProps) {
   const [activeTab, setActiveTab] = useState("visao-geral");
+  const [exportingPDF, setExportingPDF] = useState(false);
+  const [exportingXLSX, setExportingXLSX] = useState(false);
 
   // ── Data fetching ───────────────────────────────────────────────────────────
   const summary = trpc.patrimony.getSummary.useQuery({ clientId });
@@ -438,6 +446,134 @@ export function PatrimonyTab({ clientId }: PatrimonyTabProps) {
     return `${name || ""} ${(percent * 100).toFixed(0)}%`;
   };
 
+  // ── Export handlers ─────────────────────────────────────────────────────────
+
+  const handleExportPDF = async () => {
+    if (!data) return;
+    setExportingPDF(true);
+    try {
+      const pdfData: PatrimonyPDFData = {
+        clientName: "Cliente",
+        generatedAt: new Date().toLocaleDateString("pt-BR"),
+        summary: {
+          totalAssets: data.totalAssets,
+          freeAssets: data.freeAssets,
+          totalLienAmount: data.totalLienAmount,
+          totalRuralArea: data.totalRuralArea,
+          totalOwnedArea: data.totalOwnedArea,
+          ruralPropertyCount: data.counts.ruralProperties,
+          urbanPropertyCount: data.counts.urbanProperties,
+          vehicleCount: data.counts.vehicles,
+          machineCount: 0,
+          participationCount: data.counts.participations,
+        },
+        indicators: data.latestFinancial?.indicators ? {
+          year: data.latestFinancial.year,
+          grossRevenue: data.latestFinancial.grossRevenue,
+          ebitda: data.latestFinancial.ebitda,
+          netIncome: data.latestFinancial.netIncome,
+          totalDebt: data.latestFinancial.totalDebt,
+          netDebt: data.latestFinancial.netDebt,
+          equity: data.latestFinancial.equity,
+          debtToEquity: data.latestFinancial.indicators.debtToEquity ?? 0,
+          debtToEbitda: data.latestFinancial.indicators.debtToEbitda ?? 0,
+          currentRatio: data.latestFinancial.indicators.currentRatio ?? 0,
+          grossMargin: data.latestFinancial.indicators.grossMargin ?? 0,
+          ebitdaMargin: data.latestFinancial.indicators.ebitdaMargin ?? 0,
+          netMargin: data.latestFinancial.indicators.netMargin ?? 0,
+          roe: data.latestFinancial.indicators.roe ?? 0,
+        } : undefined,
+        ruralProperties: (ruralList.data || []).map((p: any) => ({
+          name: p.name, city: p.city, state: p.state, totalArea: p.totalArea,
+          productiveArea: p.productiveArea, estimatedValue: p.estimatedValue,
+          hasLien: p.hasLien, lienHolder: p.lienHolder, lienAmount: p.lienAmount, ownership: p.ownership,
+        })),
+        productions: (productionsList.data || []).map((p: any) => ({
+          crop: CROP_LABELS[p.crop as keyof typeof CROP_LABELS] || p.crop,
+          harvestYear: p.harvestYear, plantedArea: p.plantedArea,
+          totalProduction: p.totalProduction, yieldUnit: p.yieldUnit,
+          totalRevenue: p.totalRevenue, productionCost: p.productionCost,
+        })),
+        urbanProperties: (urbanList.data || []).map((p: any) => ({
+          propertyType: p.propertyType, description: p.description,
+          city: p.city, state: p.state, estimatedValue: p.estimatedValue, hasLien: p.hasLien,
+        })),
+        vehicles: (vehiclesList.data || []).map((v: any) => ({
+          category: v.category, description: v.description,
+          year: v.year, estimatedValue: v.estimatedValue, hasLien: v.hasLien,
+        })),
+        participations: (participationsList.data || []).map((p: any) => ({
+          companyName: p.companyName, cnpj: p.cnpj, participationType: p.participationType,
+          sharePercentage: p.sharePercentage, estimatedValue: p.estimatedValue,
+        })),
+        operational: data.latestOperational ? {
+          year: data.latestOperational.year,
+          totalEmployees: data.latestOperational.totalEmployees ?? undefined,
+          totalManagedArea: data.latestOperational.totalManagedArea ?? undefined,
+          storageCapacity: data.latestOperational.storageCapacity ?? undefined,
+        } : undefined,
+      };
+      await exportPatrimonyPDF(pdfData);
+    } catch (e) {
+      console.error("PDF export error:", e);
+    } finally {
+      setExportingPDF(false);
+    }
+  };
+
+  const handleExportXLSX = () => {
+    if (!data) return;
+    setExportingXLSX(true);
+    try {
+      exportPatrimonyXLSX({
+        clientName: "Cliente",
+        summary: {
+          totalAssets: data.totalAssets, freeAssets: data.freeAssets,
+          totalLienAmount: data.totalLienAmount, totalRuralArea: data.totalRuralArea,
+          ruralPropertyCount: data.counts.ruralProperties, urbanPropertyCount: data.counts.urbanProperties,
+          vehicleCount: data.counts.vehicles, machineCount: 0,
+          participationCount: data.counts.participations,
+        },
+        ruralProperties: (ruralList.data || []).map((p: any) => ({
+          name: p.name, city: p.city, state: p.state, totalArea: p.totalArea,
+          productiveArea: p.productiveArea, estimatedValue: p.estimatedValue,
+          hasLien: p.hasLien, lienHolder: p.lienHolder, lienAmount: p.lienAmount, ownership: p.ownership,
+        })),
+        productions: (productionsList.data || []).map((p: any) => ({
+          crop: CROP_LABELS[p.crop as keyof typeof CROP_LABELS] || p.crop,
+          harvestYear: p.harvestYear, season: p.season, plantedArea: p.plantedArea,
+          expectedYield: p.expectedYield, yieldUnit: p.yieldUnit, totalProduction: p.totalProduction,
+          totalRevenue: p.totalRevenue, productionCost: p.productionCost,
+        })),
+        urbanProperties: (urbanList.data || []).map((p: any) => ({
+          propertyType: p.propertyType, description: p.description,
+          city: p.city, state: p.state, builtArea: p.builtArea,
+          estimatedValue: p.estimatedValue, hasLien: p.hasLien,
+        })),
+        vehicles: (vehiclesList.data || []).map((v: any) => ({
+          category: v.category, description: v.description, brand: v.brand,
+          model: v.model, year: v.year, plate: v.plate,
+          estimatedValue: v.estimatedValue, hasLien: v.hasLien,
+        })),
+        participations: (participationsList.data || []).map((p: any) => ({
+          companyName: p.companyName, cnpj: p.cnpj, participationType: p.participationType,
+          sharePercentage: p.sharePercentage, role: p.role, companyStatus: p.companyStatus,
+          estimatedValue: p.estimatedValue,
+        })),
+        financials: (financials.data || []).map((f: any) => ({
+          year: f.year, grossRevenue: f.grossRevenue, netRevenue: f.netRevenue,
+          ebitda: f.ebitda, netIncome: f.netIncome, totalAssets: f.totalAssets,
+          equity: f.equity, totalDebt: f.totalDebt, netDebt: f.netDebt,
+        })),
+        operational: [],
+      });
+    } catch (e) {
+      console.error("XLSX export error:", e);
+    } finally {
+      setExportingXLSX(false);
+    }
+  };
+
   // ── Render ──────────────────────────────────────────────────────────────────
   return (
     <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
@@ -481,14 +617,36 @@ export function PatrimonyTab({ clientId }: PatrimonyTabProps) {
           ═══════════════════════════════════════════════════════════════════ */}
       <TabsContent value="visao-geral" className="space-y-6">
         {/* ── Header ─────────────────────────────────────────────────────── */}
-        <div>
-          <h2 className="text-2xl font-bold tracking-tight">
-            Relatorio Patrimonial
-          </h2>
-          <p className="text-sm text-muted-foreground">
-            Visao consolidada do patrimonio, indicadores financeiros e producao
-            agricola
-          </p>
+        <div className="flex items-start justify-between">
+          <div>
+            <h2 className="text-2xl font-bold tracking-tight">
+              Relatorio Patrimonial
+            </h2>
+            <p className="text-sm text-muted-foreground">
+              Visao consolidada do patrimonio, indicadores financeiros e producao
+              agricola
+            </p>
+          </div>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleExportPDF}
+              disabled={exportingPDF}
+            >
+              {exportingPDF ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <FileDown className="mr-1.5 h-4 w-4" />}
+              Exportar PDF
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleExportXLSX}
+              disabled={exportingXLSX}
+            >
+              {exportingXLSX ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <FileSpreadsheet className="mr-1.5 h-4 w-4" />}
+              Exportar XLSX
+            </Button>
+          </div>
         </div>
 
         <Separator />
