@@ -1,10 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { anthropic, MODEL_CONFIGS } from "@/lib/ai";
 import { generateText } from "ai";
+import { auth } from "@/lib/auth";
 import { DEADLINE_SUGGESTION_PROMPT, buildDeadlineSuggestionContext } from "@/lib/deadline-ai-prompts";
 
 export async function POST(req: NextRequest) {
   try {
+    const session = await auth();
+    if (!session?.user) {
+      return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
+    }
+
     const body = await req.json();
     const { movimentoTexto, tipoProcesso, jurisdicao, uf, parteContraria, processoEletronico } = body;
 

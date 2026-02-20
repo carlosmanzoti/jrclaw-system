@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { generateText } from "ai"
 import { z } from "zod"
 import { anthropic, MODEL_CONFIGS } from "@/lib/ai"
+import { auth } from "@/lib/auth"
 import { buildFieldDescriptionForAI, type ImportEntityTypeKey } from "@/lib/import-constants"
 
 const VALID_ENTITY_TYPES: ImportEntityTypeKey[] = [
@@ -16,6 +17,11 @@ const requestSchema = z.object({
 
 export async function POST(req: NextRequest) {
   try {
+    const session = await auth()
+    if (!session?.user) {
+      return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
+    }
+
     const body = await req.json()
     const parsed = requestSchema.safeParse(body)
 
