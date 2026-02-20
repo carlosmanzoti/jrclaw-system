@@ -21,6 +21,8 @@ import { monitoringRouter } from "./monitoring";
 import { financialRouter } from "./financial";
 import { auditRouter } from "./audit";
 import { investigationRouter } from "./investigation";
+import { courtRouter } from "./court";
+import { judicialAdminRouter } from "./judicial-administrator";
 
 export const appRouter = router({
   users: usersRouter,
@@ -45,6 +47,8 @@ export const appRouter = router({
   financial: financialRouter,
   audit: auditRouter,
   investigation: investigationRouter,
+  court: courtRouter,
+  judicialAdmin: judicialAdminRouter,
 });
 
 export type AppRouter = typeof appRouter;

@@ -871,6 +871,8 @@ model Person {
   whatsapp_conversations     WhatsAppConversation[]
   portal_messages            PortalMessage[]
   deadlines                  Deadline[]       @relation("ClientDeadlines")
+  relatedPersons             ClientRelatedPerson[] @relation("ClientRelatedPersons")
+  linkedAsRelated            ClientRelatedPerson[] @relation("LinkedRelatedPerson")
 
   @@map("persons")
 }
@@ -944,6 +946,10 @@ model Case {
   email_activities           EmailActivity[]
   whatsapp_conversations     WhatsAppConversation[]
   investigations             Investigation[] @relation("InvestigationCase")
+  courtId                    String?
+  court                      Court?          @relation("CourtCases", fields: [courtId], references: [id])
+  caseJudges                 CaseJudge[]
+  caseAdministrators         CaseAdministrator[]
 
   @@map("cases")
 }
@@ -5297,4 +5303,352 @@ enum ReportType {
   RELATORIO_COMPLIANCE
   PETICAO_MEDIDA_CONSTRITIVA
   LAUDO_AVALIACAO
+}
+
+// ============================================================
+// CADASTROS — VARAS, JUÍZES, ADM. JUDICIAIS, PESSOAS VINCULADAS
+// ============================================================
+
+enum CourtType {
+  VARA_CIVEL
+  VARA_EMPRESARIAL
+  VARA_FAZENDA_PUBLICA
+  VARA_TRABALHO
+  VARA_FEDERAL
+  VARA_FAMILIA
+  VARA_CRIMINAL
+  VARA_FALENCIAS_RJ
+  JUIZADO_ESPECIAL
+  TURMA_RECURSAL
+  CAMARA_CIVEL
+  CAMARA_EMPRESARIAL
+  TURMA_TRF
+  SECAO_TRF
+  TURMA_TST
+  TURMA_STJ
+  TURMA_STF
+  PLENARIO
+  CORTE_ESPECIAL
+  OUTRO_COURT
+}
+
+enum CourtInstance {
+  PRIMEIRA
+  SEGUNDA
+  SUPERIOR
+  SUPREMO
+}
+
+enum JudgeTitle {
+  JUIZ
+  JUIZ_FEDERAL
+  JUIZ_TRABALHO
+  JUIZ_SUBSTITUTO
+  DESEMBARGADOR_TJ
+  DESEMBARGADOR_FEDERAL
+  MINISTRO_STJ
+  MINISTRO_TST
+  MINISTRO_STF
+}
+
+enum CourtStaffRole {
+  ESCRIVAO
+  ESCREVENTE
+  ANALISTA_JUDICIARIO
+  OFICIAL_JUSTICA
+  ASSESSOR
+  SECRETARIO_CAMARA
+  CONCILIADOR
+  PERITO_JUDICIAL
+  CONTADOR_JUDICIAL
+  ESTAGIARIO_COURT
+  OUTRO_STAFF
+}
+
+enum JudicialAdminRole {
+  ADMINISTRADOR_PRINCIPAL
+  ADVOGADO_AJ
+  CONTADOR_AJ
+  ECONOMISTA
+  ANALISTA_AJ
+  GESTOR_OPERACIONAL
+  SECRETARIO_AJ
+  ESTAGIARIO_AJ
+  OUTRO_AJ
+}
+
+enum ClientRelationshipType {
+  // Societário
+  SOCIO
+  SOCIO_ADMINISTRADOR
+  SOCIO_MINORITARIO
+  ACIONISTA
+  CONSELHEIRO
+  // Diretoria / Gestão
+  CEO
+  CFO
+  COO
+  DIRETOR
+  GERENTE_GERAL
+  GERENTE
+  SUPERVISOR
+  // Operacional
+  FUNCIONARIO
+  CONTADOR_OP
+  ADVOGADO_INTERNO
+  CONSULTOR_EXT
+  PREPOSTO
+  // Familiar
+  CONJUGE
+  FILHO
+  PAI_MAE
+  IRMAO
+  PARENTE
+  // Influência externa
+  POLITICO
+  CREDOR_CHAVE
+  FORNECEDOR_CHAVE
+  PARCEIRO_COMERCIAL
+  AGENTE_FINANCEIRO
+  CORRETOR
+  DESPACHANTE
+  // Profissionais ligados
+  PERITO_REL
+  MEDIADOR
+  ARBITRO
+  LEILOEIRO
+  TRADUTOR
+  OUTRO_REL
+}
+
+enum InfluenceLevel {
+  CRITICO
+  ALTO_INF
+  MEDIO_INF
+  BAIXO_INF
+  INFORMATIVO
+}
+
+// ─── Court (Vara / Comarca) ───────────────────────────────
+
+model Court {
+  id            String        @id @default(cuid())
+  name          String
+  shortName     String?
+  courtType     CourtType
+  instance      CourtInstance
+  comarca       String
+  city          String
+  state         String
+  tribunal      String
+  tribunalCode  String?
+  phone         String?
+  email         String?
+  address       String?
+  cep           String?
+  notes         String?       @db.Text
+  isActive      Boolean       @default(true)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  judges        Judge[]
+  staffMembers  CourtStaff[]
+  cases         Case[]        @relation("CourtCases")
+
+  @@index([state, comarca])
+  @@index([tribunal])
+  @@index([courtType])
+  @@map("courts")
+}
+
+// ─── Judge (Juiz / Desembargador) ─────────────────────────
+
+model Judge {
+  id                 String      @id @default(cuid())
+  name               String
+  title              JudgeTitle
+  registrationNumber String?
+  email              String?
+  phone              String?
+  cellphone          String?
+  assistantName      String?
+  assistantEmail     String?
+  assistantPhone     String?
+  courtId            String?
+  court              Court?      @relation(fields: [courtId], references: [id])
+  chamberName        String?
+  specialty          String?
+  appointmentDate    DateTime?
+  tendencyNotes      String?     @db.Text
+  avgDecisionDays    Int?
+  relevantDecisions  String?     @db.Text
+  photoUrl           String?
+  notes              String?     @db.Text
+  isActive           Boolean     @default(true)
+  createdAt          DateTime    @default(now())
+  updatedAt          DateTime    @updatedAt
+
+  cases              CaseJudge[]
+
+  @@index([courtId])
+  @@index([name])
+  @@map("judges")
+}
+
+// ─── CaseJudge (N:N Case ↔ Judge) ────────────────────────
+
+model CaseJudge {
+  id        String    @id @default(cuid())
+  caseId    String
+  case      Case      @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  judgeId   String
+  judge     Judge     @relation(fields: [judgeId], references: [id], onDelete: Cascade)
+  role      String?
+  startDate DateTime?
+  endDate   DateTime?
+  isCurrent Boolean   @default(true)
+
+  @@unique([caseId, judgeId])
+  @@index([judgeId])
+  @@map("case_judges")
+}
+
+// ─── CourtStaff (Servidores da Vara) ──────────────────────
+
+model CourtStaff {
+  id          String         @id @default(cuid())
+  name        String
+  role        CourtStaffRole
+  customRole  String?
+  courtId     String
+  court       Court          @relation(fields: [courtId], references: [id], onDelete: Cascade)
+  email       String?
+  phone       String?
+  cellphone   String?
+  notes       String?
+  isActive    Boolean        @default(true)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  @@index([courtId])
+  @@map("court_staff")
+}
+
+// ─── JudicialAdministrator (Empresa AJ) ───────────────────
+
+model JudicialAdministrator {
+  id               String    @id @default(cuid())
+  companyName      String
+  tradeName        String?
+  cnpj             String?   @unique
+  email            String?
+  phone            String?
+  website          String?
+  address          String?
+  city             String?
+  state            String?
+  mainContactName  String?
+  mainContactEmail String?
+  mainContactPhone String?
+  rating           Int?
+  specialties      String?
+  avgFeePercentage Float?
+  notes            String?   @db.Text
+  isActive         Boolean   @default(true)
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  teamMembers      JudicialAdminTeamMember[]
+  cases            CaseAdministrator[]
+
+  @@index([state])
+  @@map("judicial_administrators")
+}
+
+// ─── JudicialAdminTeamMember ──────────────────────────────
+
+model JudicialAdminTeamMember {
+  id              String                @id @default(cuid())
+  administratorId String
+  administrator   JudicialAdministrator @relation(fields: [administratorId], references: [id], onDelete: Cascade)
+  name            String
+  role            JudicialAdminRole
+  customRole      String?
+  cpf             String?
+  oabNumber       String?
+  crcNumber       String?
+  email           String?
+  phone           String?
+  cellphone       String?
+  assignedCases   String?
+  notes           String?
+  isActive        Boolean               @default(true)
+  createdAt       DateTime              @default(now())
+  updatedAt       DateTime              @updatedAt
+
+  @@index([administratorId])
+  @@map("judicial_admin_team_members")
+}
+
+// ─── CaseAdministrator (N:N Case ↔ JudicialAdministrator) ─
+
+model CaseAdministrator {
+  id              String                @id @default(cuid())
+  caseId          String
+  case            Case                  @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  administratorId String
+  administrator   JudicialAdministrator @relation(fields: [administratorId], references: [id])
+  appointmentDate DateTime?
+  dismissalDate   DateTime?
+  feePercentage   Float?
+  feeAmount       BigInt?
+  status          String?
+
+  @@unique([caseId, administratorId])
+  @@map("case_administrators")
+}
+
+// ─── ClientRelatedPerson (Mapa de Influência) ─────────────
+
+model ClientRelatedPerson {
+  id                 String                 @id @default(cuid())
+  clientId           String
+  client             Person                 @relation("ClientRelatedPersons", fields: [clientId], references: [id], onDelete: Cascade)
+  name               String
+  relationship       ClientRelationshipType
+  customRelationship String?
+  cpf                String?
+  rg                 String?
+  birthDate          DateTime?
+  email              String?
+  phone              String?
+  cellphone          String?
+  whatsapp           String?
+  address            String?
+  city               String?
+  state              String?
+  cep                String?
+  company            String?
+  position           String?
+  department         String?
+  influenceLevel     InfluenceLevel         @default(MEDIO_INF)
+  influenceNotes     String?                @db.Text
+  decisionPower      Boolean                @default(false)
+  isKeyPerson        Boolean                @default(false)
+  contactFrequency   String?
+  lastContactDate    DateTime?
+  preferredChannel   String?
+  relatedCaseIds     String?
+  linkedPersonId     String?
+  linkedPerson       Person?                @relation("LinkedRelatedPerson", fields: [linkedPersonId], references: [id])
+  photoUrl           String?
+  notes              String?                @db.Text
+  isActive           Boolean                @default(true)
+  createdAt          DateTime               @default(now())
+  updatedAt          DateTime               @updatedAt
+
+  @@index([clientId])
+  @@index([relationship])
+  @@index([clientId, isKeyPerson])
+  @@map("client_related_persons")
 }

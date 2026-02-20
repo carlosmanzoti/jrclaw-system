@@ -24,6 +24,10 @@ import {
   Settings,
   ChevronDown,
   Search,
+  Database,
+  Landmark,
+  Gavel,
+  UserCircle,
 } from "lucide-react"
 import {
   Sidebar,
@@ -74,11 +78,13 @@ const navMain = [
     ],
   },
   {
-    title: "Clientes",
+    title: "Cadastros",
     url: "/clientes",
-    icon: Users,
+    icon: Database,
     items: [
       { title: "Clientes", url: "/clientes" },
+      { title: "Varas e Comarcas", url: "/cadastros/varas" },
+      { title: "Adm. Judiciais", url: "/cadastros/administradores-judiciais" },
       { title: "Pessoas", url: "/pessoas" },
     ],
   },
@@ -199,7 +205,8 @@ function NavItem({
   pathname: string
 }) {
   const isActive =
-    pathname === item.url || pathname.startsWith(item.url + "/")
+    pathname === item.url || pathname.startsWith(item.url + "/") ||
+    (item.items?.some((sub) => pathname === sub.url || pathname.startsWith(sub.url + "/")) ?? false)
   const hasSubItems = item.items && item.items.length > 0
 
   if (!hasSubItems) {
