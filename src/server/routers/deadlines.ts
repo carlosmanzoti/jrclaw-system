@@ -291,47 +291,106 @@ export const deadlinesRouter = router({
     const weekEnd = endOfWeek(now);
     const thirtyDaysEnd = endOfDay(addDays(now, 30));
 
-    const [vencidos, hoje, proximos3dias, estaSemana, proximos30dias, fatais_pendentes, total_pendentes] =
-      await Promise.all([
-        ctx.db.deadlineNew.count({
-          where: { status: "VENCIDO" },
-        }),
-        ctx.db.deadlineNew.count({
-          where: {
-            status: { in: ACTIVE_STATUSES as never },
-            data_fim_prazo: { gte: todayStart, lte: todayEnd },
-          },
-        }),
-        ctx.db.deadlineNew.count({
-          where: {
-            status: { in: ACTIVE_STATUSES as never },
-            data_fim_prazo: { gte: todayStart, lte: threeDaysEnd },
-          },
-        }),
-        ctx.db.deadlineNew.count({
-          where: {
-            status: { in: ACTIVE_STATUSES as never },
-            data_fim_prazo: { gte: todayStart, lte: weekEnd },
-          },
-        }),
-        ctx.db.deadlineNew.count({
-          where: {
-            status: { in: ACTIVE_STATUSES as never },
-            data_fim_prazo: { gte: todayStart, lte: thirtyDaysEnd },
-          },
-        }),
-        ctx.db.deadlineNew.count({
-          where: {
-            status: { in: ACTIVE_STATUSES as never },
-            prioridade: "FATAL",
-          },
-        }),
-        ctx.db.deadlineNew.count({
-          where: { status: { in: ACTIVE_STATUSES as never } },
-        }),
-      ]);
+    // Query both tables (DeadlineNew and Deadline/legacy) and sum results
+    const NOT_RESOLVED_NEW = ["CUMPRIDO", "CANCELADO"];
+    const NOT_RESOLVED_LEGACY = ["CUMPRIDO", "PERDIDO", "CANCELADO"];
 
-    return { vencidos, hoje, proximos3dias, estaSemana, proximos30dias, fatais_pendentes, total_pendentes };
+    const [
+      vencidos_new, hoje_new, proximos3dias_new, estaSemana_new, proximos30dias_new, fatais_new, total_new,
+      vencidos_leg, hoje_leg, proximos3dias_leg, estaSemana_leg, proximos30dias_leg, fatais_leg, total_leg,
+    ] = await Promise.all([
+      // --- DeadlineNew table ---
+      // Vencidos: date-based (overdue = data_fim_prazo < today AND not resolved)
+      ctx.db.deadlineNew.count({
+        where: {
+          data_fim_prazo: { lt: todayStart },
+          status: { notIn: NOT_RESOLVED_NEW },
+        },
+      }),
+      ctx.db.deadlineNew.count({
+        where: {
+          status: { notIn: NOT_RESOLVED_NEW },
+          data_fim_prazo: { gte: todayStart, lte: todayEnd },
+        },
+      }),
+      ctx.db.deadlineNew.count({
+        where: {
+          status: { notIn: NOT_RESOLVED_NEW },
+          data_fim_prazo: { gte: todayStart, lte: threeDaysEnd },
+        },
+      }),
+      ctx.db.deadlineNew.count({
+        where: {
+          status: { notIn: NOT_RESOLVED_NEW },
+          data_fim_prazo: { gte: todayStart, lte: weekEnd },
+        },
+      }),
+      ctx.db.deadlineNew.count({
+        where: {
+          status: { notIn: NOT_RESOLVED_NEW },
+          data_fim_prazo: { gte: todayStart, lte: thirtyDaysEnd },
+        },
+      }),
+      ctx.db.deadlineNew.count({
+        where: {
+          status: { notIn: NOT_RESOLVED_NEW },
+          prioridade: "FATAL",
+        },
+      }),
+      ctx.db.deadlineNew.count({
+        where: { status: { notIn: NOT_RESOLVED_NEW } },
+      }),
+      // --- Legacy Deadline table ---
+      ctx.db.deadline.count({
+        where: {
+          dueDate: { lt: todayStart },
+          status: { notIn: NOT_RESOLVED_LEGACY as never },
+        },
+      }),
+      ctx.db.deadline.count({
+        where: {
+          status: { notIn: NOT_RESOLVED_LEGACY as never },
+          dueDate: { gte: todayStart, lte: todayEnd },
+        },
+      }),
+      ctx.db.deadline.count({
+        where: {
+          status: { notIn: NOT_RESOLVED_LEGACY as never },
+          dueDate: { gte: todayStart, lte: threeDaysEnd },
+        },
+      }),
+      ctx.db.deadline.count({
+        where: {
+          status: { notIn: NOT_RESOLVED_LEGACY as never },
+          dueDate: { gte: todayStart, lte: weekEnd },
+        },
+      }),
+      ctx.db.deadline.count({
+        where: {
+          status: { notIn: NOT_RESOLVED_LEGACY as never },
+          dueDate: { gte: todayStart, lte: thirtyDaysEnd },
+        },
+      }),
+      ctx.db.deadline.count({
+        where: {
+          status: { notIn: NOT_RESOLVED_LEGACY as never },
+          priority: "CRITICA",
+        },
+      }),
+      ctx.db.deadline.count({
+        where: { status: { notIn: NOT_RESOLVED_LEGACY as never } },
+      }),
+    ]);
+
+    return {
+      vencidos: vencidos_new + vencidos_leg,
+      hoje: hoje_new + hoje_leg,
+      proximos3dias: proximos3dias_new + proximos3dias_leg,
+      estaSemana: estaSemana_new + estaSemana_leg,
+      proximos30dias: proximos30dias_new + proximos30dias_leg,
+      fatais_pendentes: fatais_new + fatais_leg,
+      total_pendentes: total_new + total_leg,
+    };
   }),
 
   /**
@@ -409,7 +468,37 @@ export const deadlinesRouter = router({
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const orderBy: Record<string, any> = { [sortField]: sortDir };
 
-      const [items, total] = await Promise.all([
+      // Also query legacy Deadline table and merge results
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const legacyWhere: Record<string, any> = {};
+      if (input?.status) {
+        // Map DeadlineNew statuses to legacy statuses
+        const statusMap: Record<string, string> = {
+          CORRENDO: "PENDENTE", PROXIMO: "PENDENTE", URGENTE: "PENDENTE",
+          HOJE: "PENDENTE", VENCIDO: "PERDIDO", FUTURO: "PENDENTE",
+        };
+        legacyWhere.status = (statusMap[input.status] ?? input.status) as never;
+      }
+      if (input?.tipo) legacyWhere.tipo = input.tipo as never;
+      if (input?.responsavel_id) legacyWhere.responsavel_id = input.responsavel_id;
+      if (input?.case_id) legacyWhere.case_id = input.case_id;
+      if (input?.uf) {
+        legacyWhere.case_ = { uf: input.uf };
+      }
+      if (input?.date_from || input?.date_to) {
+        legacyWhere.dueDate = {
+          ...(input?.date_from && { gte: startOfDay(input.date_from) }),
+          ...(input?.date_to && { lte: endOfDay(input.date_to) }),
+        };
+      }
+      if (input?.search) {
+        legacyWhere.OR = [
+          { title: { contains: input.search, mode: "insensitive" } },
+          { descricao: { contains: input.search, mode: "insensitive" } },
+        ];
+      }
+
+      const [newItems, newTotal, legacyItems, legacyTotal] = await Promise.all([
         ctx.db.deadlineNew.findMany({
           where,
           skip,
@@ -418,10 +507,67 @@ export const deadlinesRouter = router({
           orderBy,
         }),
         ctx.db.deadlineNew.count({ where }),
+        ctx.db.deadline.findMany({
+          where: legacyWhere,
+          skip,
+          take: perPage,
+          include: {
+            case_: {
+              select: {
+                id: true,
+                numero_processo: true,
+                tipo: true,
+                uf: true,
+                vara: true,
+                cliente: { select: { id: true, nome: true } },
+              },
+            },
+            responsavel: { select: { id: true, name: true, avatar_url: true, role: true } },
+            client: { select: { id: true, nome: true } },
+          },
+          orderBy: { dueDate: sortDir },
+        }),
+        ctx.db.deadline.count({ where: legacyWhere }),
       ]);
 
+      // Normalize legacy items to match DeadlineNew shape
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const normalizedLegacy = legacyItems.map((d: any) => ({
+        ...d,
+        _source: "legacy" as const,
+        codigo: `LEG-${d.id.slice(-6)}`,
+        titulo: d.title || d.descricao || "Prazo sem titulo",
+        tipo: String(d.tipo),
+        categoria: "PARTE",
+        contagem_tipo: d.countingType || "DIAS_UTEIS",
+        prazo_dias: d.calculatedDays || d.originalDays || 0,
+        prazo_dias_efetivo: d.calculatedDays || 0,
+        data_evento_gatilho: d.startDate || d.created_at,
+        data_inicio_contagem: d.startDate || d.created_at,
+        data_fim_prazo: d.dueDate || d.data_limite,
+        data_fim_prazo_fatal: d.fatalDueDate || d.dueDate || d.data_limite,
+        data_cumprimento: null,
+        status: d.dueDate && new Date(d.dueDate) < new Date() && d.status === "PENDENTE"
+          ? "VENCIDO" : d.status === "PENDENTE" ? "CORRENDO" : d.status === "PERDIDO" ? "VENCIDO" : d.status,
+        prioridade: d.priority || "MEDIA",
+        responsavel_backup: null,
+        numero_processo: d.case_?.numero_processo || null,
+        descricao: d.descricao,
+        observacoes: null,
+      }));
+
+      // Merge, sort by data_fim_prazo, and paginate
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const allItems = [...newItems, ...normalizedLegacy].sort((a: any, b: any) => {
+        const dateA = new Date(a.data_fim_prazo || 0).getTime();
+        const dateB = new Date(b.data_fim_prazo || 0).getTime();
+        return sortDir === "asc" ? dateA - dateB : dateB - dateA;
+      }).slice(0, perPage);
+
+      const total = newTotal + legacyTotal;
+
       return {
-        items,
+        items: allItems,
         total,
         page,
         per_page: perPage,
@@ -2048,6 +2194,36 @@ export const deadlinesRouter = router({
     });
   }),
 
+  /**
+   * Clients for select dropdown (only persons with type CLIENTE)
+   */
+  clientsForSelect: protectedProcedure
+    .input(z.object({ search: z.string().optional() }).optional())
+    .query(async ({ ctx, input }) => {
+      const search = input?.search?.trim();
+      return ctx.db.person.findMany({
+        where: {
+          tipo: "CLIENTE",
+          ...(search && {
+            OR: [
+              { nome: { contains: search, mode: "insensitive" as const } },
+              { razao_social: { contains: search, mode: "insensitive" as const } },
+              { cpf_cnpj: { contains: search } },
+            ],
+          }),
+        },
+        select: {
+          id: true,
+          nome: true,
+          razao_social: true,
+          cpf_cnpj: true,
+          subtipo: true,
+        },
+        orderBy: { nome: "asc" },
+        take: 50,
+      });
+    }),
+
   // ============================================================
   // TYPE CATALOG & TRIGGERS (DeadlineTypeCatalog + DeadlinePieceTrigger)
   // ============================================================
@@ -2453,6 +2629,7 @@ export const deadlinesRouter = router({
         priority: z.string().optional(),
         responsavel_id: z.string().optional(),
         dueDate: z.coerce.date().optional(), // manual override
+        manualDueDate: z.coerce.date().optional(), // advogado's target date
 
         // Notifications
         notifyClientEmail: z.boolean().default(false),
@@ -2537,17 +2714,59 @@ export const deadlinesRouter = router({
       }
       const internalDueDate = tempDate;
 
-      // Build title
-      const autoTitle = catalog
-        ? `${catalog.displayName} — ${catalog.legalBasis ?? ""}`
-        : input.deadlineType;
-      const title = input.title ?? autoTitle;
+      // Auto-infer clientId from case if not provided
+      let resolvedClientId = input.clientId;
+      let clientName: string | null = null;
+      let caseNumber: string | null = null;
+
+      if (input.case_id) {
+        const linkedCase = await ctx.db.case.findUnique({
+          where: { id: input.case_id },
+          select: {
+            numero_processo: true,
+            cliente_id: true,
+            cliente: { select: { id: true, nome: true } },
+          },
+        });
+        if (linkedCase) {
+          if (!resolvedClientId) resolvedClientId = linkedCase.cliente_id;
+          clientName = linkedCase.cliente?.nome ?? null;
+          caseNumber = linkedCase.numero_processo;
+        }
+      }
+
+      if (resolvedClientId && !clientName) {
+        const person = await ctx.db.person.findUnique({
+          where: { id: resolvedClientId },
+          select: { nome: true },
+        });
+        clientName = person?.nome ?? null;
+      }
+
+      // Build title: "ShortCNJ — Cliente — TipoPrazo"
+      const catalogName = catalog?.displayName ?? input.deadlineType;
+      let autoTitleStr = catalogName;
+      if (clientName || caseNumber) {
+        const shortCNJ = caseNumber
+          ? caseNumber.replace(/^(\d{7}-\d{2})\..*/, "$1")
+          : "";
+        const shortClient = clientName && clientName.length > 30
+          ? clientName.substring(0, 30) + "..."
+          : clientName || "";
+        const parts = [shortCNJ, shortClient, catalogName].filter(Boolean);
+        autoTitleStr = parts.join(" — ");
+      }
+      const title = input.title || autoTitleStr;
+
+      // Calculate effective dueDate: use manualDueDate if provided, else calculated
+      const fatalDueDate = dueDate;
+      const effectiveDueDate = input.manualDueDate ?? dueDate;
 
       const deadline = await ctx.db.deadline.create({
         data: {
           tipo: input.deadlineType as never,
           case_id: input.case_id,
-          clientId: input.clientId,
+          clientId: resolvedClientId,
           title,
           autoTitle: !input.title,
           descricao: input.descricao,
@@ -2570,11 +2789,13 @@ export const deadlinesRouter = router({
           doubleReason,
           originalDays: days,
 
-          dueDate,
+          dueDate: effectiveDueDate,
+          fatalDueDate,
+          manualDueDate: input.manualDueDate ?? null,
           internalDueDate,
           calculationLog: calcLog.length > 0 ? (calcLog as any) : undefined,
 
-          data_limite: dueDate,
+          data_limite: effectiveDueDate,
           data_alerta: [],
           status: "PENDENTE",
           responsavel_id: input.responsavel_id,

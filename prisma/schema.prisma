@@ -1016,6 +1016,8 @@ model Deadline {
   // Datas calculadas
   dueDate           DateTime?
   internalDueDate   DateTime?
+  manualDueDate     DateTime?       // Data que o advogado quer cumprir (antes do fatal)
+  fatalDueDate      DateTime?       // Data fatal calculada pelo sistema (referência)
   calculationLog    Json?
 
   // Campos legados (mantidos para compatibilidade)
@@ -1056,6 +1058,7 @@ model Deadline {
   @@index([triggerPieceType])
   @@index([dueDate])
   @@index([status])
+  @@index([status, dueDate])
   @@map("deadlines")
 }
 

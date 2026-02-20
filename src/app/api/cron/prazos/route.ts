@@ -23,8 +23,8 @@ export async function GET(request: NextRequest) {
   const now = new Date();
   now.setHours(0, 0, 0, 0);
 
-  // Mark overdue deadlines as PERDIDO
-  const result = await db.deadline.updateMany({
+  // Mark overdue legacy deadlines as PERDIDO
+  const legacyResult = await db.deadline.updateMany({
     where: {
       status: "PENDENTE",
       data_limite: { lt: now },
@@ -34,9 +34,22 @@ export async function GET(request: NextRequest) {
     },
   });
 
+  // Mark overdue DeadlineNew records as VENCIDO
+  const ACTIVE_STATUSES = ["FUTURO", "CORRENDO", "PROXIMO", "URGENTE", "HOJE"];
+  const newResult = await db.deadlineNew.updateMany({
+    where: {
+      status: { in: ACTIVE_STATUSES },
+      data_fim_prazo: { lt: now },
+    },
+    data: {
+      status: "VENCIDO",
+    },
+  });
+
   return NextResponse.json({
     ok: true,
     timestamp: new Date().toISOString(),
-    overdue_marked: result.count,
+    overdue_marked_legacy: legacyResult.count,
+    overdue_marked_new: newResult.count,
   });
 }

@@ -1155,9 +1155,11 @@ const START_METHOD_LABELS: Record<string, string> = {
 
 function NewDeadlineDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (v: boolean) => void }) {
   const [formData, setFormData] = useState({
+    clientId: "",
     case_id: "",
     deadlineType: "",
     title: "",
+    autoTitle: true,
     descricao: "",
     startMethod: "MANUAL",
     startDate: "",
@@ -1170,12 +1172,21 @@ function NewDeadlineDialog({ open, onOpenChange }: { open: boolean; onOpenChange
     isMP: false,
     isElectronic: true,
     uf: "PR",
+    manualDueDate: "",
   })
 
-  const { data: cases } = trpc.deadlines.casesForSelect.useQuery()
+  const { data: clients } = trpc.deadlines.clientsForSelect.useQuery()
+  const { data: allCases } = trpc.deadlines.casesForSelect.useQuery()
   const { data: users } = trpc.users.list.useQuery()
   const { data: catalog } = trpc.deadlines.getTypeCatalog.useQuery()
   const utils = trpc.useUtils()
+
+  // Filter cases by selected client
+  const filteredCases = useMemo(() => {
+    if (!allCases) return []
+    if (!formData.clientId) return allCases
+    return allCases.filter((c) => c.cliente?.id === formData.clientId)
+  }, [allCases, formData.clientId])
 
   // Group catalog by category
   const catalogByCategory = useMemo(() => {
@@ -1194,6 +1205,23 @@ function NewDeadlineDialog({ open, onOpenChange }: { open: boolean; onOpenChange
     catalog?.find((c) => c.type === formData.deadlineType),
     [catalog, formData.deadlineType]
   )
+
+  // Auto-generate title when client + case + type change
+  useEffect(() => {
+    if (!formData.autoTitle) return
+    const clientName = clients?.find((c) => c.id === formData.clientId)?.nome || ""
+    const selectedCase = allCases?.find((c) => c.id === formData.case_id)
+    const caseNumber = selectedCase?.numero_processo || ""
+    const typeName = selectedCatalog?.displayName || ""
+
+    if (clientName || caseNumber || typeName) {
+      const shortCNJ = caseNumber ? caseNumber.replace(/^(\d{7}-\d{2})\..*/, "$1") : ""
+      const shortClient = clientName.length > 25 ? clientName.substring(0, 25) + "..." : clientName
+      const parts = [shortCNJ, shortClient, typeName].filter(Boolean)
+      const newTitle = parts.join(" — ")
+      if (newTitle) set("title", newTitle)
+    }
+  }, [formData.clientId, formData.case_id, formData.deadlineType, formData.autoTitle, clients, allCases, selectedCatalog])
 
   // Simulation query
   const simulationInput = useMemo(() => {
@@ -1215,40 +1243,76 @@ function NewDeadlineDialog({ open, onOpenChange }: { open: boolean; onOpenChange
     } else if (formData.intimacaoDate) {
       input.intimacaoDate = new Date(formData.intimacaoDate)
     }
-    // Only simulate if we have a start date
     const hasDate = formData.startDate || formData.disponibilizacaoDate || formData.intimacaoDate
     if (!hasDate) return null
     return input
   }, [formData])
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: simulation, isLoading: simLoading } = trpc.deadlines.simulate.useQuery(
     simulationInput as any,
     { enabled: !!simulationInput }
   )
+
+  const resetForm = () => {
+    setFormData({
+      clientId: "", case_id: "", deadlineType: "", title: "", autoTitle: true, descricao: "", startMethod: "MANUAL",
+      startDate: "", disponibilizacaoDate: "", publicacaoDate: "", intimacaoDate: "",
+      responsavel_id: "", isPublicEntity: false, isDefensoria: false, isMP: false, isElectronic: true, uf: "PR",
+      manualDueDate: "",
+    })
+  }
 
   const createDeadline = trpc.deadlines.createExpanded.useMutation({
     onSuccess: () => {
       utils.deadlines.listNew.invalidate()
       utils.deadlines.dashboardStats.invalidate()
       utils.deadlines.stats.invalidate()
+      utils.deadlines.list.invalidate()
       onOpenChange(false)
-      setFormData({
-        case_id: "", deadlineType: "", title: "", descricao: "", startMethod: "MANUAL",
-        startDate: "", disponibilizacaoDate: "", publicacaoDate: "", intimacaoDate: "",
-        responsavel_id: "", isPublicEntity: false, isDefensoria: false, isMP: false, isElectronic: true, uf: "PR",
-      })
+      resetForm()
     },
   })
 
   const set = (field: string, value: unknown) => setFormData((prev) => ({ ...prev, [field]: value }))
 
+  // When selecting a case, auto-fill client
+  const handleCaseChange = (caseId: string) => {
+    set("case_id", caseId)
+    if (caseId && !formData.clientId) {
+      const selectedCase = allCases?.find((c) => c.id === caseId)
+      if (selectedCase?.cliente?.id) {
+        set("clientId", selectedCase.cliente.id)
+      }
+    }
+  }
+
+  // When selecting a client, clear case if it doesn't match
+  const handleClientChange = (clientId: string) => {
+    set("clientId", clientId)
+    if (formData.case_id) {
+      const currentCase = allCases?.find((c) => c.id === formData.case_id)
+      if (currentCase?.cliente?.id !== clientId) {
+        set("case_id", "")
+      }
+    }
+    // Auto-select case if client has only one
+    if (clientId && allCases) {
+      const clientCases = allCases.filter((c) => c.cliente?.id === clientId)
+      if (clientCases.length === 1) {
+        set("case_id", clientCases[0].id)
+      }
+    }
+  }
+
   const handleCreate = () => {
-    if (!formData.deadlineType) return
+    if (!formData.deadlineType || !formData.case_id) return
 
     createDeadline.mutate({
       deadlineType: formData.deadlineType,
-      case_id: formData.case_id || undefined,
-      title: formData.title || undefined,
+      case_id: formData.case_id,
+      clientId: formData.clientId || undefined,
+      title: formData.autoTitle ? undefined : formData.title || undefined,
       descricao: formData.descricao || undefined,
       startMethod: formData.startMethod,
       startDate: formData.startDate ? new Date(formData.startDate) : undefined,
@@ -1262,13 +1326,24 @@ function NewDeadlineDialog({ open, onOpenChange }: { open: boolean; onOpenChange
       uf: formData.uf,
       responsavel_id: formData.responsavel_id || undefined,
       dueDate: simulation?.dueDate ? new Date(simulation.dueDate) : undefined,
+      manualDueDate: formData.manualDueDate ? new Date(formData.manualDueDate) : undefined,
     })
   }
 
-  const canCreate = !!formData.deadlineType && (!!simulation || !!formData.startDate)
+  const canCreate = !!formData.deadlineType && !!formData.case_id && (!!simulation || !!formData.startDate)
+
+  // Manual due date validation
+  const fatalDate = simulation?.dueDate ? new Date(simulation.dueDate) : null
+  const manualDate = formData.manualDueDate ? new Date(formData.manualDueDate) : null
+  const manualAfterFatal = fatalDate && manualDate && manualDate > fatalDate
+
+  // Business days between manual and fatal (approximate)
+  const daysOfSlack = fatalDate && manualDate && manualDate < fatalDate
+    ? Math.ceil((fatalDate.getTime() - manualDate.getTime()) / (1000 * 60 * 60 * 24))
+    : null
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={(v) => { onOpenChange(v); if (!v) resetForm() }}>
       <DialogContent className="min-w-[700px] max-w-[95vw] max-h-[85vh] flex flex-col p-0 gap-0">
         <DialogHeader className="shrink-0 px-6 pt-6 pb-4 border-b">
           <DialogTitle className="flex items-center gap-2">
@@ -1281,20 +1356,48 @@ function NewDeadlineDialog({ open, onOpenChange }: { open: boolean; onOpenChange
         </DialogHeader>
 
         <div className="flex-1 overflow-y-auto min-h-0 px-6 py-4 space-y-4">
-          {/* Row 1: Processo + Responsável */}
+          {/* Row 1: Cliente */}
+          <div className="space-y-1.5">
+            <Label className="text-xs">Cliente *</Label>
+            <Select value={formData.clientId} onValueChange={handleClientChange}>
+              <SelectTrigger className="h-9 text-sm">
+                <SelectValue placeholder="Selecionar cliente" />
+              </SelectTrigger>
+              <SelectContent>
+                {clients?.map((c) => (
+                  <SelectItem key={c.id} value={c.id} className="text-sm">
+                    {c.nome}{c.razao_social ? ` (${c.razao_social})` : ""}{c.cpf_cnpj ? ` — ${c.cpf_cnpj}` : ""}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Row 2: Processo + Responsável */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5">
-              <Label className="text-xs">Processo (opcional)</Label>
-              <Select value={formData.case_id} onValueChange={(v) => set("case_id", v)}>
-                <SelectTrigger className="h-9 text-sm"><SelectValue placeholder="Selecionar processo" /></SelectTrigger>
+              <Label className="text-xs">Processo *</Label>
+              <Select value={formData.case_id} onValueChange={handleCaseChange}>
+                <SelectTrigger className={`h-9 text-sm ${!formData.case_id && formData.clientId ? "border-amber-300" : ""}`}>
+                  <SelectValue placeholder={formData.clientId ? "Selecionar processo do cliente" : "Selecione o cliente primeiro"} />
+                </SelectTrigger>
                 <SelectContent>
-                  {cases?.map((c) => (
-                    <SelectItem key={c.id} value={c.id} className="text-sm">
-                      {formatCNJ(c.numero_processo) || "s/n"} — {c.cliente.nome}
-                    </SelectItem>
-                  ))}
+                  {filteredCases.length === 0 ? (
+                    <div className="px-2 py-3 text-xs text-center text-[#666666]">
+                      {formData.clientId ? "Nenhum processo ativo para este cliente" : "Selecione o cliente primeiro"}
+                    </div>
+                  ) : (
+                    filteredCases.map((c) => (
+                      <SelectItem key={c.id} value={c.id} className="text-sm">
+                        {formatCNJ(c.numero_processo) || "s/n"} — {c.cliente.nome}
+                      </SelectItem>
+                    ))
+                  )}
                 </SelectContent>
               </Select>
+              {!formData.case_id && formData.deadlineType && (
+                <p className="text-[9px] text-red-500">Selecione o processo para continuar</p>
+              )}
             </div>
             <div className="space-y-1.5">
               <Label className="text-xs">Responsável</Label>
@@ -1307,16 +1410,11 @@ function NewDeadlineDialog({ open, onOpenChange }: { open: boolean; onOpenChange
             </div>
           </div>
 
-          {/* Row 2: Tipo de Prazo (from catalog, grouped by category) */}
+          {/* Row 3: Tipo de Prazo (from catalog, grouped by category) */}
           <div className="space-y-1.5">
             <Label className="text-xs">Tipo de Prazo *</Label>
             <Select value={formData.deadlineType} onValueChange={(v) => {
               set("deadlineType", v)
-              // Auto-fill title from catalog
-              const item = catalog?.find((c) => c.type === v)
-              if (item && !formData.title) {
-                set("title", item.displayName)
-              }
             }}>
               <SelectTrigger className="h-9 text-sm"><SelectValue placeholder="Selecionar tipo de prazo" /></SelectTrigger>
               <SelectContent className="max-h-[300px]">
@@ -1359,13 +1457,43 @@ function NewDeadlineDialog({ open, onOpenChange }: { open: boolean; onOpenChange
             </div>
           )}
 
-          {/* Row 3: Title + Description */}
+          {/* Title (auto/manual) */}
           <div className="space-y-1.5">
-            <Label className="text-xs">Título</Label>
-            <Input className="h-9 text-sm" value={formData.title} onChange={(e) => set("title", e.target.value)} placeholder="Título do prazo (auto-preenchido pelo catálogo)" />
+            {formData.autoTitle ? (
+              <>
+                <Label className="text-xs">Título (automático)</Label>
+                <div className="flex items-center gap-2 h-9 px-3 bg-stone-50 border border-stone-200 rounded-md">
+                  <FileText className="size-3.5 text-stone-400 shrink-0" />
+                  <span className="text-sm text-stone-700 truncate flex-1">
+                    {formData.title || "Preencha cliente, processo e tipo para gerar"}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => set("autoTitle", false)}
+                    className="text-[10px] text-amber-700 hover:text-amber-900 shrink-0 font-medium"
+                  >
+                    Editar
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <Label className="text-xs">Título</Label>
+                <div className="flex gap-2">
+                  <Input className="h-9 text-sm flex-1" value={formData.title} onChange={(e) => set("title", e.target.value)} placeholder="Digite o título..." />
+                  <button
+                    type="button"
+                    onClick={() => set("autoTitle", true)}
+                    className="text-[10px] text-amber-700 hover:text-amber-900 whitespace-nowrap font-medium px-2"
+                  >
+                    Auto
+                  </button>
+                </div>
+              </>
+            )}
           </div>
 
-          {/* Row 4: Start Method + Date */}
+          {/* Row 4: Start Method + UF */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5">
               <Label className="text-xs">Método de Início da Contagem *</Label>
@@ -1418,7 +1546,7 @@ function NewDeadlineDialog({ open, onOpenChange }: { open: boolean; onOpenChange
             </div>
           )}
 
-          {/* Context flags: Fazenda Pública, Defensoria, MP */}
+          {/* Context flags */}
           <div className="flex items-center gap-4 flex-wrap">
             <label className="flex items-center gap-1.5 text-xs cursor-pointer">
               <Checkbox checked={formData.isPublicEntity}
@@ -1449,7 +1577,7 @@ function NewDeadlineDialog({ open, onOpenChange }: { open: boolean; onOpenChange
             </label>
           </div>
 
-          {/* Simulation Preview Panel */}
+          {/* Simulation Preview */}
           {simulation && (
             <Card className="border-green-200 bg-green-50/50">
               <CardContent className="pt-4 pb-3 space-y-2">
@@ -1499,7 +1627,6 @@ function NewDeadlineDialog({ open, onOpenChange }: { open: boolean; onOpenChange
                   </div>
                 )}
 
-                {/* Calculation log (collapsible) */}
                 {simulation.calculationLog?.length > 0 && (
                   <details className="text-[10px] text-[#666666]">
                     <summary className="cursor-pointer hover:text-[#333]">Log de cálculo ({simulation.calculationLog.length} passos)</summary>
@@ -1520,7 +1647,48 @@ function NewDeadlineDialog({ open, onOpenChange }: { open: boolean; onOpenChange
             </div>
           )}
 
-          {/* Description */}
+          {/* Manual Due Date (Cumprir Até) */}
+          {simulation && (
+            <div className="p-3 rounded-lg border bg-stone-50 space-y-2">
+              <Label className="text-xs font-semibold text-stone-700">Prazo de Cumprimento</Label>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-[10px] text-stone-500">Vencimento Fatal (calculado)</Label>
+                  <div className="flex items-center gap-2 h-9 px-3 bg-red-50 border border-red-200 rounded-md">
+                    <AlertTriangle className="size-3.5 text-red-600 shrink-0" />
+                    <span className="text-sm font-medium text-red-800">
+                      {new Date(simulation.dueDate).toLocaleDateString("pt-BR")}
+                    </span>
+                  </div>
+                </div>
+                <div>
+                  <Label className="text-[10px] text-stone-500">Cumprir Até (opcional)</Label>
+                  <Input
+                    type="date"
+                    className="h-9 text-sm"
+                    value={formData.manualDueDate}
+                    onChange={(e) => set("manualDueDate", e.target.value)}
+                  />
+                  {manualAfterFatal && (
+                    <p className="text-[9px] text-red-600 mt-0.5 flex items-center gap-1">
+                      <AlertTriangle className="size-2.5" />
+                      Data posterior ao vencimento fatal! Risco de perda do prazo.
+                    </p>
+                  )}
+                  {daysOfSlack && !manualAfterFatal && (
+                    <p className="text-[9px] text-green-600 mt-0.5">
+                      {daysOfSlack} dia(s) de folga antes do vencimento fatal
+                    </p>
+                  )}
+                </div>
+              </div>
+              <p className="text-[9px] text-stone-500">
+                O vencimento fatal é calculado pelo sistema. Use &quot;Cumprir até&quot; para definir uma data anterior e garantir margem de segurança.
+              </p>
+            </div>
+          )}
+
+          {/* Observações */}
           <div className="space-y-1.5">
             <Label className="text-xs">Observações (opcional)</Label>
             <Textarea className="text-sm min-h-[60px]" value={formData.descricao}
@@ -1529,10 +1697,15 @@ function NewDeadlineDialog({ open, onOpenChange }: { open: boolean; onOpenChange
         </div>
 
         <DialogFooter className="shrink-0 px-6 py-4 border-t">
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
+          <Button variant="outline" onClick={() => { onOpenChange(false); resetForm() }}>Cancelar</Button>
           <Button disabled={!canCreate || createDeadline.isPending} onClick={handleCreate}>
-            {createDeadline.isPending ? "Salvando..." : "Salvar Prazo"}
+            {createDeadline.isPending ? (
+              <><Loader2 className="size-4 mr-1 animate-spin" />Salvando...</>
+            ) : "Salvar Prazo"}
           </Button>
+          {createDeadline.isError && (
+            <p className="text-xs text-red-600 mt-1">{createDeadline.error?.message}</p>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>
