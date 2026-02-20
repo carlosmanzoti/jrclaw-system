@@ -330,13 +330,61 @@ function ResumoTab({ caso }: { caso: CaseData }) {
         <Card>
           <CardContent className="pt-4 pb-4">
             <p className="text-xs text-[#666666]">Vara / Comarca</p>
-            <p className="text-sm font-medium">
-              {[caso.vara, caso.comarca, caso.uf].filter(Boolean).join(" / ") || (
-                <span className="text-[#999999] italic">Não informado</span>
-              )}
-            </p>
+            {caso.court ? (
+              <Link href={`/cadastros/varas/${caso.court.id}`} className="text-sm font-medium text-primary hover:underline">
+                {caso.court.shortName || caso.court.name}
+              </Link>
+            ) : (
+              <p className="text-sm font-medium">
+                {[caso.vara, caso.comarca, caso.uf].filter(Boolean).join(" / ") || (
+                  <span className="text-[#999999] italic">Não informado</span>
+                )}
+              </p>
+            )}
           </CardContent>
         </Card>
+      </div>
+
+      {/* Judge & AJ cards */}
+      <div className="grid gap-4 sm:grid-cols-2">
+        {((caso.caseJudges as CaseData[]) ?? []).length > 0 && (
+          <Card>
+            <CardContent className="pt-4 pb-4">
+              <p className="text-xs text-[#666666] mb-1">Juiz(a) Atual</p>
+              {(caso.caseJudges as CaseData[]).filter((cj: CaseData) => cj.isCurrent).map((cj: CaseData) => (
+                <div key={cj.judge?.id}>
+                  <Link href={`/cadastros/varas/${caso.court?.id || ""}`} className="text-sm font-medium text-primary hover:underline">
+                    {cj.judge?.name}
+                  </Link>
+                  {cj.judge?.specialty && (
+                    <p className="text-xs text-[#666666] mt-0.5">{cj.judge.specialty}</p>
+                  )}
+                  {cj.judge?.avgDecisionDays && (
+                    <p className="text-xs text-[#666666]">Média de decisão: {cj.judge.avgDecisionDays} dias</p>
+                  )}
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        )}
+
+        {((caso.caseAdministrators as CaseData[]) ?? []).length > 0 && (
+          <Card>
+            <CardContent className="pt-4 pb-4">
+              <p className="text-xs text-[#666666] mb-1">Administrador Judicial</p>
+              {(caso.caseAdministrators as CaseData[]).map((ca: CaseData) => (
+                <div key={ca.administrator?.id}>
+                  <Link href={`/cadastros/administradores-judiciais/${ca.administrator?.id}`} className="text-sm font-medium text-primary hover:underline">
+                    {ca.administrator?.companyName}
+                  </Link>
+                  {ca.administrator?.mainContactName && (
+                    <p className="text-xs text-[#666666] mt-0.5">Contato: {ca.administrator.mainContactName}</p>
+                  )}
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        )}
       </div>
 
       {/* Right column */}

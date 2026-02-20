@@ -83,6 +83,9 @@ export const casesRouter = router({
           documentos: { orderBy: { created_at: "desc" }, include: { criado_por: { select: { id: true, name: true } } } },
           atividades: { orderBy: { data: "desc" }, take: 50, include: { user: { select: { id: true, name: true } } } },
           credores: { include: { person: { select: { id: true, nome: true } } } },
+          court: { select: { id: true, name: true, shortName: true, comarca: true, state: true, tribunal: true, courtType: true } },
+          caseJudges: { where: { isCurrent: true }, include: { judge: { select: { id: true, name: true, title: true, specialty: true, avgDecisionDays: true, tendencyNotes: true } } } },
+          caseAdministrators: { include: { administrator: { select: { id: true, companyName: true, tradeName: true, mainContactName: true, mainContactPhone: true } } } },
         },
       });
       if (!caso) throw new TRPCError({ code: "NOT_FOUND", message: "Processo não encontrado" });
