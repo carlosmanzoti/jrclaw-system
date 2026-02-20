@@ -874,6 +874,15 @@ model Person {
   relatedPersons             ClientRelatedPerson[] @relation("ClientRelatedPersons")
   linkedAsRelated            ClientRelatedPerson[] @relation("LinkedRelatedPerson")
 
+  // Patrimony relations
+  ruralProperties            ClientRuralProperty[]           @relation("ClientRuralProperties")
+  agriculturalProductions    ClientAgriculturalProduction[]   @relation("ClientProductions")
+  urbanProperties            ClientUrbanProperty[]            @relation("ClientUrbanProperties")
+  vehicles                   ClientVehicle[]                  @relation("ClientVehicles")
+  corporateParticipations    ClientCorporateParticipation[]   @relation("ClientParticipations")
+  financialData              ClientFinancialData[]            @relation("ClientFinancials")
+  operationalData            ClientOperationalData[]          @relation("ClientOperational")
+
   @@map("persons")
 }
 
@@ -5651,4 +5660,416 @@ model ClientRelatedPerson {
   @@index([relationship])
   @@index([clientId, isKeyPerson])
   @@map("client_related_persons")
+}
+
+// ═══════════════════════════════════════════════════════════
+// PATRIMÔNIO — ENUMS
+// ═══════════════════════════════════════════════════════════
+
+enum PropertyOwnership {
+  PROPRIO
+  ARRENDADO
+  PARCERIA
+  COMODATO
+  POSSE
+  CONDOMINIO
+}
+
+enum HarvestSeason {
+  SAFRA
+  SAFRINHA
+  INVERNO
+  PERENE
+}
+
+enum CropType {
+  SOJA
+  MILHO
+  MILHO_SAFRINHA
+  ALGODAO
+  CAFE
+  CANA_DE_ACUCAR
+  ARROZ
+  FEIJAO
+  TRIGO
+  SORGO
+  GIRASSOL
+  EUCALIPTO
+  PECUARIA_CORTE
+  PECUARIA_LEITE
+  SUINOCULTURA
+  AVICULTURA
+  PISCICULTURA
+  FRUTICULTURA
+  HORTICULTURA
+  SILVICULTURA
+  OUTRA
+}
+
+enum UrbanPropertyType {
+  CASA
+  APARTAMENTO
+  SALA_COMERCIAL
+  GALPAO
+  TERRENO
+  LOJA
+  PREDIO_COMERCIAL
+  FAZENDA_URBANA
+  OUTRO
+}
+
+enum VehicleCategory {
+  AUTOMOVEL
+  CAMINHONETE
+  CAMINHAO
+  CAMINHAO_PESADO
+  VAN_UTILITARIO
+  MOTOCICLETA
+  TRATOR
+  COLHEITADEIRA
+  PLANTADEIRA
+  PULVERIZADOR
+  CARRETA_AGRICOLA
+  SILO
+  SECADOR
+  PIVO_IRRIGACAO
+  GERADOR
+  EQUIPAMENTO_INDUSTRIAL
+  EQUIPAMENTO_ESCRITORIO
+  OUTRO_VEICULO
+}
+
+enum ParticipationType {
+  SOCIO_QUOTISTA
+  SOCIO_ADMINISTRADOR_PART
+  ACIONISTA_CONTROLADOR
+  ACIONISTA_MINORITARIO
+  COOPERADO
+  CONSORCIO
+}
+
+enum FinancialPeriod {
+  ANUAL
+  TRIMESTRAL
+  MENSAL
+}
+
+// ═══════════════════════════════════════════════════════════
+// IMÓVEIS RURAIS (FAZENDAS)
+// ═══════════════════════════════════════════════════════════
+
+model ClientRuralProperty {
+  id                 String            @id @default(cuid())
+  clientId           String
+  client             Person            @relation("ClientRuralProperties", fields: [clientId], references: [id], onDelete: Cascade)
+
+  name               String
+  registrationNumber String?
+  carCode            String?
+  incraCode          String?
+  nirf               String?
+
+  address            String?
+  city               String
+  state              String
+  comarca            String?
+  latitude           Float?
+  longitude          Float?
+
+  totalArea          Float
+  productiveArea     Float?
+  pastureland        Float?
+  nativeVegetation   Float?
+  forestArea         Float?
+  improvementArea    Float?
+  irrigatedArea      Float?
+
+  ownership          PropertyOwnership @default(PROPRIO)
+  ownerName          String?
+  ownerDocument      String?
+  contractEndDate    DateTime?
+  annualRent         BigInt?
+
+  estimatedValue     BigInt?
+  valuePerHectare    BigInt?
+  appraisalDate      DateTime?
+  appraisalSource    String?
+
+  hasLien            Boolean           @default(false)
+  lienHolder         String?
+  lienAmount         BigInt?
+  hasJudicialBlock   Boolean           @default(false)
+  blockDetails       String?
+  hasEnvironmentalIssue Boolean        @default(false)
+  environmentalNotes String?
+
+  productions        ClientAgriculturalProduction[]
+
+  notes              String?           @db.Text
+  isActive           Boolean           @default(true)
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+
+  @@index([clientId])
+  @@index([state, city])
+  @@map("client_rural_properties")
+}
+
+// ═══════════════════════════════════════════════════════════
+// PRODUÇÃO AGRÍCOLA (por safra/propriedade)
+// ═══════════════════════════════════════════════════════════
+
+model ClientAgriculturalProduction {
+  id                String              @id @default(cuid())
+  clientId          String
+  client            Person              @relation("ClientProductions", fields: [clientId], references: [id], onDelete: Cascade)
+
+  ruralPropertyId   String?
+  ruralProperty     ClientRuralProperty? @relation(fields: [ruralPropertyId], references: [id])
+
+  harvestYear       String
+  season            HarvestSeason
+  crop              CropType
+  customCrop        String?
+  plantedArea       Float
+  expectedYield     Float?
+  actualYield       Float?
+  yieldUnit         String?
+  totalProduction   Float?
+
+  averagePrice      BigInt?
+  priceUnit         String?
+  totalRevenue      BigInt?
+  percentageSold    Float?
+  percentageHedged  Float?
+
+  productionCost    BigInt?
+  costPerHectare    BigInt?
+
+  hasCPR            Boolean             @default(false)
+  cprDetails        String?
+  financingSource   String?
+  financingAmount   BigInt?
+
+  notes             String?
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+
+  @@index([clientId])
+  @@index([clientId, harvestYear])
+  @@index([ruralPropertyId])
+  @@map("client_agricultural_productions")
+}
+
+// ═══════════════════════════════════════════════════════════
+// IMÓVEIS URBANOS
+// ═══════════════════════════════════════════════════════════
+
+model ClientUrbanProperty {
+  id                 String            @id @default(cuid())
+  clientId           String
+  client             Person            @relation("ClientUrbanProperties", fields: [clientId], references: [id], onDelete: Cascade)
+
+  propertyType       UrbanPropertyType
+  description        String
+  registrationNumber String?
+
+  address            String
+  neighborhood       String?
+  city               String
+  state              String
+  cep                String?
+
+  builtArea          Float?
+  landArea           Float?
+
+  ownership          PropertyOwnership @default(PROPRIO)
+  ownerName          String?
+
+  estimatedValue     BigInt?
+  appraisalDate      DateTime?
+  appraisalSource    String?
+  monthlyRent        BigInt?
+
+  hasLien            Boolean           @default(false)
+  lienHolder         String?
+  lienAmount         BigInt?
+  hasJudicialBlock   Boolean           @default(false)
+  blockDetails       String?
+
+  notes              String?
+  isActive           Boolean           @default(true)
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+
+  @@index([clientId])
+  @@map("client_urban_properties")
+}
+
+// ═══════════════════════════════════════════════════════════
+// VEÍCULOS, MÁQUINAS E EQUIPAMENTOS
+// ═══════════════════════════════════════════════════════════
+
+model ClientVehicle {
+  id                String          @id @default(cuid())
+  clientId          String
+  client            Person          @relation("ClientVehicles", fields: [clientId], references: [id], onDelete: Cascade)
+
+  category          VehicleCategory
+  description       String
+  brand             String?
+  model             String?
+  year              Int?
+  plate             String?
+  renavam           String?
+  chassi            String?
+  serialNumber      String?
+
+  estimatedValue    BigInt?
+  fipeValue         BigInt?
+  appraisalDate     DateTime?
+
+  hasLien           Boolean         @default(false)
+  lienHolder        String?
+  lienAmount        BigInt?
+  hasJudicialBlock  Boolean         @default(false)
+
+  condition         String?
+  location          String?
+
+  notes             String?
+  isActive          Boolean         @default(true)
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  @@index([clientId])
+  @@index([category])
+  @@map("client_vehicles")
+}
+
+// ═══════════════════════════════════════════════════════════
+// PARTICIPAÇÕES SOCIETÁRIAS
+// ═══════════════════════════════════════════════════════════
+
+model ClientCorporateParticipation {
+  id                String            @id @default(cuid())
+  clientId          String
+  client            Person            @relation("ClientParticipations", fields: [clientId], references: [id], onDelete: Cascade)
+
+  companyName       String
+  cnpj              String?
+  participationType ParticipationType
+  sharePercentage   Float?
+  capitalAmount     BigInt?
+
+  role              String?
+  companyStatus     String?
+  cnaeDescription   String?
+
+  estimatedValue    BigInt?
+  annualDividends   BigInt?
+
+  notes             String?
+  isActive          Boolean           @default(true)
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+
+  @@index([clientId])
+  @@map("client_corporate_participations")
+}
+
+// ═══════════════════════════════════════════════════════════
+// DADOS FINANCEIROS (por exercício)
+// ═══════════════════════════════════════════════════════════
+
+model ClientFinancialData {
+  id                    String          @id @default(cuid())
+  clientId              String
+  client                Person          @relation("ClientFinancials", fields: [clientId], references: [id], onDelete: Cascade)
+
+  year                  Int
+  period                FinancialPeriod @default(ANUAL)
+  quarter               Int?
+
+  grossRevenue          BigInt?
+  netRevenue            BigInt?
+  cogs                  BigInt?
+  grossProfit           BigInt?
+  operatingExpenses     BigInt?
+  ebitda                BigInt?
+  depreciation          BigInt?
+  ebit                  BigInt?
+  financialExpenses     BigInt?
+  financialIncome       BigInt?
+  netIncome             BigInt?
+
+  totalAssets           BigInt?
+  currentAssets         BigInt?
+  nonCurrentAssets      BigInt?
+  totalLiabilities      BigInt?
+  currentLiabilities    BigInt?
+  nonCurrentLiabilities BigInt?
+  equity                BigInt?
+  cash                  BigInt?
+
+  totalDebt             BigInt?
+  shortTermDebt         BigInt?
+  longTermDebt          BigInt?
+  netDebt               BigInt?
+
+  operatingCashFlow     BigInt?
+  investingCashFlow     BigInt?
+  financingCashFlow     BigInt?
+
+  source                String?
+  documentUrl           String?
+
+  notes                 String?         @db.Text
+  createdAt             DateTime        @default(now())
+  updatedAt             DateTime        @updatedAt
+
+  @@unique([clientId, year, period, quarter])
+  @@index([clientId])
+  @@index([clientId, year])
+  @@map("client_financial_data")
+}
+
+// ═══════════════════════════════════════════════════════════
+// INDICADORES OPERACIONAIS
+// ═══════════════════════════════════════════════════════════
+
+model ClientOperationalData {
+  id                String   @id @default(cuid())
+  clientId          String
+  client            Person   @relation("ClientOperational", fields: [clientId], references: [id], onDelete: Cascade)
+
+  year              Int
+
+  totalEmployees    Int?
+  cltEmployees      Int?
+  temporaryWorkers  Int?
+  monthlyPayroll    BigInt?
+  annualPayroll     BigInt?
+
+  totalManagedArea  Float?
+  ownedArea         Float?
+  leasedArea        Float?
+  storageCapacity   Float?
+  cattleHeadCount   Int?
+
+  vehicleCount      Int?
+  machineCount      Int?
+  truckCount        Int?
+
+  operationalUnits  Int?
+  states            String?
+  certifications    String?
+
+  notes             String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@unique([clientId, year])
+  @@index([clientId])
+  @@map("client_operational_data")
 }
