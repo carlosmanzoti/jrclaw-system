@@ -526,7 +526,17 @@ export function ConfeccaoGenerate({
         signal: controller.signal,
       })
 
-      if (!res.ok) throw new Error("Erro ao gerar documento")
+      if (!res.ok) {
+        let errMsg = "Erro ao gerar documento"
+        try {
+          const errBody = await res.json()
+          if (errBody?.error) errMsg = errBody.error
+        } catch {
+          // response may not be JSON; use status text
+          errMsg = `Erro ao gerar documento (${res.status})`
+        }
+        throw new Error(errMsg)
+      }
 
       // Read model tier from response header
       const tier = res.headers.get("X-AI-Tier") as ModelTier | null

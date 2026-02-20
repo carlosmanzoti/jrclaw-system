@@ -1,6 +1,4 @@
-import { pdf } from "@react-pdf/renderer"
 import { createElement, type ReactElement } from "react"
-import { ReportPDFDocument } from "./report-pdf-template"
 import type { ReportData } from "@/types/reports"
 
 export interface GenerateReportPDFOptions {
@@ -14,10 +12,14 @@ export interface GenerateReportPDFOptions {
 /**
  * Generate a PDF Blob from report data.
  * Must be called on the client side (browser).
+ * Uses dynamic import to avoid DOMMatrix SSR error.
  */
 export async function generateReportPDF(
   options: GenerateReportPDFOptions
 ): Promise<Blob> {
+  const { pdf } = await import("@react-pdf/renderer")
+  const { ReportPDFDocument } = await import("./report-pdf-template")
+
   const doc = createElement(ReportPDFDocument, {
     data: options.data,
     clientName: options.clientName,

@@ -33,9 +33,9 @@ export const MODEL_CONFIGS: Record<ModelTier, ModelConfig> = {
   },
   premium: {
     tier: "premium",
-    model: "claude-opus-4-6-20250918",
+    model: "claude-opus-4-6",
     maxOutputTokens: 16384,
-    temperature: 0.2,
+    temperature: 1, // Must be 1 when extended thinking is enabled
     thinking: { type: "enabled", budgetTokens: 10000 },
     costPerMTokIn: 15,
     costPerMTokOut: 75,

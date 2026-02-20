@@ -1,18 +1,18 @@
-import { pdf } from "@react-pdf/renderer";
 import { createElement } from "react";
-import {
-  PatrimonyPDFDocument,
-  type PatrimonyPDFData,
-} from "./pdf/patrimony-pdf-template";
+import type { PatrimonyPDFData } from "./pdf/patrimony-pdf-template";
 import * as XLSX from "xlsx";
 
+export type { PatrimonyPDFData };
+
 // ---------------------------------------------------------------------------
-// PDF Export
+// PDF Export (dynamic import to avoid DOMMatrix SSR error)
 // ---------------------------------------------------------------------------
 
 export async function exportPatrimonyPDF(
   data: PatrimonyPDFData
 ): Promise<void> {
+  const { pdf } = await import("@react-pdf/renderer");
+  const { PatrimonyPDFDocument } = await import("./pdf/patrimony-pdf-template");
   const doc = createElement(PatrimonyPDFDocument, { data });
   const blob = await pdf(doc as any).toBlob();
   const url = URL.createObjectURL(blob);

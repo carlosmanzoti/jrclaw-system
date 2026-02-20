@@ -10,6 +10,7 @@ import { Prisma } from "@prisma/client"
 export const maxDuration = 120
 
 export async function POST(req: Request) {
+  try {
   const session = await auth()
   if (!session?.user?.id) {
     return new Response("Unauthorized", { status: 401 })
@@ -226,14 +227,31 @@ export async function POST(req: Request) {
     }
   }
 
-  const result = streamText(streamOptions)
+  try {
+    const result = streamText(streamOptions)
 
-  const response = result.toTextStreamResponse()
+    const response = result.toTextStreamResponse()
 
-  // Add model info headers
-  response.headers.set("X-AI-Model", config.model)
-  response.headers.set("X-AI-Tier", config.tier)
-  response.headers.set("X-Biblioteca-Refs", JSON.stringify(bibliotecaRefIds))
+    // Add model info headers
+    response.headers.set("X-AI-Model", config.model)
+    response.headers.set("X-AI-Tier", config.tier)
+    response.headers.set("X-Biblioteca-Refs", JSON.stringify(bibliotecaRefIds))
 
-  return response
+    return response
+  } catch (streamErr: unknown) {
+    console.error("[AI Generate] streamText error:", streamErr)
+    const message = streamErr instanceof Error ? streamErr.message : "Erro desconhecido na geração"
+    return new Response(JSON.stringify({ error: message }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" },
+    })
+  }
+  } catch (err: unknown) {
+    console.error("[AI Generate] Unexpected error:", err)
+    const message = err instanceof Error ? err.message : "Erro interno ao gerar documento"
+    return new Response(JSON.stringify({ error: message }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" },
+    })
+  }
 }

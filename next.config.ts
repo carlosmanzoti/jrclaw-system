@@ -4,6 +4,13 @@ const nextConfig: NextConfig = {
   // Disable strict mode in dev to avoid double renders
   reactStrictMode: false,
 
+  // Externalize packages that require Node-only APIs (DOMMatrix, canvas, etc.)
+  // This prevents them from being bundled by webpack and evaluated at import time.
+  serverExternalPackages: [
+    "pdf-parse",
+    "@react-pdf/renderer",
+  ],
+
   // Optimize barrel file imports — tree-shakes heavy packages
   experimental: {
     optimizePackageImports: [
