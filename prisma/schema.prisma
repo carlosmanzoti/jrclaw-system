@@ -796,6 +796,7 @@ model User {
   assignedInvestigations       Investigation[] @relation("InvestigationAssignee")
   investigationQueries         InvestigationQuery[] @relation("InvestigationQueryExecutor")
   investigationReports         InvestigationReport[] @relation("InvestigationReportGenerator")
+  teamMember               TeamMember?
 
   @@map("users")
 }
@@ -6072,4 +6073,663 @@ model ClientOperationalData {
   @@unique([clientId, year])
   @@index([clientId])
   @@map("client_operational_data")
+}
+
+// ════════════════════════════════════════
+// TEAM MANAGEMENT MODULE
+// ════════════════════════════════════════
+
+enum TeamRole {
+  SOCIO
+  ADVOGADO_SENIOR
+  ADVOGADO_PLENO
+  ADVOGADO_JUNIOR
+  ESTAGIARIO
+  PARALEGAL
+  ADMINISTRATIVO
+}
+
+enum CareerTrack {
+  JURIDICO
+  ADMINISTRATIVO_TRACK
+  PARALEGAL_TRACK
+}
+
+enum BurnoutRisk {
+  LOW
+  MODERATE
+  HIGH
+  CRITICAL
+}
+
+enum OKRStatus {
+  DRAFT
+  ACTIVE
+  REVIEW
+  CLOSED
+}
+
+enum OKRCategory {
+  PRODUTIVIDADE
+  QUALIDADE
+  CAPTACAO
+  DESENVOLVIMENTO
+  FINANCEIRO
+  OPERACIONAL
+}
+
+enum FeedbackType {
+  POSITIVO
+  CONSTRUTIVO
+  FEEDFORWARD
+  RECONHECIMENTO
+}
+
+enum FeedbackDirection {
+  MANAGER_TO_REPORT
+  REPORT_TO_MANAGER
+  PEER_TO_PEER
+  SELF
+  CLIENT_ORIGINATED
+}
+
+enum FeedbackVisibility {
+  PRIVATE
+  TEAM
+  MANAGERS_ONLY
+}
+
+enum FeedbackReaction {
+  AGRADECIDO
+  CONCORDO
+  PARCIALMENTE_CONCORDO
+  DISCORDO
+  PRECISO_CONVERSAR
+}
+
+enum LegalCompetency {
+  TECNICA_JURIDICA
+  COMUNICACAO_CLIENTE
+  NEGOCIACAO
+  GESTAO_PRAZOS
+  REDACAO_JURIDICA
+  ORATORIA_AUDIENCIA
+  PESQUISA_JURISPRUDENCIAL
+  BUSINESS_DEVELOPMENT
+  TRABALHO_EQUIPE
+  LIDERANCA
+  COMPETENCIA_TECNOLOGICA
+  ETICA_PROFISSIONAL
+}
+
+enum Review360Status {
+  SETUP
+  COLLECTING
+  PROCESSING
+  REVIEW_360
+  RELEASED
+  CLOSED_360
+}
+
+enum Review360ParticipantStatus {
+  PENDING_360
+  IN_PROGRESS_360
+  COMPLETED_360
+  RESULTS_AVAILABLE
+}
+
+enum OneOnOneStatus {
+  SCHEDULED
+  IN_PROGRESS_1ON1
+  COMPLETED_1ON1
+  CANCELLED_1ON1
+  RESCHEDULED
+}
+
+enum OneOnOneFrequency {
+  WEEKLY_1ON1
+  BIWEEKLY_1ON1
+  MONTHLY_1ON1
+}
+
+enum PDIStatus {
+  DRAFT_PDI
+  ACTIVE_PDI
+  MID_REVIEW
+  FINAL_REVIEW
+  COMPLETED_PDI
+  ARCHIVED_PDI
+}
+
+enum SurveyType {
+  PULSE
+  ENPS
+  CLIMA
+  CUSTOM_SURVEY
+  ONBOARDING_SURVEY
+  EXIT_SURVEY
+}
+
+enum SurveyStatus {
+  DRAFT_SURVEY
+  ACTIVE_SURVEY
+  CLOSED_SURVEY
+  ANALYZED
+}
+
+enum SurveyFrequency {
+  WEEKLY_SURVEY
+  BIWEEKLY_SURVEY
+  MONTHLY_SURVEY
+  QUARTERLY
+  SEMESTRAL
+}
+
+enum ClientFeedbackType {
+  NPS
+  CSAT
+  CES
+  FULL_FEEDBACK
+}
+
+enum NPSCategory {
+  PROMOTER
+  PASSIVE
+  DETRACTOR
+}
+
+enum ClientFeedbackStatus {
+  PENDING_CF
+  RESPONDED
+  FOLLOWED_UP
+  EXPIRED_CF
+}
+
+enum ComplaintCategory {
+  ASSEDIO_MORAL
+  ASSEDIO_SEXUAL
+  DISCRIMINACAO
+  DESVIO_ETICO
+  CONFLITO_INTERESSES
+  IRREGULARIDADE_FINANCEIRA
+  CONDICOES_TRABALHO
+  RELACAO_INTERPESSOAL
+  SUGESTAO_MELHORIA
+  ELOGIO
+  OUTRO_COMPLAINT
+}
+
+enum ComplaintSeverity {
+  LOW_SEV
+  MEDIUM_SEV
+  HIGH_SEV
+  CRITICAL_SEV
+}
+
+enum ComplaintStatus {
+  RECEIVED
+  UNDER_ANALYSIS
+  INVESTIGATING
+  ACTION_TAKEN
+  RESOLVED_COMPLAINT
+  DISMISSED
+  ARCHIVED_COMPLAINT
+}
+
+enum ComplaintChannel {
+  INTERNAL_SYSTEM
+  EMAIL_CHANNEL
+  WHATSAPP_CHANNEL
+  IN_PERSON
+  EXTERNAL_LINK
+}
+
+enum RecognitionCategory {
+  HIGH_FIVE
+  STAR_OF_WEEK
+  MILESTONE_REC
+  CLIENT_PRAISE
+  INNOVATION
+  MENTORSHIP
+}
+
+model TeamMember {
+  id              String   @id @default(cuid())
+  userId          String   @unique
+  user            User     @relation(fields: [userId], references: [id])
+
+  role            TeamRole @default(ESTAGIARIO)
+  department      String?
+  oabNumber       String?
+  admissionDate   DateTime
+  birthDate       DateTime?
+
+  careerTrack     CareerTrack @default(JURIDICO)
+  currentLevel    Int      @default(1)
+  targetLevel     Int?
+
+  managerMemberId String?
+  manager         TeamMember? @relation("ManagerSubordinate", fields: [managerMemberId], references: [id])
+  subordinates    TeamMember[] @relation("ManagerSubordinate")
+
+  lastWellbeingScore  Int?
+  burnoutRiskLevel    BurnoutRisk @default(LOW)
+
+  okrs              OKR[]
+  kpiEntries        KPIEntry[]
+  feedbackGiven     Feedback[]     @relation("FeedbackAuthor")
+  feedbackReceived  Feedback[]     @relation("FeedbackTarget")
+  review360Cycles   Review360Participant[]
+  oneOnOnes         OneOnOne[]     @relation("OneOnOneSubordinate")
+  oneOnOnesManagedBy OneOnOne[]   @relation("OneOnOneManager")
+  pdiPlans          PDIPlan[]
+  pulseSurveyResponses PulseSurveyResponse[]
+  clientFeedbackFor    ClientFeedback[]
+  complaintsSubmitted  Complaint[]  @relation("ComplaintSubmitter")
+  complaintsAssigned   Complaint[]  @relation("ComplaintAssignee")
+  recognitionsGiven    Recognition[] @relation("RecognitionFrom")
+  recognitionsReceived Recognition[] @relation("RecognitionTo")
+  wellbeingCheckins    WellbeingCheckin[]
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@map("team_members")
+}
+
+model OKR {
+  id            String    @id @default(cuid())
+  teamMemberId  String
+  teamMember    TeamMember @relation(fields: [teamMemberId], references: [id])
+
+  quarter       Int
+  year          Int
+  status        OKRStatus @default(DRAFT)
+
+  objective     String
+  category      OKRCategory
+
+  keyResults    Json
+
+  overallProgress Float   @default(0)
+
+  finalScore      Float?
+  selfAssessment  String?
+  managerComment  String?
+
+  parentOkrId     String?
+  parentOkr       OKR?    @relation("OKRAlignment", fields: [parentOkrId], references: [id])
+  childOkrs       OKR[]   @relation("OKRAlignment")
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@map("okrs")
+}
+
+model KPIEntry {
+  id            String   @id @default(cuid())
+  teamMemberId  String
+  teamMember    TeamMember @relation(fields: [teamMemberId], references: [id])
+
+  period        DateTime
+
+  billableHours       Float?
+  totalHours          Float?
+  utilizationRate     Float?
+  casesActive         Int?
+  deadlinesMet        Int?
+  deadlinesTotal      Int?
+  deadlineComplianceRate Float?
+
+  piecesProduced      Int?
+  piecesQualityScore  Float?
+  caseSuccessRate     Float?
+
+  revenueGenerated    Float?
+  clientsAcquired     Int?
+
+  trainingHours       Float?
+  mentoringSessions   Int?
+
+  overallScore        Float?
+  aiInsights          String?
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([teamMemberId, period])
+  @@map("kpi_entries")
+}
+
+model Feedback {
+  id            String   @id @default(cuid())
+
+  authorId      String
+  author        TeamMember @relation("FeedbackAuthor", fields: [authorId], references: [id])
+  targetId      String
+  target        TeamMember @relation("FeedbackTarget", fields: [targetId], references: [id])
+
+  type          FeedbackType
+  direction     FeedbackDirection
+  visibility    FeedbackVisibility @default(PRIVATE)
+
+  situation     String
+  behavior      String
+  impact        String
+
+  feedforward   String?
+
+  competency    LegalCompetency?
+
+  caseId        String?
+
+  acknowledged  Boolean   @default(false)
+  reaction      FeedbackReaction?
+  replyText     String?
+
+  aiSuggested   Boolean   @default(false)
+  aiTone        String?
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@map("feedbacks")
+}
+
+model Review360Cycle {
+  id            String   @id @default(cuid())
+
+  name          String
+  period        String
+  status        Review360Status @default(SETUP)
+
+  competencies  Json
+
+  includeClients      Boolean @default(true)
+  includePeers        Boolean @default(true)
+  includeSelfReview   Boolean @default(true)
+  anonymousComments   Boolean @default(true)
+  minReviewersPerCategory Int @default(2)
+
+  startDate     DateTime
+  endDate       DateTime
+  resultsDate   DateTime?
+
+  participants  Review360Participant[]
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@map("review_360_cycles")
+}
+
+model Review360Participant {
+  id            String   @id @default(cuid())
+  cycleId       String
+  cycle         Review360Cycle @relation(fields: [cycleId], references: [id])
+  teamMemberId  String
+  teamMember    TeamMember @relation(fields: [teamMemberId], references: [id])
+
+  selfReview    Json?
+  managerReview Json?
+  peerReviews   Json?
+  clientReviews Json?
+
+  consolidatedScores  Json?
+  strengthsSummary    String?
+  developmentAreas    String?
+  aiNarrative         String?
+
+  performanceScore    Float?
+  potentialScore      Float?
+  nineBoxPosition     String?
+
+  status        Review360ParticipantStatus @default(PENDING_360)
+  completedAt   DateTime?
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([cycleId, teamMemberId])
+  @@map("review_360_participants")
+}
+
+model OneOnOne {
+  id            String   @id @default(cuid())
+
+  managerId     String
+  manager       TeamMember @relation("OneOnOneManager", fields: [managerId], references: [id])
+  subordinateId String
+  subordinate   TeamMember @relation("OneOnOneSubordinate", fields: [subordinateId], references: [id])
+
+  scheduledAt   DateTime
+  duration      Int      @default(45)
+  location      String?
+  status        OneOnOneStatus @default(SCHEDULED)
+
+  recurring     Boolean  @default(true)
+  frequency     OneOnOneFrequency @default(WEEKLY_1ON1)
+
+  agenda        Json?
+  notes         String?
+  actionItems   Json?
+
+  moodScore     Int?
+  energyLevel   Int?
+  workloadPerception Int?
+
+  aiSummary     String?
+  aiSuggestions Json?
+
+  calendarEventId String?
+
+  completedAt   DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@map("one_on_ones")
+}
+
+model PDIPlan {
+  id            String   @id @default(cuid())
+  teamMemberId  String
+  teamMember    TeamMember @relation(fields: [teamMemberId], references: [id])
+
+  title         String
+  period        String
+  status        PDIStatus @default(DRAFT_PDI)
+
+  goals         Json
+
+  currentRole   TeamRole
+  targetRole    TeamRole?
+  timelineMonths Int?
+
+  midReview     Json?
+  finalReview   Json?
+  overallProgress Float  @default(0)
+
+  aiRecommendations String?
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@map("pdi_plans")
+}
+
+model PulseSurvey {
+  id            String   @id @default(cuid())
+
+  title         String
+  type          SurveyType
+  status        SurveyStatus @default(DRAFT_SURVEY)
+
+  questions     Json
+
+  anonymous     Boolean  @default(true)
+  frequency     SurveyFrequency?
+
+  startDate     DateTime
+  endDate       DateTime
+
+  responseCount Int      @default(0)
+  responseRate  Float?
+  avgScore      Float?
+  enpsScore     Int?
+  aiAnalysis    String?
+
+  responses     PulseSurveyResponse[]
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@map("pulse_surveys")
+}
+
+model PulseSurveyResponse {
+  id            String   @id @default(cuid())
+  surveyId      String
+  survey        PulseSurvey @relation(fields: [surveyId], references: [id])
+
+  respondentId  String?
+  respondent    TeamMember? @relation(fields: [respondentId], references: [id])
+
+  answers       Json
+
+  submittedAt   DateTime @default(now())
+
+  @@unique([surveyId, respondentId])
+  @@map("pulse_survey_responses")
+}
+
+model ClientFeedback {
+  id            String   @id @default(cuid())
+
+  clientName    String
+  clientEmail   String?
+  clientCompany String?
+
+  teamMemberId  String?
+  teamMember    TeamMember? @relation(fields: [teamMemberId], references: [id])
+
+  caseId        String?
+
+  type          ClientFeedbackType
+  triggerMoment String?
+
+  npsScore      Int?
+  npsCategory   NPSCategory?
+
+  csatCommunication    Int?
+  csatResult           Int?
+  csatSpeed            Int?
+  csatCompetence       Int?
+  csatTransparency     Int?
+  csatOverall          Float?
+
+  cesScore      Int?
+
+  positiveComment  String?
+  improvementComment String?
+  wouldRecommend   Boolean?
+
+  status        ClientFeedbackStatus @default(PENDING_CF)
+  followUpDone  Boolean  @default(false)
+  followUpNotes String?
+
+  accessToken   String   @unique @default(cuid())
+  expiresAt     DateTime
+
+  respondedAt   DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@map("client_feedbacks")
+}
+
+model Complaint {
+  id            String   @id @default(cuid())
+
+  submitterId   String?
+  submitter     TeamMember? @relation("ComplaintSubmitter", fields: [submitterId], references: [id])
+  isAnonymous   Boolean  @default(true)
+
+  category      ComplaintCategory
+  severity      ComplaintSeverity @default(MEDIUM_SEV)
+
+  title         String
+  description   String
+  evidence      Json?
+
+  involvedPersonDescription String?
+
+  status        ComplaintStatus @default(RECEIVED)
+  assigneeId    String?
+  assignee      TeamMember? @relation("ComplaintAssignee", fields: [assigneeId], references: [id])
+
+  timeline      Json?
+
+  resolution    String?
+  resolvedAt    DateTime?
+
+  channel       ComplaintChannel @default(INTERNAL_SYSTEM)
+
+  trackingCode  String   @unique @default(cuid())
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@map("complaints")
+}
+
+model Recognition {
+  id          String   @id @default(cuid())
+
+  fromId      String
+  from        TeamMember @relation("RecognitionFrom", fields: [fromId], references: [id])
+  toId        String
+  to          TeamMember @relation("RecognitionTo", fields: [toId], references: [id])
+
+  message     String
+  category    RecognitionCategory
+  competency  LegalCompetency?
+
+  isPublic    Boolean  @default(true)
+
+  reactions   Json?
+
+  caseId      String?
+
+  createdAt   DateTime @default(now())
+
+  @@map("recognitions")
+}
+
+model WellbeingCheckin {
+  id            String   @id @default(cuid())
+  teamMemberId  String
+  teamMember    TeamMember @relation(fields: [teamMemberId], references: [id])
+
+  mood          Int
+  energy        Int
+  workload      Int
+  satisfaction  Int
+  sleepQuality  Int?
+
+  feelingBurnout  Boolean @default(false)
+  needsSupport    Boolean @default(false)
+
+  notes         String?
+
+  weekHoursLogged Float?
+  deadlinesPending Int?
+
+  aiAlert       String?
+  aiAlertLevel  BurnoutRisk?
+
+  checkedAt     DateTime @default(now())
+
+  @@index([teamMemberId, checkedAt])
+  @@map("wellbeing_checkins")
 }

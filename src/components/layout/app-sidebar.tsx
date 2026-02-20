@@ -28,6 +28,7 @@ import {
   Landmark,
   Gavel,
   UserCircle,
+  UsersRound,
 } from "lucide-react"
 import {
   Sidebar,
@@ -184,6 +185,18 @@ const navAdmin = [
     title: "Importar Dados",
     url: "/importar",
     icon: Upload,
+  },
+  {
+    title: "Equipe",
+    url: "/equipe",
+    icon: UsersRound,
+    items: [
+      { title: "Painel", url: "/equipe" },
+      { title: "OKRs", url: "/equipe?tab=okrs" },
+      { title: "Feedback", url: "/equipe?tab=feedback" },
+      { title: "1:1s", url: "/equipe?tab=one-on-one" },
+      { title: "Bem-Estar", url: "/equipe?tab=wellbeing" },
+    ],
   },
   {
     title: "Configurações",
