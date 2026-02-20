@@ -58,6 +58,7 @@ import {
   ESTADOS_BRASIL,
 } from "@/lib/constants"
 import Link from "next/link"
+import { InfluenceMapTab } from "@/components/cadastros/influence-map-tab"
 
 // Form validation schema
 const formSchema = z.object({
@@ -353,6 +354,9 @@ export function PersonForm({ personId }: PersonFormProps) {
             <>
               <TabsTrigger value="processos">Processos</TabsTrigger>
               <TabsTrigger value="projetos">Projetos</TabsTrigger>
+              {form.watch("tipo") === "CLIENTE" && (
+                <TabsTrigger value="influencia">Mapa de Influência</TabsTrigger>
+              )}
               <TabsTrigger value="historico">Histórico</TabsTrigger>
             </>
           )}
@@ -719,7 +723,14 @@ export function PersonForm({ personId }: PersonFormProps) {
           </TabsContent>
         )}
 
-        {/* Tab 7 — Histórico */}
+        {/* Tab 7 — Mapa de Influência (only for CLIENTE) */}
+        {isEditing && form.watch("tipo") === "CLIENTE" && (
+          <TabsContent value="influencia">
+            <InfluenceMapTab clientId={personId!} />
+          </TabsContent>
+        )}
+
+        {/* Tab 8 — Histórico */}
         {isEditing && (
           <TabsContent value="historico">
             <PersonHistoryTab person={person} />
