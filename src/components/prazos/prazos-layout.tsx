@@ -33,7 +33,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Textarea } from "@/components/ui/textarea"
-import { Sheet, SheetContent } from "@/components/ui/sheet"
+import { Sheet, SheetContent, SheetTitle, SheetDescription } from "@/components/ui/sheet"
 import { Checkbox } from "@/components/ui/checkbox"
 import {
   DEADLINE_TYPE_LABELS, formatCNJ, daysUntil, deadlineColor,
@@ -245,6 +245,8 @@ export function PrazosLayout() {
         {/* Workspace Drawer */}
         <Sheet open={!!selectedDeadlineId} onOpenChange={(open) => { if (!open) closeWorkspace() }}>
           <SheetContent side="right" className="w-full sm:max-w-[80vw] p-0 overflow-hidden [&>button]:hidden">
+            <SheetTitle className="sr-only">Workspace do Prazo</SheetTitle>
+            <SheetDescription className="sr-only">Painel de preparação de documentos do prazo</SheetDescription>
             {selectedDeadlineId && (
               <WorkspaceView deadlineId={selectedDeadlineId} onClose={closeWorkspace} />
             )}
