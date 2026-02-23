@@ -28,7 +28,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   return (
     <SidebarProvider className="!min-h-0 h-svh overflow-hidden">
       <AppSidebar />
-      <SidebarInset className="min-h-0 min-w-0 overflow-x-hidden">
+      <SidebarInset className="min-h-0 min-w-0 overflow-x-hidden flex flex-col">
         <AppHeader />
         <div className="flex-1 min-h-0 min-w-0 overflow-x-hidden overflow-y-auto">
           {children}
